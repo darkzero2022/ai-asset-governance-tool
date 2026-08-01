@@ -441,3 +441,9 @@ Files: backend/prisma/schema.prisma, backend/prisma/migrations/20260801225500_ad
 Summary: Added optional `AIAsset.sourceUrl` plus secured URL import suggestion endpoints for new and existing assets. The importer validates protocols, resolves hostnames before fetching, blocks private/loopback/link-local addresses including cloud metadata, revalidates redirects, caps responses, strips HTML into title/description/excerpt suggestions, and leaves governance fields user-confirmed.
 Migration: 20260801225500_add_asset_source_url, expand, no backfill script needed
 Tests: `npm run prisma:generate`; `npx prisma validate`; `npm run build`; `npm run prisma:migrate`; `npm run test` in `backend/`
+
+## 2026-08-01T23:00:52.2209834+03:00 — Add URL import frontend
+Files: frontend/src/App.tsx, frontend/src/components/ModelCardForm.tsx, frontend/src/pages/AssetDetail.tsx, frontend/src/pages/AssetList.tsx, docs/codex-backlog.md
+Summary: Added Import from URL inputs and fetch previews to asset creation/editing and Model Card editing. Suggestions remain copy-only while `sourceUrl` is persisted with asset saves and shown as a clickable citation on asset detail.
+Migration: none
+Tests: `npm run build`; `npm run test` in `frontend/`

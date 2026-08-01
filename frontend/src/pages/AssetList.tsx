@@ -14,6 +14,7 @@ type Asset = {
   dataClassificationTouched?: string | null;
   trainingDataProvenance?: string | null;
   downstreamConsumers?: string | null;
+  sourceUrl?: string | null;
   status: string;
   updatedAt: string;
   _count?: { risks: number };
@@ -31,6 +32,14 @@ type AssetForm = {
   dataClassificationTouched: string;
   trainingDataProvenance: string;
   downstreamConsumers: string;
+  sourceUrl: string;
+};
+
+type ImportSuggestion = {
+  sourceUrl: string;
+  suggestedTitle: string;
+  suggestedDescription: string;
+  excerpt: string;
 };
 
 type AssetFilters = {
@@ -50,6 +59,8 @@ type Props = {
   label: (value: string) => string;
   onFiltersChange: (filters: AssetFilters) => void;
   onFormChange: (form: AssetForm) => void;
+  importSuggestion: ImportSuggestion | null;
+  onFetchImport: (sourceUrl: string) => void;
   onSubmit: (event: FormEvent) => void;
   onNewAsset: () => void;
   onSelect: (id: string) => void;
@@ -86,6 +97,13 @@ export default function AssetList(props: Props) {
         <h2 className="text-xl font-semibold">{props.editingAssetId ? "Edit Asset" : "Create Asset"}</h2>
         <div className="mt-4 grid gap-4">
           <Field label="Name" value={props.assetForm.name} onChange={(value) => updateForm("name", value)} />
+          <div className="rounded-xl border border-slate-200 p-3">
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1"><Field label="Import from URL" value={props.assetForm.sourceUrl} onChange={(value) => updateForm("sourceUrl", value)} /></div>
+              <button type="button" className="self-end rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-40" disabled={!props.assetForm.sourceUrl} onClick={() => props.onFetchImport(props.assetForm.sourceUrl)}>Fetch</button>
+            </div>
+            {props.importSuggestion && <ImportPreview suggestion={props.importSuggestion} />}
+          </div>
           <Field label="Version" value={props.assetForm.version} onChange={(value) => updateForm("version", value)} />
           <Select label="Type" value={props.assetForm.type} options={["MODEL", "DATASET", "SERVICE", "LIBRARY"]} onChange={(value) => updateForm("type", value)} labelValue={props.label} />
           <Select label="Hosting Model" value={props.assetForm.hostingModel} options={["SAAS_API", "SELF_HOSTED", "EMBEDDED_IN_APP"]} onChange={(value) => updateForm("hostingModel", value)} labelValue={props.label} />
@@ -100,6 +118,17 @@ export default function AssetList(props: Props) {
         <button className="mt-5 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">{props.editingAssetId ? "Save asset" : "Create asset"}</button>
       </form>
     </section>
+  );
+}
+
+function ImportPreview(props: { suggestion: ImportSuggestion }) {
+  return (
+    <div className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 ring-1 ring-slate-200">
+      <p className="font-semibold text-slate-800">Fetched suggestion</p>
+      <p className="mt-1"><span className="font-medium">Title:</span> {props.suggestion.suggestedTitle || "Not found"}</p>
+      <p className="mt-1"><span className="font-medium">Description:</span> {props.suggestion.suggestedDescription || "Not found"}</p>
+      <p className="mt-1"><span className="font-medium">Excerpt:</span> {props.suggestion.excerpt || "Not found"}</p>
+    </div>
   );
 }
 

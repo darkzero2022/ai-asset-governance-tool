@@ -16,6 +16,7 @@ type Asset = {
   dataClassificationTouched?: string | null;
   trainingDataProvenance?: string | null;
   downstreamConsumers?: string | null;
+  sourceUrl?: string | null;
   status: string;
   updatedAt: string;
   _count?: { risks: number };
@@ -75,6 +76,14 @@ type AssetForm = {
   dataClassificationTouched: string;
   trainingDataProvenance: string;
   downstreamConsumers: string;
+  sourceUrl: string;
+};
+
+type ImportSuggestion = {
+  sourceUrl: string;
+  suggestedTitle: string;
+  suggestedDescription: string;
+  excerpt: string;
 };
 
 type Props = {
@@ -98,6 +107,10 @@ type Props = {
   onFormChange: (form: AssetForm) => void;
   onSaveAsset: (event: FormEvent) => void;
   onModelCardFormChange: (form: ModelCardFormState) => void;
+  modelCardSourceUrl: string;
+  modelCardImportSuggestion: ImportSuggestion | null;
+  onModelCardSourceUrlChange: (sourceUrl: string) => void;
+  onFetchModelCardImport: (sourceUrl: string) => void;
   onSaveModelCard: (event: FormEvent) => void;
   onSelectedRiskChange: (id: string) => void;
   onSelectedProjectChange: (id: string) => void;
@@ -148,6 +161,7 @@ export default function AssetDetail(props: Props) {
             <Info label="Data Classification" value={props.asset.dataClassificationTouched} />
             <Info label="Training Data" value={props.asset.trainingDataProvenance} />
             <Info label="Downstream Consumers" value={props.asset.downstreamConsumers} />
+            <Info label="Source URL" value={props.asset.sourceUrl} href={props.asset.sourceUrl} />
           </dl>
         </div>
 
@@ -166,13 +180,14 @@ export default function AssetDetail(props: Props) {
               <Field label="Data Classification" value={props.assetForm.dataClassificationTouched ?? ""} onChange={(value) => props.onFormChange({ ...props.assetForm, dataClassificationTouched: value })} />
               <TextArea label="Training Data Provenance" value={props.assetForm.trainingDataProvenance ?? ""} onChange={(value) => props.onFormChange({ ...props.assetForm, trainingDataProvenance: value })} />
               <TextArea label="Downstream Consumers" value={props.assetForm.downstreamConsumers ?? ""} onChange={(value) => props.onFormChange({ ...props.assetForm, downstreamConsumers: value })} />
+              <Field label="Source URL" value={props.assetForm.sourceUrl ?? ""} onChange={(value) => props.onFormChange({ ...props.assetForm, sourceUrl: value })} />
             </div>
             <button className="mt-5 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Save asset</button>
           </form>
         )}
 
         <ApprovalBanner risks={props.asset.risks} assetType={props.asset.type} modelCard={props.modelCard} modelCardCompleteness={props.modelCardCompleteness} />
-        {(props.asset.type === "MODEL" || props.asset.type === "SERVICE") && <ModelCardForm modelCard={props.modelCard} completeness={props.modelCardCompleteness} form={props.modelCardForm} onFormChange={props.onModelCardFormChange} onSubmit={props.onSaveModelCard} />}
+        {(props.asset.type === "MODEL" || props.asset.type === "SERVICE") && <ModelCardForm modelCard={props.modelCard} completeness={props.modelCardCompleteness} form={props.modelCardForm} sourceUrl={props.modelCardSourceUrl} importSuggestion={props.modelCardImportSuggestion} onFormChange={props.onModelCardFormChange} onSourceUrlChange={props.onModelCardSourceUrlChange} onFetchImport={props.onFetchModelCardImport} onSubmit={props.onSaveModelCard} />}
         <DependencyGraph asset={props.asset} />
       </div>
 
@@ -270,8 +285,8 @@ export default function AssetDetail(props: Props) {
   );
 }
 
-function Info(props: { label: string; value?: string | null }) {
-  return <div><dt className="font-semibold">{props.label}</dt><dd className="text-slate-600">{props.value || "Not set"}</dd></div>;
+function Info(props: { label: string; value?: string | null; href?: string | null }) {
+  return <div><dt className="font-semibold">{props.label}</dt><dd className="text-slate-600">{props.href ? <a className="text-cyan-700 underline" href={props.href} target="_blank" rel="noreferrer">{props.value}</a> : props.value || "Not set"}</dd></div>;
 }
 
 function diffAuditFields(beforeJson?: Record<string, unknown> | null, afterJson?: Record<string, unknown> | null) {

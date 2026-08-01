@@ -47,8 +47,19 @@ type Props = {
   modelCard: ModelCard | null;
   completeness?: ModelCardCompleteness;
   form: ModelCardFormState;
+  sourceUrl: string;
+  importSuggestion: ImportSuggestion | null;
   onFormChange: (form: ModelCardFormState) => void;
+  onSourceUrlChange: (sourceUrl: string) => void;
+  onFetchImport: (sourceUrl: string) => void;
   onSubmit: (event: FormEvent) => void;
+};
+
+type ImportSuggestion = {
+  sourceUrl: string;
+  suggestedTitle: string;
+  suggestedDescription: string;
+  excerpt: string;
 };
 
 export const emptyModelCardForm: ModelCardFormState = {
@@ -91,7 +102,7 @@ export function modelCardToForm(modelCard: ModelCard | null): ModelCardFormState
   };
 }
 
-export function ModelCardForm({ modelCard, completeness, form, onFormChange, onSubmit }: Props) {
+export function ModelCardForm({ modelCard, completeness, form, sourceUrl, importSuggestion, onFormChange, onSourceUrlChange, onFetchImport, onSubmit }: Props) {
   const update = (key: keyof ModelCardFormState, value: string) => onFormChange({ ...form, [key]: value });
   const updateMetric = (index: number, key: keyof ModelCardMetricFormState, value: string) => onFormChange({
     ...form,
@@ -111,6 +122,13 @@ export function ModelCardForm({ modelCard, completeness, form, onFormChange, onS
         {displayCompleteness && <span className="rounded-full bg-cyan-50 px-3 py-1 text-sm font-semibold text-cyan-700 ring-1 ring-cyan-100">{displayCompleteness.percent}% complete</span>}
       </div>
       {displayCompleteness?.missingFields?.length ? <p className="mt-3 text-sm text-amber-700">Missing: {displayCompleteness.missingFields.join(", ")}</p> : null}
+      <div className="mt-4 rounded-xl border border-slate-200 p-4">
+        <div className="flex gap-2">
+          <div className="min-w-0 flex-1"><Field label="Import from URL" value={sourceUrl} onChange={onSourceUrlChange} /></div>
+          <button type="button" className="self-end rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-40" disabled={!sourceUrl} onClick={() => onFetchImport(sourceUrl)}>Fetch</button>
+        </div>
+        {importSuggestion && <ImportPreview suggestion={importSuggestion} />}
+      </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <Field label="Task" value={form.task} onChange={(value) => update("task", value)} />
         <Field label="Approach" value={form.approach} onChange={(value) => update("approach", value)} />
@@ -150,6 +168,17 @@ export function ModelCardForm({ modelCard, completeness, form, onFormChange, onS
       </div>
       <button className="mt-5 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Save Model Card</button>
     </form>
+  );
+}
+
+function ImportPreview(props: { suggestion: ImportSuggestion }) {
+  return (
+    <div className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 ring-1 ring-slate-200">
+      <p className="font-semibold text-slate-800">Fetched suggestion</p>
+      <p className="mt-1"><span className="font-medium">Title:</span> {props.suggestion.suggestedTitle || "Not found"}</p>
+      <p className="mt-1"><span className="font-medium">Description:</span> {props.suggestion.suggestedDescription || "Not found"}</p>
+      <p className="mt-1"><span className="font-medium">Excerpt:</span> {props.suggestion.excerpt || "Not found"}</p>
+    </div>
   );
 }
 

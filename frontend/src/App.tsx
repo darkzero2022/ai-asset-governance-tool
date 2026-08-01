@@ -25,6 +25,7 @@ type Asset = {
   dataClassificationTouched?: string | null;
   trainingDataProvenance?: string | null;
   downstreamConsumers?: string | null;
+  sourceUrl?: string | null;
   status: string;
   updatedAt: string;
   _count?: { risks: number };
@@ -138,6 +139,14 @@ const emptyAsset = {
   dataClassificationTouched: "",
   trainingDataProvenance: "",
   downstreamConsumers: "",
+  sourceUrl: "",
+};
+
+type ImportSuggestion = {
+  sourceUrl: string;
+  suggestedTitle: string;
+  suggestedDescription: string;
+  excerpt: string;
 };
 
 const emptyRisk = {
@@ -204,6 +213,9 @@ function App() {
   const [assetModelCard, setAssetModelCard] = useState<ModelCard | null>(null);
   const [assetModelCardCompleteness, setAssetModelCardCompleteness] = useState<ModelCardCompleteness | undefined>();
   const [modelCardForm, setModelCardForm] = useState<ModelCardFormState>(emptyModelCardForm);
+  const [modelCardSourceUrl, setModelCardSourceUrl] = useState("");
+  const [assetImportSuggestion, setAssetImportSuggestion] = useState<ImportSuggestion | null>(null);
+  const [modelCardImportSuggestion, setModelCardImportSuggestion] = useState<ImportSuggestion | null>(null);
   const [categories, setCategories] = useState<FrameworkCategory[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<AssetDetail | null>(null);
   const [assetForm, setAssetForm] = useState(emptyAsset);
@@ -291,6 +303,8 @@ function App() {
     setAssetModelCard(modelCardData.modelCard);
     setAssetModelCardCompleteness(modelCardData.completeness);
     setModelCardForm(modelCardToForm(modelCardData.modelCard));
+    setModelCardSourceUrl(data.asset.sourceUrl ?? "");
+    setModelCardImportSuggestion(null);
     setAssetAuditLogs(auditData.logs);
   }
 
@@ -401,7 +415,38 @@ function App() {
       dataClassificationTouched: asset.dataClassificationTouched ?? "",
       trainingDataProvenance: asset.trainingDataProvenance ?? "",
       downstreamConsumers: asset.downstreamConsumers ?? "",
+      sourceUrl: asset.sourceUrl ?? "",
     });
+  }
+
+  async function fetchAssetImport(sourceUrl: string) {
+    setError("");
+    setAssetForm((current) => ({ ...current, sourceUrl }));
+    setAssetImportSuggestion(null);
+
+    try {
+      const path = editingAssetId ? `/assets/${editingAssetId}/import-url` : "/assets/import-url";
+      const suggestion = await api<ImportSuggestion>(path, { method: "POST", body: JSON.stringify({ sourceUrl }) });
+      setAssetForm((current) => ({ ...current, sourceUrl: suggestion.sourceUrl }));
+      setAssetImportSuggestion(suggestion);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "URL import failed");
+    }
+  }
+
+  async function fetchModelCardImport(sourceUrl: string) {
+    if (!selectedAsset) return;
+    setError("");
+    setModelCardSourceUrl(sourceUrl);
+    setModelCardImportSuggestion(null);
+
+    try {
+      const suggestion = await api<ImportSuggestion>(`/assets/${selectedAsset.id}/import-url`, { method: "POST", body: JSON.stringify({ sourceUrl }) });
+      setModelCardSourceUrl(suggestion.sourceUrl);
+      setModelCardImportSuggestion(suggestion);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "URL import failed");
+    }
   }
 
   async function saveProject(event: FormEvent) {
@@ -692,6 +737,24 @@ function App() {
       };
       const response = await api<{ modelCard: ModelCard }>(`/assets/${selectedAsset.id}/model-card`, { method: "PUT", body: JSON.stringify(payload) });
 
+      if (modelCardSourceUrl !== (selectedAsset.sourceUrl ?? "")) {
+        const assetPayload = {
+          name: selectedAsset.name,
+          version: selectedAsset.version,
+          type: selectedAsset.type,
+          supplier: selectedAsset.supplier,
+          provider: selectedAsset.provider ?? "",
+          hostingModel: selectedAsset.hostingModel,
+          networkDependency: selectedAsset.networkDependency,
+          license: selectedAsset.license ?? "",
+          dataClassificationTouched: selectedAsset.dataClassificationTouched ?? "",
+          trainingDataProvenance: selectedAsset.trainingDataProvenance ?? "",
+          downstreamConsumers: selectedAsset.downstreamConsumers ?? "",
+          sourceUrl: modelCardSourceUrl,
+        };
+        await api(`/assets/${selectedAsset.id}`, { method: "PUT", body: JSON.stringify(assetPayload) });
+      }
+
       for (const metric of modelCardForm.metrics) {
         if (!metric.metricName.trim() || !metric.metricValue.trim()) continue;
         const metricValue = Number(metric.metricValue);
@@ -714,6 +777,7 @@ function App() {
       setAssetModelCard(refreshed.modelCard ?? response.modelCard);
       setAssetModelCardCompleteness(refreshed.completeness);
       setModelCardForm(modelCardToForm(refreshed.modelCard ?? response.modelCard));
+      await loadAsset(selectedAsset.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Model Card save failed");
     }
@@ -954,6 +1018,10 @@ function App() {
           onFormChange={setAssetForm}
           onSaveAsset={saveAsset}
           onModelCardFormChange={setModelCardForm}
+          modelCardSourceUrl={modelCardSourceUrl}
+          modelCardImportSuggestion={modelCardImportSuggestion}
+          onModelCardSourceUrlChange={setModelCardSourceUrl}
+          onFetchModelCardImport={fetchModelCardImport}
           onSaveModelCard={saveModelCard}
           onSelectedRiskChange={setSelectedAssetRiskId}
           onSelectedProjectChange={setSelectedAssetProjectId}
@@ -973,6 +1041,8 @@ function App() {
           label={label}
           onFiltersChange={setFilters}
           onFormChange={setAssetForm}
+          importSuggestion={assetImportSuggestion}
+          onFetchImport={fetchAssetImport}
           onSubmit={saveAsset}
           onNewAsset={() => { setEditingAssetId(null); setAssetForm(emptyAsset); }}
           onSelect={(id) => { navigate(`/assets/${id}`); loadAsset(id).catch((err: Error) => setError(err.message)); }}
