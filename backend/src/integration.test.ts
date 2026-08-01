@@ -131,7 +131,7 @@ afterAll(async () => {
   await prisma.assetRisk.deleteMany({ where: { asset: { name: { startsWith: runId } } } });
   await prisma.recertificationSchedule.deleteMany({ where: { asset: { name: { startsWith: runId } } } });
   await prisma.modelCard.deleteMany({ where: { asset: { name: { startsWith: runId } } } });
-  await prisma.risk.deleteMany({ where: { description: { startsWith: runId } } });
+  await prisma.risk.deleteMany({ where: { OR: [{ description: { startsWith: runId } }, { createdById: { in: [...userIds.values()] } }] } });
   await prisma.control.deleteMany({ where: { mappedControlId: { startsWith: runId } } });
   await prisma.project.deleteMany({ where: { name: { startsWith: runId } } });
   await prisma.aIAsset.deleteMany({ where: { name: { startsWith: runId } } });
@@ -461,7 +461,7 @@ describe("archive-not-delete semantics", () => {
 describe("CSV exports", () => {
   it("exports filtered assets and risks as CSV", async () => {
     const asset = await createAsset({ status: "DEPLOYED", type: "MODEL" });
-    await createRisk(asset.id, { status: "OPEN", sourceFramework: "NIST_AI_RMF" });
+    await createRisk(asset.id, { status: "OPEN", sourceFramework: "NIST_AI_RMF", description: "=HYPERLINK(\"https://example.com\")" });
 
     await request(app).get("/assets/export/csv?status=DEPLOYED&type=MODEL").set(auth("VIEWER")).expect(200).expect((response) => {
       expect(response.header["content-type"]).toContain("text/csv");
@@ -473,6 +473,7 @@ describe("CSV exports", () => {
       expect(response.header["content-type"]).toContain("text/csv");
       expect(response.text).toContain("description,severity");
       expect(response.text).toContain(asset.name);
+      expect(response.text).toContain("'=");
     });
   });
 });

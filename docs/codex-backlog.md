@@ -2,7 +2,7 @@
 
 Ordered task list for the Code Executor. Pull tasks top-to-bottom within a section; don't skip ahead to a later phase without the user's explicit go-ahead. Background/rationale for each item is in `docs/roadmap.md`. Log every completed item in `CHANGES.log` per the format in `AGENTS.md`.
 
-Phases 1–5, the UI polish pass, the stabilization pass, the Frontend IA overhaul, demo data seeding, and the test coverage pass are all complete (verified live, not just by the checkmarks). The Model Card metric-level analytics section shipped its reporting half correctly but **not the CRUD half** — `CHANGES.log` claimed "audited CRUD" that doesn't exist. **Work through the three new sections below in order: "Fix Model Card metric CRUD," then "Maturity gaps," then "Import asset and Model Card data from a URL."**
+Everything through the Model Card metric CRUD fix, the maturity-gaps round (version control, user management, ownership RBAC, segregation of duties, real OIDC, notifications, CSV export, deployment docs, control dedup, EU AI Act tier suggestion, field history), and the URL import feature (with SSRF mitigations) are complete and verified — both by reading the code and by actually running the test suites (27 backend, 6 frontend, all passing). One live-verified gap survived that round: CSV export has no formula-injection protection. **Start with "Fix CSV formula-injection protection" below.**
 
 ## Fix Model Card metric CRUD (do this first — live-verified gap, CHANGES.log claim doesn't match reality)
 
@@ -11,6 +11,10 @@ Phases 1–5, the UI polish pass, the stabilization pass, the Frontend IA overha
 - [x] Add `DELETE /assets/:id/model-card/metrics/:metricId` to `backend/src/app.ts` — delete a `ModelCardMetric` row, same role gate and audit pattern.
 - [x] Add `metrics: true` to the `include` on the `prisma.modelCard.findUnique` call in the `GET /assets/:id/model-card` handler (~line 314) — today it omits the relation entirely, so even seeded/existing metrics never show up on the asset detail page's Model Card form, only through the separate `/reports/model-metrics` endpoint.
 - [x] Add an integration test in `backend/src/integration.test.ts` exercising create/update/delete on a metric (the existing RBAC matrix tests stop at `PUT /assets/:id/model-card` and never touch the metrics sub-routes — that's why this shipped broken with all tests green).
+
+## Fix CSV formula-injection protection (do this first — live-verified gap)
+
+- [x] In `csvValue()` in `backend/src/app.ts` (~line 321), prefix values starting with `=`, `+`, `-`, `@`, tab, or carriage return with a leading `'` before the existing quote-escaping, so free-text fields can't become live formulas when the exported CSV is opened in Excel/LibreOffice. Add a test asserting a risk description starting with `=` exports with the neutralizing prefix.
 
 ## Maturity gaps (do this second, in order — full rationale in `docs/roadmap.md`'s "Maturity gaps identified in supervisor review" section)
 

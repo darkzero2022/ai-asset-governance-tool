@@ -453,3 +453,9 @@ Files: backend/src/cyclonedx.ts, backend/src/integration.test.ts, docs/codex-bac
 Summary: Included asset `sourceUrl` values as CycloneDX external references for both component and service assets. Extended the CycloneDX fixture test to assert the reference is emitted and still validates against the schema.
 Migration: none
 Tests: `npm run build`; `npm run test` in `backend/`
+
+## 2026-08-01T23:30:15.1274255+03:00 — Fix CSV formula-injection protection
+Files: backend/src/app.ts, backend/src/integration.test.ts, docs/codex-backlog.md
+Summary: Hardened CSV export values by prefixing cells that start with formula trigger characters before quote escaping. Added integration coverage proving a risk description beginning with `=` is exported with the neutralizing prefix.
+Migration: none
+Tests: `npm run build`; `npm run test` in `backend/`

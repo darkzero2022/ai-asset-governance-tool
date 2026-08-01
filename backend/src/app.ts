@@ -320,7 +320,8 @@ function cleanExpiredOidcStates() {
 
 function csvValue(value: unknown) {
   const text = value === null || value === undefined ? "" : String(value);
-  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  const safeText = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+  return /[",\r\n]/.test(safeText) ? `"${safeText.replace(/"/g, '""')}"` : safeText;
 }
 
 function csv(rows: unknown[][]) {
