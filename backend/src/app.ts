@@ -1,5 +1,7 @@
 import bcrypt from "bcryptjs";
 import cors from "cors";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { Issuer, generators, type Client } from "openid-client";
@@ -26,7 +28,12 @@ const assetSchema = z.object({
   dataClassificationTouched: z.string().optional().nullable(),
   trainingDataProvenance: z.string().optional().nullable(),
   downstreamConsumers: z.string().optional().nullable(),
+  sourceUrl: z.string().url().optional().nullable(),
 });
+
+const importUrlSchema = z.object({ sourceUrl: z.string().url() });
+const importResponseSizeLimit = 2 * 1024 * 1024;
+const importTimeoutMs = 5000;
 
 const projectSchema = z.object({
   name: z.string().min(1),
@@ -156,6 +163,100 @@ function assetResponse<T extends { riskLinks?: Array<{ risk: unknown }> }>(asset
 
 function assetListResponse<T extends { _count?: { riskLinks?: number; projectLinks?: number } }>(asset: T) {
   return { ...asset, _count: { risks: asset._count?.riskLinks ?? 0 }, projectUsageCount: asset._count?.projectLinks ?? 0 };
+}
+
+function normalizeImportUrl(sourceUrl: string) {
+  const url = new URL(sourceUrl);
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("Only http and https URLs are supported");
+  }
+  url.hash = "";
+  return url;
+}
+
+function isBlockedIp(address: string) {
+  if (address === "169.254.169.254") return true;
+
+  if (isIP(address) === 4) {
+    const [a, b] = address.split(".").map(Number);
+    return a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254) || a === 0;
+  }
+
+  const normalized = address.toLowerCase();
+  return normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe80:") || normalized === "::";
+}
+
+async function assertFetchableUrl(url: URL) {
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("Only http and https URLs are supported");
+  }
+
+  const addresses = await lookup(url.hostname, { all: true, verbatim: true });
+  if (!addresses.length || addresses.some((entry) => isBlockedIp(entry.address))) {
+    throw new Error("URL host resolves to a blocked private, loopback, or link-local address");
+  }
+}
+
+async function readCappedResponse(response: Response) {
+  const contentLength = Number(response.headers.get("content-length") ?? 0);
+  if (contentLength > importResponseSizeLimit) throw new Error("URL response exceeds 2MB limit");
+
+  const reader = response.body?.getReader();
+  if (!reader) return "";
+
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > importResponseSizeLimit) throw new Error("URL response exceeds 2MB limit");
+    chunks.push(value);
+  }
+
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}
+
+async function fetchImportHtml(sourceUrl: string) {
+  let url = normalizeImportUrl(sourceUrl);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), importTimeoutMs);
+
+  try {
+    for (let redirects = 0; redirects <= 3; redirects += 1) {
+      await assertFetchableUrl(url);
+      const response = await fetch(url, { redirect: "manual", signal: controller.signal });
+
+      if (response.status >= 300 && response.status < 400 && response.headers.get("location")) {
+        url = normalizeImportUrl(new URL(response.headers.get("location")!, url).toString());
+        continue;
+      }
+
+      if (!response.ok) throw new Error(`URL fetch failed with ${response.status}`);
+      return { finalUrl: url.toString(), html: await readCappedResponse(response) };
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  throw new Error("Too many redirects while importing URL");
+}
+
+function extractHtmlSuggestion(html: string) {
+  const withoutScripts = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<noscript[\s\S]*?<\/noscript>/gi, " ");
+  const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(withoutScripts)?.[1] ?? "";
+  const description = /<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["'][^>]*>/i.exec(withoutScripts)?.[1] ?? /<meta[^>]+content=["']([^"']*)["'][^>]+name=["']description["'][^>]*>/i.exec(withoutScripts)?.[1] ?? "";
+  const excerpt = withoutScripts.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 1000);
+
+  return {
+    suggestedTitle: decodeHtml(title).trim(),
+    suggestedDescription: decodeHtml(description).trim(),
+    excerpt: decodeHtml(excerpt),
+  };
+}
+
+function decodeHtml(value: string) {
+  return value.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 }
 
 function assetForBom<T extends { riskLinks?: Array<{ risk: unknown }> }>(asset: T) {
@@ -441,6 +542,20 @@ app.post("/assets", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req,
   }
 });
 
+app.post("/assets/import-url", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+  try {
+    const body = importUrlSchema.parse(req.body);
+    const { finalUrl, html } = await fetchImportHtml(body.sourceUrl);
+    res.json({ sourceUrl: finalUrl, ...extractHtmlSuggestion(html) });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    next(error);
+  }
+});
+
 app.get("/assets/export/csv", requireAuth, async (req, res, next) => {
   try {
     const { status, type, hostingModel, networkDependency } = req.query;
@@ -613,6 +728,33 @@ app.put("/assets/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (r
     await audit(req.user!.id, "AIAsset", asset.id, "UPDATE", before, asset);
     res.json({ asset });
   } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/assets/:id/import-url", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+  try {
+    const id = String(req.params.id);
+    const body = importUrlSchema.parse(req.body);
+    const asset = await prisma.aIAsset.findUnique({ where: { id } });
+
+    if (!asset) {
+      res.status(404).json({ error: "Asset not found" });
+      return;
+    }
+
+    if (req.user!.role === "RISK_OWNER" && asset.createdById !== req.user!.id) {
+      res.status(403).json({ error: "RISK_OWNER can only import URLs for assets they created" });
+      return;
+    }
+
+    const { finalUrl, html } = await fetchImportHtml(body.sourceUrl);
+    res.json({ sourceUrl: finalUrl, ...extractHtmlSuggestion(html) });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
     next(error);
   }
 });

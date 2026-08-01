@@ -118,6 +118,7 @@ model AIAsset {
   dataClassificationTouched  String?
   trainingDataProvenance     String?
   downstreamConsumers        String?
+  sourceUrl                  String?
   status                     AssetStatus          @default(DRAFT)
   createdById                String
   createdBy                  User                 @relation("AssetCreator", fields: [createdById], references: [id])

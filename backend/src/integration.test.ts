@@ -409,6 +409,28 @@ describe("Model Card metric CRUD", () => {
   });
 });
 
+describe("URL import", () => {
+  it("rejects loopback and cloud metadata URLs before fetching", async () => {
+    await request(app)
+      .post("/assets/import-url")
+      .set(auth("ADMIN"))
+      .send({ sourceUrl: "http://127.0.0.1/internal" })
+      .expect(400)
+      .expect((response) => {
+        expect(response.body.error).toMatch(/blocked private, loopback, or link-local/);
+      });
+
+    await request(app)
+      .post("/assets/import-url")
+      .set(auth("ADMIN"))
+      .send({ sourceUrl: "http://169.254.169.254/latest/meta-data" })
+      .expect(400)
+      .expect((response) => {
+        expect(response.body.error).toMatch(/blocked private, loopback, or link-local/);
+      });
+  });
+});
+
 describe("archive-not-delete semantics", () => {
   it("archives linked risks and hard-deletes unlinked risks", async () => {
     const asset = await createAsset();

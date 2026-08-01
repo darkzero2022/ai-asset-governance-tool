@@ -435,3 +435,9 @@ Files: frontend/src/App.tsx, frontend/src/pages/AssetDetail.tsx, docs/codex-back
 Summary: Loaded existing AIAsset audit logs on the asset detail page and added a Field History panel that renders before/after diffs for changed fields. The panel avoids raw JSON inspection for reviewers while preserving an empty-state and fallback when diffs are unavailable.
 Migration: none
 Tests: `npm run build`; `npm run test` in `frontend/`
+
+## 2026-08-01T22:56:19.8095414+03:00 — Add secured URL import backend
+Files: backend/prisma/schema.prisma, backend/prisma/migrations/20260801225500_add_asset_source_url/migration.sql, backend/src/app.ts, backend/src/integration.test.ts, docs/codex-backlog.md
+Summary: Added optional `AIAsset.sourceUrl` plus secured URL import suggestion endpoints for new and existing assets. The importer validates protocols, resolves hostnames before fetching, blocks private/loopback/link-local addresses including cloud metadata, revalidates redirects, caps responses, strips HTML into title/description/excerpt suggestions, and leaves governance fields user-confirmed.
+Migration: 20260801225500_add_asset_source_url, expand, no backfill script needed
+Tests: `npm run prisma:generate`; `npx prisma validate`; `npm run build`; `npm run prisma:migrate`; `npm run test` in `backend/`
