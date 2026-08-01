@@ -1,17 +1,142 @@
 # AI Asset Governance Tool
 
-Standalone web application for maintaining a governed inventory of AI assets, tracking AI risks and controls, managing approval workflow, and exporting CycloneDX AI-BOM documents.
+A governed inventory and risk register for AI models, datasets, services, and libraries — built for security/GRC teams who need to track what AI is running across the organization, assess its risk against recognized frameworks, enforce an approval workflow before it goes live, and produce audit-ready AI-BOM evidence.
 
-## Structure
+This is not a codebase scanner. Data is entered through structured intake forms by the people who own the risk decision, not auto-discovered from source code.
 
-- `backend/` - TypeScript, Express, Prisma API
-- `frontend/` - React 19, Vite, Tailwind CSS UI
-- `docker-compose.yml` - local PostgreSQL database
+## What it does
 
-## Local Development
+- **AI Asset Inventory** — every model, dataset, service, and library in one place: type, supplier, hosting model, network dependency (air-gapped / hybrid / fully connected), license, data classification, training data provenance, and lifecycle status (Draft → Under Review → Approved → Deployed → Retired).
+- **Risk Register** — risks scored on a likelihood × impact matrix, banded into LOW/MEDIUM/HIGH/CRITICAL severity, mapped to **NIST AI RMF**, the **EU AI Act**, or the **OWASP LLM Top 10**, with a heatmap view, bulk status updates, and a reusable control catalog to track mitigation.
+- **Projects** — the business use cases an asset is actually used in. A single model or service can be linked to many projects, giving a real reuse count instead of a free-text guess, and risks can be scoped to a project directly or rolled up from every asset it depends on.
+- **Model Cards** — structured ML-BOM documentation (task, architecture, intended use, limitations, ethical/fairness considerations, quantitative performance metrics) exported as native CycloneDX `modelCard` data, not bolted-on custom properties. Required before a MODEL/SERVICE asset can be Approved or Deployed.
+- **Governance workflow** — status transitions are policy-gated: an asset can't move to Approved/Deployed while it has open high/critical risk, or while its Model Card is incomplete. Segregation of duties is enforced in code, not just policy — the person who moved an asset to review can't be the one who approves it, and a risk's creator can't be the one who accepts it.
+- **RBAC** — four roles (Admin, Risk Owner, Approver, Viewer) with a real permission matrix, per-row ownership scoping, and admin-managed user accounts (create, deactivate, reset password, change role).
+- **Full audit trail** — every mutation is logged with actor, before/after state, and timestamp; an asset's field-level history is visible on its own detail page.
+- **Compliance exports** — CycloneDX (AI-BOM/ML-BOM) and SPDX documents, schema-validated against vendored schemas, plus filtered CSV export of the asset inventory and risk register.
+- **Dashboard** — portfolio health at a glance: severity distribution, framework coverage gaps, reuse leaderboard, Model Card coverage, recertification due list, and cross-entity search.
+- **Import from a URL** — paste a link to existing model documentation and get a reviewed, editable suggestion for the asset/Model Card fields instead of retyping everything by hand.
 
-1. Copy `backend/.env.example` to `backend/.env`.
-2. Start PostgreSQL with `docker compose up -d`.
-3. Install dependencies in `backend/` and `frontend/`.
-4. Run Prisma migration and seed from `backend/`.
-5. Start backend and frontend dev servers.
+## Tech stack
+
+```mermaid
+flowchart LR
+    subgraph Frontend
+        FE["React 19 + Vite + Tailwind"]
+    end
+    subgraph Backend
+        API["Express + TypeScript"]
+        Auth["JWT + RBAC"]
+        Jobs["Notification jobs"]
+    end
+    subgraph Data
+        PG[("PostgreSQL 16")]
+        Prisma["Prisma ORM"]
+    end
+    subgraph Exports
+        CDX["CycloneDX"]
+        SPDX["SPDX"]
+        CSV["CSV"]
+    end
+    FE -->|REST/JSON| API
+    API --> Auth
+    API --> Prisma
+    Prisma --> PG
+    API --> CDX
+    API --> SPDX
+    API --> CSV
+    Jobs --> PG
+```
+
+- **Backend**: TypeScript, Express, Prisma ORM, PostgreSQL 16
+- **Frontend**: React 19, Vite, Tailwind CSS (no heavy component/charting libraries — hand-rolled SVG charts to keep the dependency surface small)
+- **Auth**: JWT sessions, with an optional real OIDC/SSO authorization-code flow when an identity provider is configured
+- **Testing**: Vitest + Supertest (backend), Vitest + React Testing Library (frontend)
+
+## Quick start
+
+Two install modes, and two data modes — pick one of each.
+
+| | Local | Docker |
+|---|---|---|
+| **What runs where** | Backend/frontend run as host Node processes; PostgreSQL runs in Docker | Everything (Postgres, backend, frontend) runs in Docker |
+| **Best for** | Active development, debugging, fast iteration | A repeatable, self-contained stack |
+
+| | Empty | Demo |
+|---|---|---|
+| **What you get** | Only required reference data (framework categories, EU AI Act tiers, the admin account) | Reference data plus a realistic fictional portfolio (assets, risks, projects, controls, a filled-in Model Card) |
+| **Best for** | Real evaluation/production data entry | Learning the UI or demoing without typing anything in first |
+
+```bash
+# Interactive — asks which install mode and which data mode you want
+scripts/setup.sh
+
+# Or non-interactive:
+scripts/setup.sh --mode=local  --data=empty --yes
+scripts/setup.sh --mode=docker --data=demo  --yes
+
+# Start / stop (reads the mode recorded by setup.sh, no need to specify it again)
+scripts/start.sh
+scripts/stop.sh
+```
+
+Once running:
+
+- Frontend: http://localhost:5173
+- Backend health check: http://localhost:4000/health
+- Sign in with `admin@example.com` / `admin123` — **change this password immediately** via the Users page once you're in; this default only exists to get you into a fresh instance.
+
+## Backing up and restoring
+
+```bash
+scripts/backup.sh                 # writes a timestamped dump to backups/
+scripts/restore.sh <backup-file>  # destructive — requires typing RESTORE or passing --yes
+```
+
+`restore.sh` drops and recreates the current database before loading the dump. It will not run without explicit confirmation.
+
+## Documentation
+
+The full user and operator guide lives in [`docs/guide/`](docs/guide/README.md), organized by feature area:
+
+| Guide | Covers |
+|---|---|
+| [Getting Started](docs/guide/01-getting-started.md) | Install modes, setup, start/stop, first login |
+| [Asset Management](docs/guide/02-asset-management.md) | Asset fields/lifecycle, dependency graph, exports, URL import |
+| [Risk Register](docs/guide/03-risk-register.md) | Risk scoring, heatmap, bulk updates, linking, EU AI Act tier suggestions |
+| [Projects](docs/guide/04-projects.md) | Reuse tracking, project-scoped risk, project-level SBOM export |
+| [Model Cards](docs/guide/05-model-cards.md) | Model Card fields, completeness scoring, metrics, policy gates |
+| [Governance Workflow](docs/guide/06-governance-workflow.md) | Status lifecycle, policy gates, segregation of duties, recertification |
+| [RBAC & Users](docs/guide/07-rbac-and-users.md) | Roles, permission matrix, ownership scoping, user management |
+| [Dashboard](docs/guide/08-dashboard.md) | Every dashboard panel explained |
+| [Audit & Compliance](docs/guide/09-audit-and-compliance.md) | Audit log, field history, archive-not-delete, CSV export |
+| [Operations](docs/guide/10-operations.md) | Scripts, backup/restore, deployment, the recertification notification job |
+
+Production deployment guidance (containerizing both services, a real Postgres target, secrets management, running migrations) is in [`docs/deployment.md`](docs/deployment.md).
+
+## Project structure
+
+```
+backend/
+  src/            Express app, routes, RBAC, CycloneDX/SPDX export, scoring logic
+  prisma/         Schema, migrations, reference/demo seed data
+  vendor/         Vendored CycloneDX/SPDX schemas (no runtime network dependency)
+frontend/
+  src/pages/      Dashboard, Assets, Risk Register, Projects and their detail views
+  src/components/ Shared UI: tables, charts, forms, severity badges
+scripts/          setup.sh, start.sh, stop.sh, backup.sh, restore.sh
+docs/guide/       Full user/operator documentation
+docs/deployment.md
+docker-compose.yml, backend/Dockerfile, frontend/Dockerfile
+```
+
+## Testing
+
+```bash
+cd backend  && npm run test
+cd frontend && npm run test
+```
+
+## Non-goals
+
+No source-code/repo scanning or auto-discovery of AI usage — inventory is entered deliberately by the people accountable for the risk decision. No multi-tenant/multi-org support. Full executive reporting/BI integration and third-party GRC platform integrations are intentionally out of scope for now.

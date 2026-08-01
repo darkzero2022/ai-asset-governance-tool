@@ -6,8 +6,14 @@ build/
 !.env.example
 .DS_Store
 *.log
-!CHANGES.log
 coverage/
 backups/
 logs/
 .aibom-mode
+
+# Internal AI-assisted development workflow files — kept locally, not published
+CLAUDE.md
+AGENTS.md
+CHANGES.log
+docs/roadmap.md
+docs/codex-backlog.md
