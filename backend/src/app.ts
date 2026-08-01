@@ -52,6 +52,13 @@ const modelCardSchema = z.object({
   performanceMetrics: z.unknown().optional().nullable(),
 });
 
+const modelCardMetricSchema = z.object({
+  metricName: z.string().min(1),
+  metricValue: z.number(),
+  slice: z.string().optional().nullable(),
+  recordedAt: z.string().datetime().optional(),
+});
+
 const riskSchema = z.object({
   assetId: z.string().min(1),
   sourceFramework: z.enum(["NIST_AI_RMF", "EU_AI_ACT", "OWASP_LLM_TOP10"]),
@@ -311,7 +318,7 @@ app.get("/assets/:id/model-card", requireAuth, async (req, res, next) => {
       return;
     }
 
-    const modelCard = await prisma.modelCard.findUnique({ where: { assetId } });
+    const modelCard = await prisma.modelCard.findUnique({ where: { assetId }, include: { metrics: { orderBy: { recordedAt: "desc" } } } });
     res.json({ modelCard: modelCardResponse(modelCard), completeness: modelCardCompleteness(modelCard) });
   } catch (error) {
     next(error);
@@ -338,6 +345,69 @@ app.put("/assets/:id/model-card", requireAuth, requireRole("ADMIN", "RISK_OWNER"
     });
     await audit(req.user!.id, "ModelCard", modelCard.id, before ? "UPDATE" : "CREATE", before, modelCard);
     res.json({ modelCard: modelCardResponse(modelCard) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/assets/:id/model-card/metrics", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+  try {
+    const assetId = String(req.params.id);
+    const body = modelCardMetricSchema.parse(req.body);
+    const asset = await prisma.aIAsset.findUnique({ where: { id: assetId }, select: { id: true } });
+
+    if (!asset) {
+      res.status(404).json({ error: "Asset not found" });
+      return;
+    }
+
+    const modelCard = await prisma.modelCard.upsert({ where: { assetId }, update: {}, create: { assetId } });
+    const metric = await prisma.modelCardMetric.create({
+      data: {
+        modelCardId: modelCard.id,
+        metricName: body.metricName,
+        metricValue: body.metricValue,
+        slice: body.slice,
+        recordedAt: body.recordedAt ? new Date(body.recordedAt) : undefined,
+      },
+    });
+    await audit(req.user!.id, "ModelCardMetric", metric.id, "CREATE", undefined, metric);
+    res.status(201).json({ metric });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/assets/:id/model-card/metrics/:metricId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+  try {
+    const assetId = String(req.params.id);
+    const metricId = String(req.params.metricId);
+    const body = modelCardMetricSchema.parse(req.body);
+    const before = await prisma.modelCardMetric.findFirstOrThrow({ where: { id: metricId, modelCard: { assetId } } });
+    const metric = await prisma.modelCardMetric.update({
+      where: { id: metricId },
+      data: {
+        metricName: body.metricName,
+        metricValue: body.metricValue,
+        slice: body.slice,
+        ...(body.recordedAt ? { recordedAt: new Date(body.recordedAt) } : {}),
+      },
+    });
+    await audit(req.user!.id, "ModelCardMetric", metric.id, "UPDATE", before, metric);
+    res.json({ metric });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete("/assets/:id/model-card/metrics/:metricId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+  try {
+    const assetId = String(req.params.id);
+    const metricId = String(req.params.metricId);
+    const before = await prisma.modelCardMetric.findFirstOrThrow({ where: { id: metricId, modelCard: { assetId } } });
+    await prisma.modelCardMetric.delete({ where: { id: metricId } });
+    await audit(req.user!.id, "ModelCardMetric", metricId, "DELETE", before, undefined);
+    res.status(204).send();
   } catch (error) {
     next(error);
   }

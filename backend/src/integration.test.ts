@@ -312,6 +312,37 @@ describe("asset transition policy gates", () => {
   });
 });
 
+describe("Model Card metric CRUD", () => {
+  it("creates, returns, updates, audits, and deletes metric rows", async () => {
+    const asset = await createAsset({ type: "MODEL" });
+    await prisma.modelCard.create({ data: { assetId: asset.id, ...modelCardBody } });
+
+    const createResponse = await request(app)
+      .post(`/assets/${asset.id}/model-card/metrics`)
+      .set(auth("RISK_OWNER"))
+      .send({ metricName: "accuracy", metricValue: 0.91, slice: "overall" })
+      .expect(201);
+    const metricId = createResponse.body.metric.id;
+
+    await request(app).get(`/assets/${asset.id}/model-card`).set(auth("VIEWER")).expect(200).expect((response) => {
+      expect(response.body.modelCard.metrics).toEqual(expect.arrayContaining([expect.objectContaining({ id: metricId, metricName: "accuracy", metricValue: 0.91 })]));
+    });
+
+    await request(app)
+      .put(`/assets/${asset.id}/model-card/metrics/${metricId}`)
+      .set(auth("ADMIN"))
+      .send({ metricName: "accuracy", metricValue: 0.94, slice: "overall" })
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.metric).toMatchObject({ id: metricId, metricName: "accuracy", metricValue: 0.94 });
+      });
+
+    await request(app).delete(`/assets/${asset.id}/model-card/metrics/${metricId}`).set(auth("ADMIN")).expect(204);
+    expect(await prisma.modelCardMetric.findUnique({ where: { id: metricId } })).toBeNull();
+    await expect(prisma.auditLog.findMany({ where: { entityType: "ModelCardMetric", entityId: metricId } })).resolves.toHaveLength(3);
+  });
+});
+
 describe("archive-not-delete semantics", () => {
   it("archives linked risks and hard-deletes unlinked risks", async () => {
     const asset = await createAsset();

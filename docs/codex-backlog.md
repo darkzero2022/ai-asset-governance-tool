@@ -6,11 +6,11 @@ Phases 1–5, the UI polish pass, the stabilization pass, the Frontend IA overha
 
 ## Fix Model Card metric CRUD (do this first — live-verified gap, CHANGES.log claim doesn't match reality)
 
-- [ ] Add `POST /assets/:id/model-card/metrics` to `backend/src/app.ts` — create a `ModelCardMetric` row, `requireRole("ADMIN", "RISK_OWNER")`, audited via the existing `audit()` helper. This route is currently missing entirely; the frontend already calls it and gets a 404.
-- [ ] Add `PUT /assets/:id/model-card/metrics/:metricId` to `backend/src/app.ts` — update a `ModelCardMetric` row, same role gate and audit pattern.
-- [ ] Add `DELETE /assets/:id/model-card/metrics/:metricId` to `backend/src/app.ts` — delete a `ModelCardMetric` row, same role gate and audit pattern.
-- [ ] Add `metrics: true` to the `include` on the `prisma.modelCard.findUnique` call in the `GET /assets/:id/model-card` handler (~line 314) — today it omits the relation entirely, so even seeded/existing metrics never show up on the asset detail page's Model Card form, only through the separate `/reports/model-metrics` endpoint.
-- [ ] Add an integration test in `backend/src/integration.test.ts` exercising create/update/delete on a metric (the existing RBAC matrix tests stop at `PUT /assets/:id/model-card` and never touch the metrics sub-routes — that's why this shipped broken with all tests green).
+- [x] Add `POST /assets/:id/model-card/metrics` to `backend/src/app.ts` — create a `ModelCardMetric` row, `requireRole("ADMIN", "RISK_OWNER")`, audited via the existing `audit()` helper. This route is currently missing entirely; the frontend already calls it and gets a 404.
+- [x] Add `PUT /assets/:id/model-card/metrics/:metricId` to `backend/src/app.ts` — update a `ModelCardMetric` row, same role gate and audit pattern.
+- [x] Add `DELETE /assets/:id/model-card/metrics/:metricId` to `backend/src/app.ts` — delete a `ModelCardMetric` row, same role gate and audit pattern.
+- [x] Add `metrics: true` to the `include` on the `prisma.modelCard.findUnique` call in the `GET /assets/:id/model-card` handler (~line 314) — today it omits the relation entirely, so even seeded/existing metrics never show up on the asset detail page's Model Card form, only through the separate `/reports/model-metrics` endpoint.
+- [x] Add an integration test in `backend/src/integration.test.ts` exercising create/update/delete on a metric (the existing RBAC matrix tests stop at `PUT /assets/:id/model-card` and never touch the metrics sub-routes — that's why this shipped broken with all tests green).
 
 ## Maturity gaps (do this second, in order — full rationale in `docs/roadmap.md`'s "Maturity gaps identified in supervisor review" section)
 
