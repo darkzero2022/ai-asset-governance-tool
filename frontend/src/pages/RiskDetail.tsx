@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 type Asset = { id: string; name: string };
 type Project = { id: string; name: string; status: string };
@@ -57,6 +57,8 @@ type Props = {
 };
 
 export default function RiskDetail(props: Props) {
+  const [controlSearch, setControlSearch] = useState("");
+
   if (!props.risk) {
     return (
       <section className="mx-auto max-w-7xl px-6 py-8">
@@ -72,6 +74,10 @@ export default function RiskDetail(props: Props) {
   const availableAssets = props.assets.filter((asset) => !linkedAssetIds.has(asset.id));
   const availableProjects = props.projects.filter((project) => !linkedProjectIds.has(project.id));
   const availableControls = props.controls.filter((control) => !linkedControlIds.has(control.id));
+  const normalizedControlSearch = controlSearch.trim().toLowerCase();
+  const suggestedControls = normalizedControlSearch
+    ? availableControls.filter((control) => `${control.name} ${control.mappedControlId}`.toLowerCase().includes(normalizedControlSearch))
+    : availableControls;
 
   return (
     <section className="mx-auto grid max-w-7xl gap-6 px-6 py-8 xl:grid-cols-[1.1fr_0.9fr]">
@@ -110,10 +116,11 @@ export default function RiskDetail(props: Props) {
 
       <aside className="space-y-6">
         <Panel title="Linked Controls">
+          <input className="mb-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Search controls by name or ID" value={controlSearch} onChange={(event) => setControlSearch(event.target.value)} />
           <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
             <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={props.selectedControlId} onChange={(event) => props.onSelectedControlChange(event.target.value)}>
               <option value="">Select control</option>
-              {availableControls.map((control) => <option key={control.id} value={control.id}>{control.mappedControlId}</option>)}
+              {suggestedControls.map((control) => <option key={control.id} value={control.id}>{control.mappedControlId} - {control.name}</option>)}
             </select>
             <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={props.selectedControlStatus} onChange={(event) => props.onSelectedControlStatusChange(event.target.value)}>
               {controlStatuses.map((status) => <option key={status} value={status}>{props.label(status)}</option>)}

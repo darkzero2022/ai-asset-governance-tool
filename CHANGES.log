@@ -417,3 +417,9 @@ Files: docs/deployment.md, docs/codex-backlog.md
 Summary: Added deployment guidance for separate backend/frontend services, production Postgres, secrets-manager usage instead of committed `.env` files, Prisma `migrate deploy`, scheduled jobs, and operational checks.
 Migration: none
 Tests: none — documentation only
+
+## 2026-08-01T22:46:06.9027758+03:00 — Add control catalog search suggestions
+Files: frontend/src/pages/RiskDetail.tsx, docs/codex-backlog.md
+Summary: Added a search-as-you-type filter to the risk control-link picker so users can find existing catalog controls by name or mapped control ID before creating near-duplicates. Suggestions remain limited to controls not already linked to the risk.
+Migration: none
+Tests: `npm run build`; `npm run test` in `frontend/`
