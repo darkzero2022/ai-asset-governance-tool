@@ -23,7 +23,7 @@ Phases 1–5, the UI polish pass, the stabilization pass, the Frontend IA overha
 - [x] **CSV export**: add `GET /risks/export/csv` and `GET /assets/export/csv` to `backend/src/app.ts`, respecting the same filters as the existing list endpoints.
 - [x] **Deployment documentation**: add `docs/deployment.md` covering containerizing both services, a real Postgres target, secrets-manager guidance instead of `.env` files, and the `prisma migrate deploy` process. Documentation only — no infrastructure changes.
 - [x] **Control catalog dedup**: add a search-as-you-type suggestion (case-insensitive `contains` match against `Control.name`/`mappedControlId`) to the control-link picker in `frontend/src/pages/RiskDetail.tsx`.
-- [ ] **EU AI Act tier suggestion**: add a non-binding pre-fill suggestion for `euAiActRiskTier` on the risk create/edit form based on asset `dataClassificationTouched` keywords or the linked risk's `sourceCategoryId` — user must still confirm/override, never auto-set silently.
+- [x] **EU AI Act tier suggestion**: add a non-binding pre-fill suggestion for `euAiActRiskTier` on the risk create/edit form based on asset `dataClassificationTouched` keywords or the linked risk's `sourceCategoryId` — user must still confirm/override, never auto-set silently.
 - [ ] **Asset field history**: add a "Field History" panel to `frontend/src/pages/AssetDetail.tsx` reading the existing `GET /audit-logs?entityType=AIAsset&entityId=` endpoint, rendering before/after diffs over time. No schema change needed — `AuditLog` already captures this.
 
 ## Import asset and Model Card data from a URL (do this third — full design, including required SSRF mitigations, in `docs/roadmap.md`)

@@ -423,3 +423,9 @@ Files: frontend/src/pages/RiskDetail.tsx, docs/codex-backlog.md
 Summary: Added a search-as-you-type filter to the risk control-link picker so users can find existing catalog controls by name or mapped control ID before creating near-duplicates. Suggestions remain limited to controls not already linked to the risk.
 Migration: none
 Tests: `npm run build`; `npm run test` in `frontend/`
+
+## 2026-08-01T22:49:37.9676222+03:00 — Add EU AI Act tier suggestion
+Files: frontend/src/pages/RiskRegister.tsx, docs/codex-backlog.md
+Summary: Added a non-binding EU AI Act tier suggestion to the risk form based on selected risk category or linked asset data-classification keywords. The suggestion only fills an empty tier field and remains user-editable with helper text prompting confirmation or override before saving.
+Migration: none
+Tests: `npm run build`; `npm run test` in `frontend/`

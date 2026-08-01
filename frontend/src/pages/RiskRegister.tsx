@@ -1,8 +1,8 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { RiskHeatmap } from "../components/RiskHeatmap";
 import { RiskTable } from "../components/RiskTable";
 
-type Asset = { id: string; name: string };
+type Asset = { id: string; name: string; dataClassificationTouched?: string | null };
 type FrameworkCategory = { framework: string; categoryId: string; name: string };
 type Risk = {
   id: string;
@@ -70,8 +70,16 @@ export default function RiskRegister(props: Props) {
   const [heatmapFilter, setHeatmapFilter] = useState<{ likelihood: number; impact: number } | null>(null);
   const filteredCategories = props.categories.filter((category) => category.framework === props.riskForm.sourceFramework);
   const displayedRisks = heatmapFilter ? props.risks.filter((risk) => risk.likelihood === heatmapFilter.likelihood && risk.impact === heatmapFilter.impact) : props.risks;
+  const selectedAsset = props.assets.find((asset) => asset.id === props.riskForm.assetId);
+  const suggestedEuTier = suggestEuAiActTier(selectedAsset, props.riskForm.sourceCategoryId);
   const updateFilter = (key: keyof Filters, value: string) => props.onFiltersChange({ ...props.filters, [key]: value });
   const updateForm = (key: keyof RiskForm, value: string | number) => props.onRiskFormChange({ ...props.riskForm, [key]: value });
+
+  useEffect(() => {
+    if (!props.riskForm.euAiActRiskTier && suggestedEuTier) {
+      props.onRiskFormChange({ ...props.riskForm, euAiActRiskTier: suggestedEuTier });
+    }
+  }, [suggestedEuTier, props.riskForm.assetId, props.riskForm.sourceCategoryId]);
 
   return (
     <section className="mx-auto grid max-w-7xl gap-6 px-6 py-8 xl:grid-cols-[1.2fr_0.8fr]">
@@ -108,6 +116,7 @@ export default function RiskRegister(props: Props) {
           <Select label="Framework" value={props.riskForm.sourceFramework} options={["NIST_AI_RMF", "EU_AI_ACT", "OWASP_LLM_TOP10"]} onChange={(value) => updateForm("sourceFramework", value)} labelValue={props.label} />
           <Select label="Category" value={props.riskForm.sourceCategoryId} options={filteredCategories.map((category) => category.categoryId)} optionLabels={Object.fromEntries(filteredCategories.map((category) => [category.categoryId, `${category.categoryId} - ${category.name}`]))} onChange={(value) => updateForm("sourceCategoryId", value)} labelValue={props.label} />
           <Select label="EU AI Act Tier" value={props.riskForm.euAiActRiskTier} options={["", "UNACCEPTABLE", "HIGH", "LIMITED", "MINIMAL"]} optionLabels={{ "": "Not applicable" }} onChange={(value) => updateForm("euAiActRiskTier", value)} labelValue={props.label} />
+          {suggestedEuTier && <p className="-mt-2 text-xs text-slate-500">Suggested tier: {props.label(suggestedEuTier)}. Confirm or override before saving.</p>}
           <Select label="Likelihood" value={String(props.riskForm.likelihood)} options={["1", "2", "3", "4", "5"]} onChange={(value) => updateForm("likelihood", Number(value))} labelValue={props.label} />
           <Select label="Impact" value={String(props.riskForm.impact)} options={["1", "2", "3", "4", "5"]} onChange={(value) => updateForm("impact", Number(value))} labelValue={props.label} />
           <Field label="Residual Risk Score" value={props.riskForm.residualRiskScore} onChange={(value) => updateForm("residualRiskScore", value)} />
@@ -121,6 +130,18 @@ export default function RiskRegister(props: Props) {
       </form>
     </section>
   );
+}
+
+function suggestEuAiActTier(asset: Asset | undefined, categoryId: string) {
+  if (categoryId === "UNACCEPTABLE") return "UNACCEPTABLE";
+  if (categoryId === "HIGH") return "HIGH";
+  if (categoryId === "LIMITED") return "LIMITED";
+  if (categoryId === "MINIMAL") return "MINIMAL";
+
+  const data = asset?.dataClassificationTouched?.toLowerCase() ?? "";
+  if (/(biometric|health|medical|criminal|employment|education|credit|sensitive|protected)/.test(data)) return "HIGH";
+  if (/(personal|customer|pii|identifier)/.test(data)) return "LIMITED";
+  return "";
 }
 
 function Field(props: { label: string; value: string; type?: string; onChange: (value: string) => void }) {
