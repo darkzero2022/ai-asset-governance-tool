@@ -72,6 +72,8 @@ type AuditLog = {
   action: string;
   timestamp: string;
   actor?: { name: string; email: string };
+  beforeJson?: Record<string, unknown> | null;
+  afterJson?: Record<string, unknown> | null;
 };
 
 type CurrentUser = {
@@ -191,6 +193,7 @@ function App() {
   const [risks, setRisks] = useState<Risk[]>([]);
   const [selectedRisk, setSelectedRisk] = useState<Risk | null>(null);
   const [riskAuditLogs, setRiskAuditLogs] = useState<AuditLog[]>([]);
+  const [assetAuditLogs, setAssetAuditLogs] = useState<AuditLog[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projectRisks, setProjectRisks] = useState<Risk[]>([]);
@@ -277,16 +280,18 @@ function App() {
   }
 
   async function loadAsset(id: string) {
-    const [data, projectData, modelCardData] = await Promise.all([
+    const [data, projectData, modelCardData, auditData] = await Promise.all([
       api<{ asset: AssetDetail }>(`/assets/${id}`),
       api<{ projects: Project[] }>(`/assets/${id}/projects`),
       api<{ modelCard: ModelCard | null; completeness: ModelCardCompleteness }>(`/assets/${id}/model-card`),
+      api<{ logs: AuditLog[] }>(`/audit-logs?entityType=AIAsset&entityId=${encodeURIComponent(id)}`),
     ]);
     setSelectedAsset(data.asset);
     setAssetProjects(projectData.projects);
     setAssetModelCard(modelCardData.modelCard);
     setAssetModelCardCompleteness(modelCardData.completeness);
     setModelCardForm(modelCardToForm(modelCardData.modelCard));
+    setAssetAuditLogs(auditData.logs);
   }
 
   async function loadRisk(id: string) {
@@ -938,6 +943,7 @@ function App() {
           risks={risks}
           projects={projects}
           linkedProjects={assetProjects}
+          auditLogs={assetAuditLogs}
           selectedRiskId={selectedAssetRiskId}
           selectedProjectId={selectedAssetProjectId}
           workflowComments={workflowComments}

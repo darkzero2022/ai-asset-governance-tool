@@ -47,6 +47,15 @@ type WorkflowEntry = {
   approvedBy: { name: string; email: string };
 };
 
+type AuditLog = {
+  id: string;
+  action: string;
+  timestamp: string;
+  actor?: { name: string; email: string };
+  beforeJson?: Record<string, unknown> | null;
+  afterJson?: Record<string, unknown> | null;
+};
+
 type AssetDetailData = Asset & {
   risks: Risk[];
   workflow: WorkflowEntry[];
@@ -78,6 +87,7 @@ type Props = {
   risks: Risk[];
   projects: Project[];
   linkedProjects: Project[];
+  auditLogs: AuditLog[];
   selectedRiskId: string;
   selectedProjectId: string;
   workflowComments: string;
@@ -235,6 +245,26 @@ export default function AssetDetail(props: Props) {
             ))}
           </div>
         </Panel>
+
+        <Panel title="Field History">
+          <div className="space-y-3">
+            {props.auditLogs.map((log) => {
+              const changes = diffAuditFields(log.beforeJson, log.afterJson);
+              return (
+                <div key={log.id} className="border-t border-slate-200 pt-3 text-sm first:border-t-0 first:pt-0">
+                  <p className="font-medium">{props.label(log.action)} by {log.actor?.name ?? "Unknown actor"}</p>
+                  <p className="text-slate-500">{new Date(log.timestamp).toLocaleString()}</p>
+                  {changes.length ? (
+                    <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                      {changes.map((change) => <li key={`${log.id}-${change.field}`}><span className="font-semibold">{change.field}</span>: {change.before || "Not set"} to {change.after || "Not set"}</li>)}
+                    </ul>
+                  ) : <p className="mt-2 text-xs text-slate-500">No field-level diff available.</p>}
+                </div>
+              );
+            })}
+            {!props.auditLogs.length && <p className="text-sm text-slate-500">No asset field history yet.</p>}
+          </div>
+        </Panel>
       </aside>
     </section>
   );
@@ -242,6 +272,21 @@ export default function AssetDetail(props: Props) {
 
 function Info(props: { label: string; value?: string | null }) {
   return <div><dt className="font-semibold">{props.label}</dt><dd className="text-slate-600">{props.value || "Not set"}</dd></div>;
+}
+
+function diffAuditFields(beforeJson?: Record<string, unknown> | null, afterJson?: Record<string, unknown> | null) {
+  if (!beforeJson || !afterJson) return [];
+  const ignored = new Set(["updatedAt", "createdAt", "createdById"]);
+  const fields = new Set([...Object.keys(beforeJson), ...Object.keys(afterJson)]);
+  return [...fields]
+    .filter((field) => !ignored.has(field) && JSON.stringify(beforeJson[field]) !== JSON.stringify(afterJson[field]))
+    .map((field) => ({ field, before: formatAuditValue(beforeJson[field]), after: formatAuditValue(afterJson[field]) }));
+}
+
+function formatAuditValue(value: unknown) {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
 }
 
 function Panel(props: { title: string; children: ReactNode }) {

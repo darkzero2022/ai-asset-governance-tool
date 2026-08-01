@@ -429,3 +429,9 @@ Files: frontend/src/pages/RiskRegister.tsx, docs/codex-backlog.md
 Summary: Added a non-binding EU AI Act tier suggestion to the risk form based on selected risk category or linked asset data-classification keywords. The suggestion only fills an empty tier field and remains user-editable with helper text prompting confirmation or override before saving.
 Migration: none
 Tests: `npm run build`; `npm run test` in `frontend/`
+
+## 2026-08-01T22:51:53.0971051+03:00 — Add asset field history panel
+Files: frontend/src/App.tsx, frontend/src/pages/AssetDetail.tsx, docs/codex-backlog.md
+Summary: Loaded existing AIAsset audit logs on the asset detail page and added a Field History panel that renders before/after diffs for changed fields. The panel avoids raw JSON inspection for reviewers while preserving an empty-state and fallback when diffs are unavailable.
+Migration: none
+Tests: `npm run build`; `npm run test` in `frontend/`
