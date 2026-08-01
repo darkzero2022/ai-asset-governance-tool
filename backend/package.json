@@ -11,7 +11,8 @@
     "validate:cyclonedx": "tsx scripts/validate-cyclonedx.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "notify:recertifications": "tsx src/jobs/notifyRecertifications.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

@@ -399,3 +399,9 @@ Files: backend/package.json, backend/package-lock.json, backend/src/app.ts, docs
 Summary: Replaced the OIDC stubs with an `openid-client` authorization-code flow using state, nonce, and PKCE. The flow discovers the issuer from env config, provisions/updates users by email as active VIEWER users by default, issues the existing JWT, and still returns 501 when OIDC env config is absent.
 Migration: none
 Tests: `npm run build`; `npm run test` in `backend/`
+
+## 2026-08-01T22:40:17.6157591+03:00 — Add recertification notification job
+Files: backend/package.json, backend/src/integrations/slack.ts, backend/src/jobs/notifyRecertifications.ts, docs/codex-backlog.md
+Summary: Added a runnable `npm run notify:recertifications` job that scans overdue/due-soon recertification schedules and stale draft/under-review assets, then sends Slack messages through the existing webhook pattern. The Slack helper now supports generic messages while preserving risk-status notifications.
+Migration: none
+Tests: `npm run build`; `npm run test`; `npm run notify:recertifications` in `backend/`
