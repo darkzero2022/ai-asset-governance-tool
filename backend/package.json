@@ -12,6 +12,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:seed:reference": "tsx prisma/seed-reference.ts",
+    "prisma:seed:demo": "tsx prisma/seed-demo.ts",
     "notify:recertifications": "tsx src/jobs/notifyRecertifications.ts"
   },
   "dependencies": {

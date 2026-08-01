@@ -459,3 +459,9 @@ Files: backend/src/app.ts, backend/src/integration.test.ts, docs/codex-backlog.m
 Summary: Hardened CSV export values by prefixing cells that start with formula trigger characters before quote escaping. Added integration coverage proving a risk description beginning with `=` is exported with the neutralizing prefix.
 Migration: none
 Tests: `npm run build`; `npm run test` in `backend/`
+
+## 2026-08-01T23:55:18.3762230+03:00 — Split reference and demo seed data
+Files: backend/package.json, backend/prisma/seed.ts, backend/prisma/seed-reference.ts, backend/prisma/seed-demo.ts, docs/codex-backlog.md
+Summary: Split required reference/admin seed data from optional fictional demo records so setup can create either an empty operational instance or a demo instance. Kept the existing `prisma:seed` workflow by chaining the new reference and demo seed scripts.
+Migration: none
+Tests: `npm run prisma:seed:reference`; `npm run prisma:seed:demo`; `npm run prisma:seed` in `backend/`

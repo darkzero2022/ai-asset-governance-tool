@@ -2,7 +2,22 @@
 
 Ordered task list for the Code Executor. Pull tasks top-to-bottom within a section; don't skip ahead to a later phase without the user's explicit go-ahead. Background/rationale for each item is in `docs/roadmap.md`. Log every completed item in `CHANGES.log` per the format in `AGENTS.md`.
 
-Everything through the Model Card metric CRUD fix, the maturity-gaps round (version control, user management, ownership RBAC, segregation of duties, real OIDC, notifications, CSV export, deployment docs, control dedup, EU AI Act tier suggestion, field history), and the URL import feature (with SSRF mitigations) are complete and verified — both by reading the code and by actually running the test suites (27 backend, 6 frontend, all passing). One live-verified gap survived that round: CSV export has no formula-injection protection. **Start with "Fix CSV formula-injection protection" below.**
+Everything through the Model Card metric CRUD fix, the maturity-gaps round (version control, user management, ownership RBAC, segregation of duties, real OIDC, notifications, CSV export, deployment docs, control dedup, EU AI Act tier suggestion, field history), and the URL import feature (with SSRF mitigations) are complete and verified — both by reading the code and by actually running the test suites (27 backend, 6 frontend, all passing). One live-verified gap survived that round: CSV export has no formula-injection protection. **Work through the sections below in order: "Fix CSV formula-injection protection," then "Operational tooling: setup, start/stop, backup/restore, docs, repo upload."**
+
+## Operational tooling: setup, start/stop, backup/restore, docs, repo upload (do this after the CSV fix)
+
+- [x] Split `backend/prisma/seed.ts` into `backend/prisma/seed-reference.ts` (framework categories, EU AI Act tier reference, default admin user — always required) and `backend/prisma/seed-demo.ts` (the fictional assets/projects/risks/controls/Model Card/recertifications — optional); add `prisma:seed:reference` and `prisma:seed:demo` npm scripts to `backend/package.json`; keep `prisma:seed` running both in sequence.
+- [ ] Add `backend/Dockerfile` and `frontend/Dockerfile`, and extend `docker-compose.yml` (or add `docker-compose.full.yml`) with `backend`/`frontend` services alongside the existing `postgres` service, for the Docker install mode.
+- [ ] Add `scripts/setup.sh` — interactive (with `--mode=local|docker`, `--data=empty|demo`, `--yes` flags for non-interactive use): checks Node/npm/Docker prerequisites; generates `backend/.env` from `.env.example` with a strong random `JWT_SECRET` (`openssl rand -hex 32`) if missing; installs dependencies or builds Docker images per the chosen mode; runs `prisma migrate deploy`; runs the chosen seed variant; writes a `.aibom-mode` marker file. Must be idempotent (safe to re-run).
+- [ ] Add `scripts/start.sh` — reads `.aibom-mode` (errors with a clear message if `setup.sh` hasn't been run); local mode starts the Postgres container plus backend/frontend as background processes with PID files and logs under `logs/`, then prints both URLs once the backend health check responds; docker mode runs `docker compose up -d`.
+- [ ] Add `scripts/stop.sh` — the complement to `start.sh`: local mode kills the tracked PIDs and stops the Postgres container; docker mode runs `docker compose down`.
+- [ ] Add `scripts/backup.sh` — `pg_dump` via `docker compose exec -T postgres`, output to a timestamped file under `backups/`.
+- [ ] Add `scripts/restore.sh <file>` — requires explicit confirmation (`--yes` flag or interactive prompt) before overwriting the current database, warns and recommends a fresh backup first, then restores via `psql`/`pg_restore` against the same container.
+- [ ] Add `backups/`, `logs/`, and `.aibom-mode` to `.gitignore`.
+- [ ] Add the `docs/guide/` documentation set per `docs/roadmap.md`'s "Documentation set + repository upload" section — one substantive file per feature area (`README.md` index, `01-getting-started.md` through `10-operations.md`), not a single unwieldy file.
+- [ ] Create a new **private** GitHub repository (Codex has GitHub access per the user) and push the full local commit history plus every commit from this round to it. Do not make it public.
+
+## Fix CSV formula-injection protection (do this first — live-verified gap)
 
 ## Fix Model Card metric CRUD (do this first — live-verified gap, CHANGES.log claim doesn't match reality)
 
