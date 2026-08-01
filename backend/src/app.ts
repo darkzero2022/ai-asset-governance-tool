@@ -217,6 +217,15 @@ function cleanExpiredOidcStates() {
   }
 }
 
+function csvValue(value: unknown) {
+  const text = value === null || value === undefined ? "" : String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function csv(rows: unknown[][]) {
+  return rows.map((row) => row.map(csvValue).join(",")).join("\n");
+}
+
 export const app = express();
 
 const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173,http://127.0.0.1:5173")
@@ -427,6 +436,31 @@ app.post("/assets", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req,
     const asset = await prisma.aIAsset.create({ data: { ...body, createdById: req.user!.id } });
     await audit(req.user!.id, "AIAsset", asset.id, "CREATE", undefined, asset);
     res.status(201).json({ asset });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/assets/export/csv", requireAuth, async (req, res, next) => {
+  try {
+    const { status, type, hostingModel, networkDependency } = req.query;
+    const assets = await prisma.aIAsset.findMany({
+      where: {
+        ...(status ? { status: status as never } : {}),
+        ...(type ? { type: type as never } : {}),
+        ...(hostingModel ? { hostingModel: hostingModel as never } : {}),
+        ...(networkDependency ? { networkDependency: networkDependency as never } : {}),
+      },
+      include: { _count: { select: { riskLinks: true, projectLinks: true } } },
+      orderBy: { updatedAt: "desc" },
+    });
+    const body = csv([
+      ["id", "name", "version", "type", "supplier", "provider", "hostingModel", "networkDependency", "status", "riskCount", "projectUsageCount", "updatedAt"],
+      ...assets.map((asset) => [asset.id, asset.name, asset.version, asset.type, asset.supplier, asset.provider, asset.hostingModel, asset.networkDependency, asset.status, asset._count.riskLinks, asset._count.projectLinks, asset.updatedAt.toISOString()]),
+    ]);
+    res.header("Content-Type", "text/csv; charset=utf-8");
+    res.attachment("assets.csv");
+    res.send(body);
   } catch (error) {
     next(error);
   }
@@ -921,6 +955,32 @@ app.get("/risks", requireAuth, async (req, res, next) => {
       take: page.take,
     });
     res.json({ risks: risks.map(riskResponse), pagination: { ...page, total } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/risks/export/csv", requireAuth, async (req, res, next) => {
+  try {
+    const { assetId, sourceFramework, status } = req.query;
+    const includeArchived = req.query.includeArchived === "true";
+    const risks = await prisma.risk.findMany({
+      where: {
+        ...(includeArchived ? {} : { archived: false }),
+        ...(assetId ? { assets: { some: { assetId: String(assetId) } } } : {}),
+        ...(sourceFramework ? { sourceFramework: sourceFramework as never } : {}),
+        ...(status ? { status: status as never } : {}),
+      },
+      include: { assets: { include: { asset: true } }, controlLinks: { include: { control: true } } },
+      orderBy: { inherentRiskScore: "desc" },
+    });
+    const body = csv([
+      ["id", "description", "severity", "sourceFramework", "sourceCategoryId", "status", "likelihood", "impact", "inherentRiskScore", "residualRiskScore", "owner", "dueDate", "assetNames", "controlIds", "archived"],
+      ...risks.map((risk) => [risk.id, risk.description, severityOf(risk.inherentRiskScore), risk.sourceFramework, risk.sourceCategoryId, risk.status, risk.likelihood, risk.impact, risk.inherentRiskScore, risk.residualRiskScore, risk.owner, risk.dueDate?.toISOString() ?? "", risk.assets.map((link) => link.asset.name).join("; "), risk.controlLinks.map((link) => link.control.mappedControlId).join("; "), risk.archived]),
+    ]);
+    res.header("Content-Type", "text/csv; charset=utf-8");
+    res.attachment("risks.csv");
+    res.send(body);
   } catch (error) {
     next(error);
   }

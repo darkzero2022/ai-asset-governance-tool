@@ -405,3 +405,9 @@ Files: backend/package.json, backend/src/integrations/slack.ts, backend/src/jobs
 Summary: Added a runnable `npm run notify:recertifications` job that scans overdue/due-soon recertification schedules and stale draft/under-review assets, then sends Slack messages through the existing webhook pattern. The Slack helper now supports generic messages while preserving risk-status notifications.
 Migration: none
 Tests: `npm run build`; `npm run test`; `npm run notify:recertifications` in `backend/`
+
+## 2026-08-01T22:42:59.1813463+03:00 — Add filtered CSV exports
+Files: backend/src/app.ts, backend/src/integration.test.ts, docs/codex-backlog.md
+Summary: Added `GET /assets/export/csv` and `GET /risks/export/csv` with the same filter semantics as the existing list endpoints and safe CSV escaping. Integration coverage verifies filtered CSV responses for both assets and risks.
+Migration: none
+Tests: `npm run build`; `npm run test` in `backend/`

@@ -436,6 +436,25 @@ describe("archive-not-delete semantics", () => {
   });
 });
 
+describe("CSV exports", () => {
+  it("exports filtered assets and risks as CSV", async () => {
+    const asset = await createAsset({ status: "DEPLOYED", type: "MODEL" });
+    await createRisk(asset.id, { status: "OPEN", sourceFramework: "NIST_AI_RMF" });
+
+    await request(app).get("/assets/export/csv?status=DEPLOYED&type=MODEL").set(auth("VIEWER")).expect(200).expect((response) => {
+      expect(response.header["content-type"]).toContain("text/csv");
+      expect(response.text).toContain("id,name,version,type");
+      expect(response.text).toContain(asset.id);
+    });
+
+    await request(app).get(`/risks/export/csv?assetId=${asset.id}&sourceFramework=NIST_AI_RMF`).set(auth("VIEWER")).expect(200).expect((response) => {
+      expect(response.header["content-type"]).toContain("text/csv");
+      expect(response.text).toContain("description,severity");
+      expect(response.text).toContain(asset.name);
+    });
+  });
+});
+
 describe("export fixtures", () => {
   it("validates a CycloneDX fixture with risks, controls, and Model Card", async () => {
     const asset = await createAsset({ type: "MODEL" });
