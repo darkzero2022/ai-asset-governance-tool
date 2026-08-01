@@ -1,0 +1,340 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AssetType {
+  MODEL
+  DATASET
+  SERVICE
+  LIBRARY
+}
+
+enum HostingModel {
+  SAAS_API
+  SELF_HOSTED
+  EMBEDDED_IN_APP
+}
+
+enum NetworkDependency {
+  AIR_GAPPED
+  HYBRID
+  FULLY_CONNECTED
+}
+
+enum ProjectStatus {
+  ACTIVE
+  INACTIVE
+  RETIRED
+}
+
+enum AssetStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  DEPLOYED
+  RETIRED
+}
+
+enum SourceFramework {
+  NIST_AI_RMF
+  EU_AI_ACT
+  OWASP_LLM_TOP10
+}
+
+enum EuAiActRiskTier {
+  UNACCEPTABLE
+  HIGH
+  LIMITED
+  MINIMAL
+}
+
+enum RiskStatus {
+  OPEN
+  IN_PROGRESS
+  MITIGATED
+  ACCEPTED
+}
+
+enum ControlImplementationStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  IMPLEMENTED
+  VERIFIED
+}
+
+enum Role {
+  ADMIN
+  RISK_OWNER
+  APPROVER
+  VIEWER
+}
+
+model User {
+  id           String               @id @default(cuid())
+  email        String               @unique
+  name         String
+  passwordHash String
+  role         Role                 @default(VIEWER)
+  createdAt    DateTime             @default(now())
+  assets       AIAsset[]            @relation("AssetCreator")
+  approvals    GovernanceWorkflow[] @relation("WorkflowApprover")
+  auditLogs    AuditLog[]           @relation("AuditActor")
+  projects     Project[]            @relation("ProjectCreator")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  action     String
+  actorId    String
+  actor      User     @relation("AuditActor", fields: [actorId], references: [id])
+  beforeJson Json?
+  afterJson  Json?
+  timestamp  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([timestamp])
+}
+
+model AIAsset {
+  id                         String               @id @default(cuid())
+  name                       String
+  version                    String
+  type                       AssetType
+  supplier                   String
+  provider                   String?
+  hostingModel               HostingModel
+  networkDependency          NetworkDependency    @default(FULLY_CONNECTED)
+  license                    String?
+  dataClassificationTouched  String?
+  trainingDataProvenance     String?
+  downstreamConsumers        String?
+  status                     AssetStatus          @default(DRAFT)
+  createdById                String
+  createdBy                  User                 @relation("AssetCreator", fields: [createdById], references: [id])
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+  riskLinks                  AssetRisk[]
+  projectLinks               ProjectAsset[]
+  parentDependencies         AssetDependency[]    @relation("AssetDependencyParent")
+  childDependencies          AssetDependency[]    @relation("AssetDependencyChild")
+  workflow                   GovernanceWorkflow[]
+  recertificationSchedule    RecertificationSchedule?
+  modelCard                  ModelCard?
+
+  @@index([status])
+  @@index([type])
+  @@index([hostingModel])
+  @@index([networkDependency])
+}
+
+model Risk {
+  id                    String           @id @default(cuid())
+  sourceFramework       SourceFramework
+  sourceCategoryId      String
+  euAiActRiskTier       EuAiActRiskTier?
+  description           String
+  likelihood            Int
+  impact                Int
+  inherentRiskScore     Int
+  residualRiskScore     Int?
+  treatmentPlan         String?
+  owner                 String?
+  dueDate               DateTime?
+  status                RiskStatus       @default(OPEN)
+  archived              Boolean          @default(false)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  controlLinks          RiskControl[]
+  assets                AssetRisk[]
+  projects              ProjectRisk[]
+  frameworkCategory     FrameworkCategory @relation(fields: [sourceFramework, sourceCategoryId], references: [framework, categoryId])
+
+  @@index([sourceFramework])
+  @@index([status])
+  @@index([archived])
+  @@index([inherentRiskScore])
+}
+
+model ModelCard {
+  id                          String   @id @default(cuid())
+  assetId                     String   @unique
+  asset                       AIAsset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  approach                    String?
+  task                        String?
+  architectureFamily          String?
+  modelArchitecture           String?
+  datasetsDescription         String?
+  inputsDescription           String?
+  outputsDescription          String?
+  intendedUsers               String?
+  useCases                    String?
+  technicalLimitations        String?
+  performanceTradeoffs        String?
+  ethicalConsiderations       String?
+  fairnessAssessments         String?
+  environmentalConsiderations String?
+  performanceMetrics          Json?
+  metrics                     ModelCardMetric[]
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+}
+
+model ModelCardMetric {
+  id          String    @id @default(cuid())
+  modelCardId String
+  modelCard   ModelCard @relation(fields: [modelCardId], references: [id], onDelete: Cascade)
+  metricName  String
+  metricValue Float
+  slice       String?
+  recordedAt  DateTime  @default(now())
+
+  @@index([modelCardId])
+  @@index([metricName])
+}
+
+model AssetRisk {
+  id       String   @id @default(cuid())
+  assetId  String
+  asset    AIAsset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  riskId   String
+  risk     Risk     @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  linkedAt DateTime @default(now())
+
+  @@unique([assetId, riskId])
+  @@index([riskId])
+}
+
+model AssetDependency {
+  id            String  @id @default(cuid())
+  parentAssetId String
+  parentAsset   AIAsset @relation("AssetDependencyParent", fields: [parentAssetId], references: [id], onDelete: Cascade)
+  childAssetId  String
+  childAsset    AIAsset @relation("AssetDependencyChild", fields: [childAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([parentAssetId, childAssetId])
+  @@index([childAssetId])
+}
+
+model Project {
+  id            String         @id @default(cuid())
+  name          String
+  description   String?
+  businessOwner String?
+  status        ProjectStatus  @default(ACTIVE)
+  createdById   String
+  createdBy     User           @relation("ProjectCreator", fields: [createdById], references: [id])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  assetLinks    ProjectAsset[]
+  riskLinks     ProjectRisk[]
+
+  @@index([status])
+}
+
+model ProjectAsset {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assetId   String
+  asset     AIAsset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  linkedAt  DateTime @default(now())
+
+  @@unique([projectId, assetId])
+  @@index([assetId])
+}
+
+model ProjectRisk {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  riskId    String
+  risk      Risk     @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  linkedAt  DateTime @default(now())
+
+  @@unique([projectId, riskId])
+  @@index([riskId])
+}
+
+model Control {
+  id              String          @id @default(cuid())
+  name            String
+  mappedFramework SourceFramework
+  mappedControlId String
+  description     String?
+  archived        Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  links           RiskControl[]
+
+  @@unique([mappedFramework, mappedControlId])
+  @@index([archived])
+}
+
+model RiskControl {
+  id                   String                      @id @default(cuid())
+  riskId               String
+  risk                 Risk                        @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  controlId            String
+  control              Control                     @relation(fields: [controlId], references: [id], onDelete: Restrict)
+  implementationStatus ControlImplementationStatus @default(NOT_STARTED)
+  evidenceNotes        String?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+
+  @@unique([riskId, controlId])
+  @@index([controlId])
+}
+
+model GovernanceWorkflow {
+  id           String      @id @default(cuid())
+  assetId      String
+  asset        AIAsset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  fromStatus   AssetStatus
+  toStatus     AssetStatus
+  stepIndex    Int         @default(0)
+  requiredRole Role?
+  approvedById String
+  approvedBy   User        @relation("WorkflowApprover", fields: [approvedById], references: [id])
+  timestamp    DateTime    @default(now())
+  comments     String?
+
+  @@index([assetId])
+  @@index([timestamp])
+}
+
+model RecertificationSchedule {
+  id          String   @id @default(cuid())
+  assetId     String   @unique
+  asset       AIAsset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  cadenceDays Int
+  nextDueDate DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FrameworkCategory {
+  id          String          @id @default(cuid())
+  framework   SourceFramework
+  categoryId  String
+  name        String
+  description String
+  risks       Risk[]
+
+  @@unique([framework, categoryId])
+  @@index([framework])
+}
+
+model EuAiActRiskTierReference {
+  id          String          @id @default(cuid())
+  tier        EuAiActRiskTier @unique
+  name        String
+  description String
+}

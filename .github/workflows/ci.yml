@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Start Postgres
+        run: docker compose up -d
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Prepare backend database
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://aibom:aibom@127.0.0.1:55432/aibom?schema=public
+          JWT_SECRET: ci-secret
+        run: |
+          npx prisma migrate deploy
+          npm run prisma:seed
+
+      - name: Test backend
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://aibom:aibom@127.0.0.1:55432/aibom?schema=public
+          JWT_SECRET: ci-secret
+        run: npm run test
+
+      - name: Build backend
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://aibom:aibom@127.0.0.1:55432/aibom?schema=public
+          JWT_SECRET: ci-secret
+        run: npm run build
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Test frontend
+        working-directory: frontend
+        run: npm run test
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: http://localhost:4000
+        run: npm run build
