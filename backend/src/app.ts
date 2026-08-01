@@ -519,6 +519,15 @@ app.post("/assets/:id/transition", requireAuth, async (req, res, next) => {
       return;
     }
 
+    if (body.toStatus === "APPROVED") {
+      const underReviewStep = await prisma.governanceWorkflow.findFirst({ where: { assetId: asset.id, toStatus: "UNDER_REVIEW" }, orderBy: { timestamp: "desc" } });
+
+      if (underReviewStep?.approvedById === req.user!.id) {
+        res.status(403).json({ error: "Segregation of duties prevents approving an asset you moved to review" });
+        return;
+      }
+    }
+
     if (body.toStatus === "APPROVED" || body.toStatus === "DEPLOYED") {
       const blockingRisks = await prisma.risk.findMany({
         where: { archived: false, assets: { some: { assetId: asset.id } }, status: { in: ["OPEN", "IN_PROGRESS"] }, inherentRiskScore: { gte: HIGH_SEVERITY_MIN_SCORE } },
@@ -881,6 +890,11 @@ app.put("/risks/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (re
 
     if (req.user!.role === "RISK_OWNER" && before.createdById !== req.user!.id) {
       res.status(403).json({ error: "RISK_OWNER can only edit risks they created" });
+      return;
+    }
+
+    if (riskData.status === "ACCEPTED" && before.createdById === req.user!.id) {
+      res.status(403).json({ error: "Segregation of duties prevents accepting a risk you created" });
       return;
     }
 

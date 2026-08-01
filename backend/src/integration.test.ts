@@ -354,6 +354,30 @@ describe("asset transition policy gates", () => {
   });
 });
 
+describe("segregation of duties", () => {
+  it("blocks approving an asset moved to review by the same user", async () => {
+    const asset = await createAsset({ type: "MODEL", status: "DRAFT" });
+    await prisma.modelCard.create({ data: { assetId: asset.id, ...modelCardBody } });
+
+    await request(app).post(`/assets/${asset.id}/transition`).set(auth("ADMIN")).send({ toStatus: "UNDER_REVIEW" }).expect(200);
+    await request(app).post(`/assets/${asset.id}/transition`).set(auth("ADMIN")).send({ toStatus: "APPROVED" }).expect(403).expect((response) => {
+      expect(response.body.error).toMatch(/Segregation of duties/);
+    });
+    await request(app).post(`/assets/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(200);
+  });
+
+  it("blocks accepting a risk created by the same user", async () => {
+    const asset = await createAsset({ createdById: userIds.get("RISK_OWNER")! });
+    const risk = await createRisk(asset.id, { createdById: userIds.get("RISK_OWNER")! });
+    const payload = { assetId: asset.id, sourceFramework: "NIST_AI_RMF", sourceCategoryId: "GOVERN", description: `${runId}-sod-risk`, likelihood: 2, impact: 3, status: "ACCEPTED" };
+
+    await request(app).put(`/risks/${risk.id}`).set(auth("RISK_OWNER")).send(payload).expect(403).expect((response) => {
+      expect(response.body.error).toMatch(/Segregation of duties/);
+    });
+    await request(app).put(`/risks/${risk.id}`).set(auth("ADMIN")).send(payload).expect(200);
+  });
+});
+
 describe("Model Card metric CRUD", () => {
   it("creates, returns, updates, audits, and deletes metric rows", async () => {
     const asset = await createAsset({ type: "MODEL" });

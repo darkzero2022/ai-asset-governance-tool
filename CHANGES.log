@@ -387,3 +387,9 @@ Files: backend/prisma/schema.prisma, backend/prisma/migrations/20260801193000_ex
 Summary: Added `Risk.createdById`, backfilled existing risks to the seed admin user, and enforced that `RISK_OWNER` can only update assets and risks they created while `ADMIN` bypasses ownership scope. Integration tests now cover owned and not-owned edit cases.
 Migration: 20260801193000_expand_risk_created_by (expand), 20260801193100_contract_risk_created_by (contract), backfill script: backend/prisma/scripts/backfill-risk-created-by.ts
 Tests: `npm run prisma:generate`; `npm run prisma:migrate`; `npm run prisma:seed`; `npm run build`; `npm run test` in `backend/`
+
+## 2026-08-01T22:30:20.1837911+03:00 — Enforce segregation of duties gates
+Files: backend/src/app.ts, backend/src/integration.test.ts, docs/codex-backlog.md
+Summary: Asset approval now rejects the same user who moved that asset to under-review, and risk acceptance rejects the risk creator. Integration tests cover both blocked same-user paths and allowed alternate-user paths.
+Migration: none
+Tests: `npm run build`; `npm run test` in `backend/`
