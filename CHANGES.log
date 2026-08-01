@@ -393,3 +393,9 @@ Files: backend/src/app.ts, backend/src/integration.test.ts, docs/codex-backlog.m
 Summary: Asset approval now rejects the same user who moved that asset to under-review, and risk acceptance rejects the risk creator. Integration tests cover both blocked same-user paths and allowed alternate-user paths.
 Migration: none
 Tests: `npm run build`; `npm run test` in `backend/`
+
+## 2026-08-01T22:38:26.9582299+03:00 — Implement generic OIDC login flow
+Files: backend/package.json, backend/package-lock.json, backend/src/app.ts, docs/codex-backlog.md
+Summary: Replaced the OIDC stubs with an `openid-client` authorization-code flow using state, nonce, and PKCE. The flow discovers the issuer from env config, provisions/updates users by email as active VIEWER users by default, issues the existing JWT, and still returns 501 when OIDC env config is absent.
+Migration: none
+Tests: `npm run build`; `npm run test` in `backend/`

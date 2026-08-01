@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import cors from "cors";
 import express from "express";
 import rateLimit from "express-rate-limit";
+import { Issuer, generators, type Client } from "openid-client";
 import { z } from "zod";
 import { AssetStatus, Prisma } from "@prisma/client";
 import { requireAuth, signToken } from "./auth.js";
@@ -185,6 +186,37 @@ async function countRiskSeverityBuckets(where: Prisma.RiskWhereInput = {}) {
   return Object.fromEntries(entries);
 }
 
+type OidcState = {
+  nonce: string;
+  codeVerifier: string;
+  expiresAt: number;
+};
+
+const oidcStates = new Map<string, OidcState>();
+let oidcClientPromise: Promise<Client> | undefined;
+
+function oidcConfigured() {
+  return Boolean(process.env.OIDC_ISSUER_URL && process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET && process.env.OIDC_REDIRECT_URI);
+}
+
+async function oidcClient() {
+  if (!oidcConfigured()) throw new Error("OIDC is not configured");
+  oidcClientPromise ??= Issuer.discover(process.env.OIDC_ISSUER_URL!).then((issuer) => new issuer.Client({
+    client_id: process.env.OIDC_CLIENT_ID!,
+    client_secret: process.env.OIDC_CLIENT_SECRET!,
+    redirect_uris: [process.env.OIDC_REDIRECT_URI!],
+    response_types: ["code"],
+  }));
+  return oidcClientPromise;
+}
+
+function cleanExpiredOidcStates() {
+  const now = Date.now();
+  for (const [state, value] of oidcStates.entries()) {
+    if (value.expiresAt <= now) oidcStates.delete(state);
+  }
+}
+
 export const app = express();
 
 const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173,http://127.0.0.1:5173")
@@ -223,19 +255,79 @@ app.get("/auth/me", requireAuth, async (req, res, next) => {
   }
 });
 
-app.get("/auth/oidc/login", (_req, res) => {
-  const authorizationUrl = process.env.OIDC_AUTHORIZATION_URL;
+app.get("/auth/oidc/login", async (_req, res, next) => {
+  try {
+    if (!oidcConfigured()) {
+      res.status(501).json({ error: "OIDC is not configured" });
+      return;
+    }
 
-  if (!authorizationUrl) {
-    res.status(501).json({ error: "OIDC is not configured" });
-    return;
+    cleanExpiredOidcStates();
+    const client = await oidcClient();
+    const state = generators.state();
+    const nonce = generators.nonce();
+    const codeVerifier = generators.codeVerifier();
+    oidcStates.set(state, { nonce, codeVerifier, expiresAt: Date.now() + 10 * 60 * 1000 });
+
+    res.redirect(client.authorizationUrl({
+      scope: "openid email profile",
+      state,
+      nonce,
+      code_challenge: generators.codeChallenge(codeVerifier),
+      code_challenge_method: "S256",
+    }));
+  } catch (error) {
+    next(error);
   }
-
-  res.redirect(authorizationUrl);
 });
 
-app.get("/auth/oidc/callback", (_req, res) => {
-  res.status(501).json({ error: "OIDC callback handling is not configured for this deployment" });
+app.get("/auth/oidc/callback", async (req, res, next) => {
+  try {
+    if (!oidcConfigured()) {
+      res.status(501).json({ error: "OIDC is not configured" });
+      return;
+    }
+
+    cleanExpiredOidcStates();
+    const state = typeof req.query.state === "string" ? req.query.state : "";
+    const storedState = oidcStates.get(state);
+
+    if (!storedState) {
+      res.status(400).json({ error: "Invalid or expired OIDC state" });
+      return;
+    }
+
+    oidcStates.delete(state);
+    const client = await oidcClient();
+    const params = client.callbackParams(req);
+    const tokenSet = await client.callback(process.env.OIDC_REDIRECT_URI!, params, { state, nonce: storedState.nonce, code_verifier: storedState.codeVerifier });
+    const claims = tokenSet.claims();
+    const email = claims.email;
+
+    if (!email) {
+      res.status(400).json({ error: "OIDC provider did not return an email claim" });
+      return;
+    }
+
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: { name: claims.name ?? email, active: true },
+      create: { email, name: claims.name ?? email, role: "VIEWER", active: true, passwordHash: await bcrypt.hash(generators.random(32), 10) },
+    });
+    const token = signToken({ id: user.id, email: user.email, role: user.role });
+    const redirectUrl = process.env.OIDC_POST_LOGIN_REDIRECT_URL;
+
+    if (redirectUrl) {
+      const url = new URL(redirectUrl);
+      url.searchParams.set("token", token);
+      res.redirect(url.toString());
+      return;
+    }
+
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get("/users", requireAuth, requireRole("ADMIN"), async (_req, res, next) => {
