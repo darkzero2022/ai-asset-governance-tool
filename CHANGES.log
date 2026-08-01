@@ -369,3 +369,9 @@ Files: backend/src/app.ts, backend/src/integration.test.ts, docs/codex-backlog.m
 Summary: Added the missing audited `POST`/`PUT`/`DELETE` Model Card metric routes and included metric rows in `GET /assets/:id/model-card`. Added an integration test that creates, reads, updates, audits, and deletes a metric row so the frontend metric editor no longer targets missing endpoints.
 Migration: none
 Tests: `npm run build`; `npm run test` in `backend/`
+
+## 2026-08-01T22:18:25.4074162+03:00 — Establish git change discipline
+Files: docs/codex-backlog.md, CHANGES.log
+Summary: Initialized git history with a baseline commit and confirmed subsequent work now lands as reviewable commits alongside `CHANGES.log` entries. The metric CRUD fix is already captured in its own follow-up commit.
+Migration: none
+Tests: none — version-control bookkeeping only
