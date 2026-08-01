@@ -11,9 +11,9 @@ Everything through the Model Card metric CRUD fix, the maturity-gaps round (vers
 - [x] Add `scripts/setup.sh` — interactive (with `--mode=local|docker`, `--data=empty|demo`, `--yes` flags for non-interactive use): checks Node/npm/Docker prerequisites; generates `backend/.env` from `.env.example` with a strong random `JWT_SECRET` (`openssl rand -hex 32`) if missing; installs dependencies or builds Docker images per the chosen mode; runs `prisma migrate deploy`; runs the chosen seed variant; writes a `.aibom-mode` marker file. Must be idempotent (safe to re-run).
 - [x] Add `scripts/start.sh` — reads `.aibom-mode` (errors with a clear message if `setup.sh` hasn't been run); local mode starts the Postgres container plus backend/frontend as background processes with PID files and logs under `logs/`, then prints both URLs once the backend health check responds; docker mode runs `docker compose up -d`.
 - [x] Add `scripts/stop.sh` — the complement to `start.sh`: local mode kills the tracked PIDs and stops the Postgres container; docker mode runs `docker compose down`.
-- [ ] Add `scripts/backup.sh` — `pg_dump` via `docker compose exec -T postgres`, output to a timestamped file under `backups/`.
-- [ ] Add `scripts/restore.sh <file>` — requires explicit confirmation (`--yes` flag or interactive prompt) before overwriting the current database, warns and recommends a fresh backup first, then restores via `psql`/`pg_restore` against the same container.
-- [ ] Add `backups/`, `logs/`, and `.aibom-mode` to `.gitignore`.
+- [x] Add `scripts/backup.sh` — `pg_dump` via `docker compose exec -T postgres`, output to a timestamped file under `backups/`.
+- [x] Add `scripts/restore.sh <file>` — requires explicit confirmation (`--yes` flag or interactive prompt) before overwriting the current database, warns and recommends a fresh backup first, then restores via `psql`/`pg_restore` against the same container.
+- [x] Add `backups/`, `logs/`, and `.aibom-mode` to `.gitignore`.
 - [ ] Add the `docs/guide/` documentation set per `docs/roadmap.md`'s "Documentation set + repository upload" section — one substantive file per feature area (`README.md` index, `01-getting-started.md` through `10-operations.md`), not a single unwieldy file.
 - [ ] Create a new **private** GitHub repository (Codex has GitHub access per the user) and push the full local commit history plus every commit from this round to it. Do not make it public.
 

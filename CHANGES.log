@@ -477,3 +477,9 @@ Files: scripts/setup.sh, scripts/start.sh, scripts/stop.sh, docs/codex-backlog.m
 Summary: Added idempotent Linux setup/start/stop scripts for local host-Node mode and full Docker mode. Setup generates a strong JWT secret when needed, installs or builds dependencies, runs migrations and selected seed data, and records the chosen mode for start/stop orchestration.
 Migration: none
 Tests: `bash -n scripts/setup.sh`; `bash -n scripts/start.sh`; `bash -n scripts/stop.sh`
+
+## 2026-08-02T00:03:53.0807514+03:00 — Add backup and restore scripts
+Files: scripts/backup.sh, scripts/restore.sh, .gitignore, docs/codex-backlog.md
+Summary: Added database backup and destructive restore scripts using the Docker-managed Postgres container. Restore requires `--yes` or an explicit `RESTORE` confirmation before dropping and recreating the public schema, and runtime backup/log/mode paths are now ignored.
+Migration: none
+Tests: `bash -n scripts/backup.sh`; `bash -n scripts/restore.sh`; `bash scripts/backup.sh`; restore not executed because it intentionally overwrites the active database
