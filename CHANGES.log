@@ -465,3 +465,9 @@ Files: backend/package.json, backend/prisma/seed.ts, backend/prisma/seed-referen
 Summary: Split required reference/admin seed data from optional fictional demo records so setup can create either an empty operational instance or a demo instance. Kept the existing `prisma:seed` workflow by chaining the new reference and demo seed scripts.
 Migration: none
 Tests: `npm run prisma:seed:reference`; `npm run prisma:seed:demo`; `npm run prisma:seed` in `backend/`
+
+## 2026-08-02T00:00:51.2822495+03:00 — Add Docker install path
+Files: backend/Dockerfile, frontend/Dockerfile, docker-compose.yml, docs/codex-backlog.md
+Summary: Added container builds for the backend and frontend and extended Docker Compose so full-stack Docker mode can run Postgres, API, and UI together while local mode can still start only Postgres. The backend image installs OpenSSL for Prisma compatibility and runs migrations before starting.
+Migration: none
+Tests: `docker compose config`; `JWT_SECRET=docker-build-test-secret docker compose build backend frontend`; `JWT_SECRET=docker-build-test-secret docker compose build backend`
