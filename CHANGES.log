@@ -483,3 +483,9 @@ Files: scripts/backup.sh, scripts/restore.sh, .gitignore, docs/codex-backlog.md
 Summary: Added database backup and destructive restore scripts using the Docker-managed Postgres container. Restore requires `--yes` or an explicit `RESTORE` confirmation before dropping and recreating the public schema, and runtime backup/log/mode paths are now ignored.
 Migration: none
 Tests: `bash -n scripts/backup.sh`; `bash -n scripts/restore.sh`; `bash scripts/backup.sh`; restore not executed because it intentionally overwrites the active database
+
+## 2026-08-02T00:05:52.4011821+03:00 — Add user and operations guide set
+Files: docs/guide/README.md, docs/guide/01-getting-started.md, docs/guide/02-asset-management.md, docs/guide/03-risk-register.md, docs/guide/04-projects.md, docs/guide/05-model-cards.md, docs/guide/06-governance-workflow.md, docs/guide/07-rbac-and-users.md, docs/guide/08-dashboard.md, docs/guide/09-audit-and-compliance.md, docs/guide/10-operations.md, docs/codex-backlog.md
+Summary: Added a substantive documentation set covering setup, core user workflows, governance controls, compliance evidence, dashboards, and operations. The guide is split by feature area so users can navigate directly to the workflow they need.
+Migration: none
+Tests: file presence check for `docs/guide/README.md` and `01-getting-started.md` through `10-operations.md`

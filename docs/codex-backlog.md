@@ -14,7 +14,7 @@ Everything through the Model Card metric CRUD fix, the maturity-gaps round (vers
 - [x] Add `scripts/backup.sh` — `pg_dump` via `docker compose exec -T postgres`, output to a timestamped file under `backups/`.
 - [x] Add `scripts/restore.sh <file>` — requires explicit confirmation (`--yes` flag or interactive prompt) before overwriting the current database, warns and recommends a fresh backup first, then restores via `psql`/`pg_restore` against the same container.
 - [x] Add `backups/`, `logs/`, and `.aibom-mode` to `.gitignore`.
-- [ ] Add the `docs/guide/` documentation set per `docs/roadmap.md`'s "Documentation set + repository upload" section — one substantive file per feature area (`README.md` index, `01-getting-started.md` through `10-operations.md`), not a single unwieldy file.
+- [x] Add the `docs/guide/` documentation set per `docs/roadmap.md`'s "Documentation set + repository upload" section — one substantive file per feature area (`README.md` index, `01-getting-started.md` through `10-operations.md`), not a single unwieldy file.
 - [ ] Create a new **private** GitHub repository (Codex has GitHub access per the user) and push the full local commit history plus every commit from this round to it. Do not make it public.
 
 ## Fix CSV formula-injection protection (do this first — live-verified gap)
