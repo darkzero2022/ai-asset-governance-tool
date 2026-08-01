@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-type RouteName = "assets" | "assetDetail" | "dashboard" | "risks" | "riskDetail" | "projects" | "projectDetail" | "notFound";
+type RouteName = "assets" | "assetDetail" | "dashboard" | "risks" | "riskDetail" | "projects" | "projectDetail" | "users" | "notFound";
 
 type RouteMatch = {
   name: RouteName;
@@ -15,6 +15,7 @@ const routes: Array<{ name: RouteName; pattern: string }> = [
   { name: "riskDetail", pattern: "/risks/:id" },
   { name: "projects", pattern: "/projects" },
   { name: "projectDetail", pattern: "/projects/:id" },
+  { name: "users", pattern: "/users" },
 ];
 
 function matchRoute(pathname: string): RouteMatch {

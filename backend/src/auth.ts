@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import type { Role } from "@prisma/client";
+import { prisma } from "./prisma.js";
 
 export type AuthUser = {
   id: string;
@@ -28,7 +29,7 @@ export function signToken(user: AuthUser) {
   return jwt.sign(user, jwtSecret(), { expiresIn: "8h" });
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.header("authorization");
   const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
 
@@ -38,7 +39,15 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 
   try {
-    req.user = jwt.verify(token, jwtSecret()) as AuthUser;
+    const user = jwt.verify(token, jwtSecret()) as AuthUser;
+    const activeUser = await prisma.user.findUnique({ where: { id: user.id }, select: { active: true } });
+
+    if (!activeUser?.active) {
+      res.status(401).json({ error: "User account is deactivated" });
+      return;
+    }
+
+    req.user = user;
     next();
   } catch {
     res.status(401).json({ error: "Invalid or expired token" });

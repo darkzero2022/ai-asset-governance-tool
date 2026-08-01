@@ -80,6 +80,7 @@ model User {
   name         String
   passwordHash String
   role         Role                 @default(VIEWER)
+  active       Boolean              @default(true)
   createdAt    DateTime             @default(now())
   assets       AIAsset[]            @relation("AssetCreator")
   approvals    GovernanceWorkflow[] @relation("WorkflowApprover")

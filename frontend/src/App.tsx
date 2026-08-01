@@ -6,6 +6,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import ProjectList from "./pages/ProjectList";
 import RiskDetail from "./pages/RiskDetail";
 import RiskRegister from "./pages/RiskRegister";
+import Users from "./pages/Users";
 import { emptyModelCardForm, type ModelCard, type ModelCardCompleteness, type ModelCardFormState, modelCardToForm } from "./components/ModelCardForm";
 import { navigate, useRoute } from "./router";
 
@@ -71,6 +72,14 @@ type AuditLog = {
   action: string;
   timestamp: string;
   actor?: { name: string; email: string };
+};
+
+type CurrentUser = {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  active: boolean;
 };
 
 type FrameworkCategory = {
@@ -166,6 +175,7 @@ const navItems = [
   { label: "Assets", path: "/assets", names: ["assets", "assetDetail"] },
   { label: "Risk Register", path: "/risks", names: ["risks", "riskDetail"] },
   { label: "Projects", path: "/projects", names: ["projects", "projectDetail"] },
+  { label: "Users", path: "/users", names: ["users"], adminOnly: true },
 ];
 
 function label(value: string) {
@@ -174,6 +184,7 @@ function label(value: string) {
 
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem("aibomToken") ?? "");
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -301,6 +312,15 @@ function App() {
   }, [token, filters]);
 
   useEffect(() => {
+    if (!token) {
+      setCurrentUser(null);
+      return;
+    }
+
+    api<{ user: CurrentUser }>("/auth/me").then((data) => setCurrentUser(data.user)).catch((err: Error) => setError(err.message));
+  }, [token]);
+
+  useEffect(() => {
     if (token && route.name === "assetDetail" && route.params.id) {
       loadAsset(route.params.id).catch((err: Error) => setError(err.message));
     }
@@ -340,6 +360,7 @@ function App() {
       if (!result.token) throw new Error(result.error ?? "Login failed");
       localStorage.setItem("aibomToken", result.token);
       setToken(result.token);
+      setCurrentUser(result.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     }
@@ -815,7 +836,7 @@ function App() {
             Sign out
           </button>
           <nav className="flex flex-wrap gap-3 text-sm font-semibold">
-            {navItems.map((item) => {
+            {navItems.filter((item) => !item.adminOnly || currentUser?.role === "ADMIN").map((item) => {
               const active = item.names.includes(route.name);
               return (
                 <button key={item.path} className={`rounded-lg border px-4 py-2 ${active ? "border-cyan-700 bg-cyan-50 text-cyan-800" : "border-slate-300"}`} onClick={() => navigate(item.path)}>
@@ -830,6 +851,8 @@ function App() {
       {error && <div className="mx-auto max-w-7xl px-6 pt-6"><p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{error}</p></div>}
       {route.name === "dashboard" ? (
         <Dashboard apiBaseUrl={apiBaseUrl} token={token} />
+      ) : route.name === "users" ? (
+        currentUser?.role === "ADMIN" ? <Users apiBaseUrl={apiBaseUrl} token={token} /> : <section className="mx-auto max-w-7xl px-6 py-8"><div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">Admin access required.</div></section>
       ) : route.name === "riskDetail" ? (
         <RiskDetail
           risk={selectedRisk}

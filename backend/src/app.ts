@@ -81,6 +81,20 @@ const controlSchema = z.object({
   evidenceNotes: z.string().optional().nullable(),
 });
 
+const userCreateSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1),
+  role: z.enum(["ADMIN", "RISK_OWNER", "APPROVER", "VIEWER"]),
+  password: z.string().min(8),
+});
+
+const userUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  role: z.enum(["ADMIN", "RISK_OWNER", "APPROVER", "VIEWER"]).optional(),
+  active: z.boolean().optional(),
+  password: z.string().min(8).optional(),
+});
+
 const allowedTransitions: Record<AssetStatus, AssetStatus[]> = {
   DRAFT: ["UNDER_REVIEW"],
   UNDER_REVIEW: ["APPROVED", "DRAFT"],
@@ -189,7 +203,7 @@ app.post("/auth/login", loginRateLimit, async (req, res, next) => {
     const body = z.object({ email: z.string().email(), password: z.string().min(1) }).parse(req.body);
     const user = await prisma.user.findUnique({ where: { email: body.email } });
 
-    if (!user || !(await bcrypt.compare(body.password, user.passwordHash))) {
+    if (!user || !user.active || !(await bcrypt.compare(body.password, user.passwordHash))) {
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
@@ -202,7 +216,7 @@ app.post("/auth/login", loginRateLimit, async (req, res, next) => {
 
 app.get("/auth/me", requireAuth, async (req, res, next) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { id: true, email: true, name: true, role: true } });
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { id: true, email: true, name: true, role: true, active: true } });
     res.json({ user });
   } catch (error) {
     next(error);
@@ -222,6 +236,51 @@ app.get("/auth/oidc/login", (_req, res) => {
 
 app.get("/auth/oidc/callback", (_req, res) => {
   res.status(501).json({ error: "OIDC callback handling is not configured for this deployment" });
+});
+
+app.get("/users", requireAuth, requireRole("ADMIN"), async (_req, res, next) => {
+  try {
+    const users = await prisma.user.findMany({ select: { id: true, email: true, name: true, role: true, active: true, createdAt: true }, orderBy: { createdAt: "desc" } });
+    res.json({ users });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/users", requireAuth, requireRole("ADMIN"), async (req, res, next) => {
+  try {
+    const body = userCreateSchema.parse(req.body);
+    const user = await prisma.user.create({
+      data: { email: body.email, name: body.name, role: body.role, passwordHash: await bcrypt.hash(body.password, 10) },
+      select: { id: true, email: true, name: true, role: true, active: true, createdAt: true },
+    });
+    await audit(req.user!.id, "User", user.id, "CREATE", undefined, user);
+    res.status(201).json({ user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/users/:id", requireAuth, requireRole("ADMIN"), async (req, res, next) => {
+  try {
+    const id = String(req.params.id);
+    const body = userUpdateSchema.parse(req.body);
+    const before = await prisma.user.findUniqueOrThrow({ where: { id }, select: { id: true, email: true, name: true, role: true, active: true, createdAt: true } });
+    const user = await prisma.user.update({
+      where: { id },
+      data: {
+        ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.role !== undefined ? { role: body.role } : {}),
+        ...(body.active !== undefined ? { active: body.active } : {}),
+        ...(body.password !== undefined ? { passwordHash: await bcrypt.hash(body.password, 10) } : {}),
+      },
+      select: { id: true, email: true, name: true, role: true, active: true, createdAt: true },
+    });
+    await audit(req.user!.id, "User", id, "UPDATE", before, user);
+    res.json({ user });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get("/reference/framework-categories", requireAuth, async (req, res, next) => {

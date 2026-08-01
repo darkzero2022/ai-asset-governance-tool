@@ -284,6 +284,35 @@ describe("RBAC permission matrix", () => {
   });
 });
 
+describe("user management", () => {
+  it("allows admins to create, update, deactivate, and reset users", async () => {
+    await request(app).post("/users").set(auth("VIEWER")).send({ email: `${runId}-blocked@example.com`, name: "Blocked", role: "VIEWER", password: "password123" }).expect(403);
+
+    const createResponse = await request(app)
+      .post("/users")
+      .set(auth("ADMIN"))
+      .send({ email: `${runId}-managed@example.com`, name: "Managed User", role: "VIEWER", password: "password123" })
+      .expect(201);
+    const userId = createResponse.body.user.id;
+
+    await request(app).get("/users").set(auth("ADMIN")).expect(200).expect((response) => {
+      expect(response.body.users).toEqual(expect.arrayContaining([expect.objectContaining({ id: userId, role: "VIEWER", active: true })]));
+    });
+
+    await request(app)
+      .put(`/users/${userId}`)
+      .set(auth("ADMIN"))
+      .send({ role: "APPROVER", active: false, password: "newpassword123" })
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.user).toMatchObject({ id: userId, role: "APPROVER", active: false });
+      });
+
+    const inactiveToken = signToken({ id: userId, email: `${runId}-managed@example.com`, role: "APPROVER" });
+    await request(app).get("/auth/me").set({ Authorization: `Bearer ${inactiveToken}` }).expect(401);
+  });
+});
+
 describe("asset transition policy gates", () => {
   it("blocks approval for open high risks, then allows approval after mitigation and complete model card", async () => {
     const asset = await createAsset({ type: "MODEL", status: "UNDER_REVIEW" });

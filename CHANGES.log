@@ -375,3 +375,9 @@ Files: docs/codex-backlog.md, CHANGES.log
 Summary: Initialized git history with a baseline commit and confirmed subsequent work now lands as reviewable commits alongside `CHANGES.log` entries. The metric CRUD fix is already captured in its own follow-up commit.
 Migration: none
 Tests: none — version-control bookkeeping only
+
+## 2026-08-01T22:22:46.6189652+03:00 — Add admin user management
+Files: backend/prisma/schema.prisma, backend/prisma/migrations/20260801192000_add_user_active/migration.sql, backend/prisma/seed.ts, backend/src/app.ts, backend/src/auth.ts, backend/src/integration.test.ts, frontend/src/App.tsx, frontend/src/pages/Users.tsx, frontend/src/router.tsx, docs/codex-backlog.md
+Summary: Added admin-managed user lifecycle support with active/deactivated accounts, admin-only user list/create/update routes, password reset, role changes, auth rejection for deactivated users, and an admin-only Users page/nav entry. Seed keeps the demo admin active and integration coverage exercises create/update/deactivate plus inactive-token rejection.
+Migration: 20260801192000_add_user_active, expand, backfill script: none (default true covers existing users)
+Tests: `npm run prisma:generate`; `npm run prisma:migrate`; `npm run prisma:seed`; `npm run build`; `npm run test` in `backend/`; `npm run build`; `npm run test` in `frontend/`
