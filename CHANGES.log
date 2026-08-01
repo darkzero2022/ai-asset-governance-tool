@@ -411,3 +411,9 @@ Files: backend/src/app.ts, backend/src/integration.test.ts, docs/codex-backlog.m
 Summary: Added `GET /assets/export/csv` and `GET /risks/export/csv` with the same filter semantics as the existing list endpoints and safe CSV escaping. Integration coverage verifies filtered CSV responses for both assets and risks.
 Migration: none
 Tests: `npm run build`; `npm run test` in `backend/`
+
+## 2026-08-01T22:44:26.8961149+03:00 — Add deployment documentation
+Files: docs/deployment.md, docs/codex-backlog.md
+Summary: Added deployment guidance for separate backend/frontend services, production Postgres, secrets-manager usage instead of committed `.env` files, Prisma `migrate deploy`, scheduled jobs, and operational checks.
+Migration: none
+Tests: none — documentation only
