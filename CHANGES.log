@@ -447,3 +447,9 @@ Files: frontend/src/App.tsx, frontend/src/components/ModelCardForm.tsx, frontend
 Summary: Added Import from URL inputs and fetch previews to asset creation/editing and Model Card editing. Suggestions remain copy-only while `sourceUrl` is persisted with asset saves and shown as a clickable citation on asset detail.
 Migration: none
 Tests: `npm run build`; `npm run test` in `frontend/`
+
+## 2026-08-01T23:02:20.9774458+03:00 — Add source URL to CycloneDX exports
+Files: backend/src/cyclonedx.ts, backend/src/integration.test.ts, docs/codex-backlog.md
+Summary: Included asset `sourceUrl` values as CycloneDX external references for both component and service assets. Extended the CycloneDX fixture test to assert the reference is emitted and still validates against the schema.
+Migration: none
+Tests: `npm run build`; `npm run test` in `backend/`

@@ -81,6 +81,10 @@ function optionalObject<T extends Record<string, unknown>>(value: T) {
   return Object.keys(value).length ? value : undefined;
 }
 
+function sourceExternalReferences(asset: AssetForBom) {
+  return asset.sourceUrl ? [{ type: "website", url: asset.sourceUrl }] : undefined;
+}
+
 function performanceMetrics(metrics: ModelCardMetric[] | undefined) {
   const mappedMetrics = (metrics ?? []).map((metric) => ({
     type: metric.metricName,
@@ -135,6 +139,7 @@ function mapComponent(asset: AssetForBom) {
     version: asset.version,
     supplier: { name: asset.supplier },
     ...(asset.license ? { licenses: [{ license: { name: asset.license } }] } : {}),
+    ...(sourceExternalReferences(asset) ? { externalReferences: sourceExternalReferences(asset) } : {}),
     ...(modelCardForCycloneDx(asset) ? { modelCard: modelCardForCycloneDx(asset) } : {}),
     properties: assetProperties(asset),
   };
@@ -146,6 +151,7 @@ function mapService(asset: AssetForBom) {
     name: asset.name,
     version: asset.version,
     provider: { name: asset.provider ?? asset.supplier },
+    ...(sourceExternalReferences(asset) ? { externalReferences: sourceExternalReferences(asset) } : {}),
     properties: assetProperties(asset),
   };
 }

@@ -479,7 +479,7 @@ describe("CSV exports", () => {
 
 describe("export fixtures", () => {
   it("validates a CycloneDX fixture with risks, controls, and Model Card", async () => {
-    const asset = await createAsset({ type: "MODEL" });
+    const asset = await createAsset({ type: "MODEL", sourceUrl: "https://example.com/model-card" });
     const risk = await createRisk(asset.id);
     const control = await createControl();
     await prisma.riskControl.create({ data: { riskId: risk.id, controlId: control.id, implementationStatus: "VERIFIED" } });
@@ -487,6 +487,7 @@ describe("export fixtures", () => {
     const fixture = await prisma.aIAsset.findUniqueOrThrow({ where: { id: asset.id }, include: { modelCard: true, riskLinks: { include: { risk: { include: { controlLinks: { include: { control: true } } } } } } } });
 
     const bom = buildCycloneDxBom([{ ...fixture, risks: fixture.riskLinks.map((link) => ({ ...link.risk, controls: link.risk.controlLinks.map((controlLink) => ({ ...controlLink.control, implementationStatus: controlLink.implementationStatus, evidenceNotes: controlLink.evidenceNotes })) })) }]);
+    expect(bom.components?.[0].externalReferences).toContainEqual({ type: "website", url: "https://example.com/model-card" });
     await expect(validateCycloneDxBom(bom)).resolves.toMatchObject({ valid: true });
   });
 

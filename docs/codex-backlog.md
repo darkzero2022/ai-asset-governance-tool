@@ -32,7 +32,7 @@ Phases 1–5, the UI polish pass, the stabilization pass, the Frontend IA overha
 - [x] Add `POST /assets/import-url` and `POST /assets/:id/import-url` to `backend/src/app.ts`, `requireRole("ADMIN", "RISK_OWNER")`. **Must implement SSRF mitigations before fetching anything**: allow only `http`/`https`; resolve the hostname and reject loopback/private/link-local IP ranges (including the `169.254.169.254` cloud metadata endpoint); enforce a short timeout (~5s) and a response size cap (~2MB); do not follow redirects to a blocked destination. Strip HTML to extract `<title>`, the meta description, and a truncated plain-text excerpt of visible body content. Return `{ sourceUrl, suggestedTitle, suggestedDescription, excerpt }` as a suggestion payload — do not write these into governance fields directly.
 - [x] Add an "Import from URL" input + "Fetch" button to the asset create form in `frontend/src/pages/AssetList.tsx` and to `frontend/src/components/ModelCardForm.tsx`, showing the fetched suggestion in a preview the user copies from into real fields before saving. Always store `sourceUrl` on save regardless of whether extraction succeeded.
 - [x] Show `sourceUrl` (when present) on `frontend/src/pages/AssetDetail.tsx` as a clickable citation link.
-- [ ] Add `sourceUrl` as an external reference in the CycloneDX export (`backend/src/cyclonedx.ts`) when present.
+- [x] Add `sourceUrl` as an external reference in the CycloneDX export (`backend/src/cyclonedx.ts`) when present.
 - [x] Add a test asserting the import endpoint rejects a private/loopback/link-local URL (e.g. `http://127.0.0.1/...` or `http://169.254.169.254/...`) with an error rather than fetching it.
 
 ## Demo data seeding (do this first)
