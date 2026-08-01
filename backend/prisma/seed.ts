@@ -213,8 +213,8 @@ async function main() {
   for (const risk of risks) {
     await prisma.risk.upsert({
       where: { id: risk.id },
-      update: { ...risk, dueDate: new Date(risk.dueDate) },
-      create: { ...risk, dueDate: new Date(risk.dueDate) },
+      update: { ...risk, dueDate: new Date(risk.dueDate), createdById: admin.id },
+      create: { ...risk, dueDate: new Date(risk.dueDate), createdById: admin.id },
     });
   }
 

@@ -381,3 +381,9 @@ Files: backend/prisma/schema.prisma, backend/prisma/migrations/20260801192000_ad
 Summary: Added admin-managed user lifecycle support with active/deactivated accounts, admin-only user list/create/update routes, password reset, role changes, auth rejection for deactivated users, and an admin-only Users page/nav entry. Seed keeps the demo admin active and integration coverage exercises create/update/deactivate plus inactive-token rejection.
 Migration: 20260801192000_add_user_active, expand, backfill script: none (default true covers existing users)
 Tests: `npm run prisma:generate`; `npm run prisma:migrate`; `npm run prisma:seed`; `npm run build`; `npm run test` in `backend/`; `npm run build`; `npm run test` in `frontend/`
+
+## 2026-08-01T22:28:15.5258385+03:00 — Enforce RISK_OWNER ownership scope
+Files: backend/prisma/schema.prisma, backend/prisma/migrations/20260801193000_expand_risk_created_by/migration.sql, backend/prisma/migrations/20260801193100_contract_risk_created_by/migration.sql, backend/prisma/scripts/backfill-risk-created-by.ts, backend/prisma/seed.ts, backend/src/app.ts, backend/src/integration.test.ts, docs/codex-backlog.md
+Summary: Added `Risk.createdById`, backfilled existing risks to the seed admin user, and enforced that `RISK_OWNER` can only update assets and risks they created while `ADMIN` bypasses ownership scope. Integration tests now cover owned and not-owned edit cases.
+Migration: 20260801193000_expand_risk_created_by (expand), 20260801193100_contract_risk_created_by (contract), backfill script: backend/prisma/scripts/backfill-risk-created-by.ts
+Tests: `npm run prisma:generate`; `npm run prisma:migrate`; `npm run prisma:seed`; `npm run build`; `npm run test` in `backend/`

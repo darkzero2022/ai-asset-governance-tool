@@ -69,6 +69,7 @@ async function createRisk(assetId?: string, overrides: Partial<Parameters<typeof
       impact: 2,
       inherentRiskScore: 4,
       status: "OPEN",
+      createdById: userIds.get("ADMIN")!,
       ...(assetId ? { assets: { create: { assetId } } } : {}),
       ...overrides,
     },
@@ -143,7 +144,7 @@ describe("RBAC permission matrix", () => {
     await expectMatrix("POST /assets", ["ADMIN", "RISK_OWNER"], (role) => request(app).post("/assets").set(auth(role)).send(assetBody(`${runId}-post-asset-${role}`)));
 
     await expectMatrix("PUT /assets/:id", ["ADMIN", "RISK_OWNER"], async (role) => {
-      const asset = await createAsset();
+      const asset = await createAsset({ createdById: role === "RISK_OWNER" ? userIds.get("RISK_OWNER")! : userIds.get("ADMIN")! });
       return request(app).put(`/assets/${asset.id}`).set(auth(role)).send(assetBody(`${runId}-put-asset-${role}`));
     });
 
@@ -233,7 +234,7 @@ describe("RBAC permission matrix", () => {
 
     await expectMatrix("PUT /risks/:id", ["ADMIN", "RISK_OWNER"], async (role) => {
       const asset = await createAsset();
-      const risk = await createRisk(asset.id);
+      const risk = await createRisk(asset.id, { createdById: role === "RISK_OWNER" ? userIds.get("RISK_OWNER")! : userIds.get("ADMIN")! });
       return request(app).put(`/risks/${risk.id}`).set(auth(role)).send({ assetId: asset.id, sourceFramework: "NIST_AI_RMF", sourceCategoryId: "GOVERN", description: `${runId}-risk-put-${role}`, likelihood: 2, impact: 3 });
     });
 
@@ -281,6 +282,18 @@ describe("RBAC permission matrix", () => {
       const asset = await createAsset({ type: "MODEL" });
       return request(app).put(`/assets/${asset.id}/model-card`).set(auth(role)).send(modelCardBody);
     });
+  });
+
+  it("limits RISK_OWNER edits to owned assets and risks", async () => {
+    const otherAsset = await createAsset({ createdById: userIds.get("ADMIN")! });
+    const ownedAsset = await createAsset({ createdById: userIds.get("RISK_OWNER")! });
+    const otherRisk = await createRisk(ownedAsset.id, { createdById: userIds.get("ADMIN")! });
+    const ownedRisk = await createRisk(ownedAsset.id, { createdById: userIds.get("RISK_OWNER")! });
+
+    await request(app).put(`/assets/${otherAsset.id}`).set(auth("RISK_OWNER")).send(assetBody(`${runId}-not-owned-asset`)).expect(403);
+    await request(app).put(`/assets/${ownedAsset.id}`).set(auth("RISK_OWNER")).send(assetBody(`${runId}-owned-asset`)).expect(200);
+    await request(app).put(`/risks/${otherRisk.id}`).set(auth("RISK_OWNER")).send({ assetId: ownedAsset.id, sourceFramework: "NIST_AI_RMF", sourceCategoryId: "GOVERN", description: `${runId}-not-owned-risk`, likelihood: 2, impact: 3 }).expect(403);
+    await request(app).put(`/risks/${ownedRisk.id}`).set(auth("RISK_OWNER")).send({ assetId: ownedAsset.id, sourceFramework: "NIST_AI_RMF", sourceCategoryId: "GOVERN", description: `${runId}-owned-risk`, likelihood: 2, impact: 3 }).expect(200);
   });
 });
 

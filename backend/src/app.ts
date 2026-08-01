@@ -477,6 +477,12 @@ app.put("/assets/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (r
     const id = String(req.params.id);
     const body = assetSchema.parse(req.body);
     const before = await prisma.aIAsset.findUniqueOrThrow({ where: { id } });
+
+    if (req.user!.role === "RISK_OWNER" && before.createdById !== req.user!.id) {
+      res.status(403).json({ error: "RISK_OWNER can only edit assets they created" });
+      return;
+    }
+
     const asset = await prisma.aIAsset.update({ where: { id }, data: body });
     await audit(req.user!.id, "AIAsset", asset.id, "UPDATE", before, asset);
     res.json({ asset });
@@ -828,6 +834,7 @@ app.post("/risks", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, 
         ...riskData,
         dueDate: body.dueDate ? new Date(body.dueDate) : null,
         inherentRiskScore: body.likelihood * body.impact,
+        createdById: req.user!.id,
         assets: { create: { assetId } },
       },
       include: { assets: { include: { asset: true } }, controlLinks: { include: { control: true } }, frameworkCategory: true },
@@ -871,6 +878,12 @@ app.put("/risks/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (re
     const body = riskSchema.parse(req.body);
     const { assetId, ...riskData } = body;
     const before = await prisma.risk.findUniqueOrThrow({ where: { id }, include: { assets: true, controlLinks: { include: { control: true } }, frameworkCategory: true } });
+
+    if (req.user!.role === "RISK_OWNER" && before.createdById !== req.user!.id) {
+      res.status(403).json({ error: "RISK_OWNER can only edit risks they created" });
+      return;
+    }
+
     const risk = await prisma.risk.update({
       where: { id },
       data: {
