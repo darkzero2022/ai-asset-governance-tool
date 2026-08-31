@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { canTransitionAsset } from "./rbac.js";
 import { HIGH_SEVERITY_MIN_SCORE, severityOf } from "./riskScoring.js";
 import { modelCardCompleteness } from "./modelCardScoring.js";
+import { resolveStrideAtlas } from "./strideAtlas.js";
 
 describe("severityOf", () => {
   it("maps scores to stable severity bands", () => {
@@ -47,6 +48,39 @@ describe("modelCardCompleteness", () => {
     expect(modelCardCompleteness({ task: "  ", architectureFamily: "transformer", intendedUsers: "reviewers" })).toEqual({
       percent: 33,
       missingFields: ["task", "useCases", "technicalLimitations", "ethicalConsiderations"],
+    });
+  });
+});
+
+describe("resolveStrideAtlas", () => {
+  const llm03 = { strideAiCategory: "MODEL_IMPERSONATION", atlasTechnique: "ML Supply Chain Compromise" } as const;
+
+  it("applies the lookup default when neither field is provided", () => {
+    expect(resolveStrideAtlas({}, llm03)).toEqual({
+      strideAiCategory: "MODEL_IMPERSONATION",
+      atlasTechnique: "ML Supply Chain Compromise",
+    });
+  });
+
+  it("keeps an explicit value and treats empty string / null as unset", () => {
+    expect(resolveStrideAtlas({ strideAiCategory: "PROVENANCE_LOSS", atlasTechnique: "" }, llm03)).toEqual({
+      strideAiCategory: "PROVENANCE_LOSS",
+      atlasTechnique: "ML Supply Chain Compromise",
+    });
+    expect(resolveStrideAtlas({ strideAiCategory: null, atlasTechnique: "Data Poisoning" }, llm03)).toEqual({
+      strideAiCategory: "MODEL_IMPERSONATION",
+      atlasTechnique: "Data Poisoning",
+    });
+  });
+
+  it("returns nulls for a non-OWASP risk with no mapping and no provided values", () => {
+    expect(resolveStrideAtlas({}, null)).toEqual({ strideAiCategory: null, atlasTechnique: null });
+  });
+
+  it("respects a null atlasTechnique in the lookup (e.g. LLM09)", () => {
+    expect(resolveStrideAtlas({}, { strideAiCategory: "MODEL_INVERSION", atlasTechnique: null })).toEqual({
+      strideAiCategory: "MODEL_INVERSION",
+      atlasTechnique: null,
     });
   });
 });

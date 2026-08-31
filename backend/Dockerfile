@@ -12,13 +12,16 @@ RUN npm run prisma:generate && npm run build
 FROM node:22-alpine AS runtime
 
 WORKDIR /app
-ENV NODE_ENV=production
 RUN apk add --no-cache openssl
-COPY package*.json ./
-RUN npm ci
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
+# Carry the fully installed dependency tree (incl. the generated Prisma client, the
+# prisma CLI used by `migrate deploy`, and tsx used by the seed scripts) from the
+# build stage rather than reinstalling — a NODE_ENV=production `npm ci` here would
+# drop the devDependencies that `prisma migrate deploy` and `npm run prisma:seed*`
+# both need.
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+COPY package*.json ./
 COPY prisma ./prisma
+ENV NODE_ENV=production
 EXPOSE 4000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+CMD ["sh", "-c", "npx --no-install prisma migrate deploy && node dist/server.js"]

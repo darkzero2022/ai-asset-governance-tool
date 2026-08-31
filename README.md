@@ -55,6 +55,19 @@ flowchart LR
 
 ## Quick start
 
+**Prerequisites:** Docker Engine + Docker Compose v2, Git, and (for *local* install
+mode only) Node.js 22+ / npm. The `scripts/*.sh` helpers need Bash — on Windows use
+WSL or Git Bash, or follow the manual commands in the guide.
+
+```bash
+git clone https://github.com/darkzero2022/ai-asset-governance-tool.git
+cd ai-asset-governance-tool
+scripts/setup.sh          # interactive
+```
+
+The full step-by-step install guide — prerequisites, a scriptless manual path, verification,
+and troubleshooting — is in **[docs/guide/01-getting-started.md](docs/guide/01-getting-started.md)**.
+
 Two install modes, and two data modes — pick one of each.
 
 | | Local | Docker |
@@ -68,12 +81,13 @@ Two install modes, and two data modes — pick one of each.
 | **Best for** | Real evaluation/production data entry | Learning the UI or demoing without typing anything in first |
 
 ```bash
-# Interactive — asks which install mode and which data mode you want
+# Interactive — asks for install mode, data mode, and the admin email + password
 scripts/setup.sh
 
-# Or non-interactive:
+# Or non-interactive (defaults for anything not passed):
 scripts/setup.sh --mode=local  --data=empty --yes
-scripts/setup.sh --mode=docker --data=demo  --yes
+scripts/setup.sh --mode=docker --data=demo \
+  --admin-email=you@yourco.com --admin-password='choose-a-strong-one' --yes
 
 # Start / stop (reads the mode recorded by setup.sh, no need to specify it again)
 scripts/start.sh
@@ -84,7 +98,7 @@ Once running:
 
 - Frontend: http://localhost:5173
 - Backend health check: http://localhost:4000/health
-- Sign in with `admin@example.com` / `admin123` — **change this password immediately** via the Users page once you're in; this default only exists to get you into a fresh instance.
+- Sign in with the admin account you chose during setup (default `admin@example.com`). If you left the password blank, setup **prints a randomly generated one** — copy it from that output. Change it on the Users page after first login.
 
 ## Backing up and restoring
 
@@ -114,6 +128,8 @@ The full user and operator guide lives in [`docs/guide/`](docs/guide/README.md),
 
 Production deployment guidance (containerizing both services, a real Postgres target, secrets management, running migrations) is in [`docs/deployment.md`](docs/deployment.md).
 
+A worked end-to-end example — modelling the **PoisonGPT** AI supply-chain incident as an asset, a project, seven framework-mapped findings and an exported AI-BOM — is in [`docs/examples/poisongpt.md`](docs/examples/poisongpt.md).
+
 ## Project structure
 
 ```
@@ -136,6 +152,26 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile
 cd backend  && npm run test
 cd frontend && npm run test
 ```
+
+## Screenshots
+
+_Captured against the demo dataset (`scripts/setup.sh --data=demo`). Full-page versions are in [`docs/screenshots/`](docs/screenshots/)._
+
+| | |
+|---|---|
+| [![Dashboard](docs/screenshots/dashboard.png)](docs/screenshots/dashboard-full.png) | [![Risk Register](docs/screenshots/risk-register.png)](docs/screenshots/risk-register-full.png) |
+| **Governance dashboard** — severity distribution, framework coverage gaps, reuse leaderboard, recertification due-list | **Risk register** — likelihood × impact heatmap and a sortable, bulk-updatable risk table |
+| [![Asset detail](docs/screenshots/asset-detail.png)](docs/screenshots/asset-detail-full.png) | [![Model Card](docs/screenshots/model-card.png)](docs/screenshots/model-card-full.png) |
+| **Asset detail** — an approved model whose deploy is blocked by an open critical risk, with its complete Model Card | **Approval gate** — a service blocked from approval until its Model Card is filled in |
+
+## Contributing & security
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup and PR checklist
+- [SECURITY.md](SECURITY.md) — how to report a vulnerability
+
+## License
+
+[MIT](LICENSE) © darkzero2022
 
 ## Non-goals
 

@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 type Asset = { id: string; name: string; type: string; status: string };
 type Risk = { id: string; description: string; status: string; inherentRiskScore: number; severity?: string | null; origin?: string };
 type Project = {
@@ -45,7 +47,7 @@ export default function ProjectDetail(props: Props) {
 
   return (
     <section className="mx-auto grid max-w-7xl gap-6 px-6 py-8 xl:grid-cols-[1.1fr_0.9fr]">
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <button className="text-sm font-semibold text-cyan-700" onClick={props.onBack}>Back to Projects</button>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -67,7 +69,7 @@ export default function ProjectDetail(props: Props) {
         </Panel>
       </div>
 
-      <aside className="space-y-6">
+      <aside className="min-w-0 space-y-6">
         <Panel title="Direct Risks">
           <LinkRow value={props.selectedRiskId} options={availableRisks.map((risk) => ({ id: risk.id, label: risk.description }))} placeholder="Select risk" onChange={props.onSelectedRiskChange} onLink={props.onLinkRisk} />
           <div className="mt-4 space-y-3">
@@ -80,7 +82,7 @@ export default function ProjectDetail(props: Props) {
           <div className="space-y-3">
             {props.mergedRisks.map((risk) => (
               <div key={risk.id} className="rounded-xl border border-slate-200 p-3 text-sm">
-                <p className="font-medium">{risk.description}</p>
+                <p className="font-medium break-words">{risk.description}</p>
                 <p className="text-slate-500">{props.label(risk.status)} | Score {risk.inherentRiskScore} | Origin: {risk.origin ?? "project"}</p>
               </div>
             ))}
@@ -112,10 +114,9 @@ function Item(props: { title: string; subtitle: string; onRemove: () => void }) 
   return (
     <div className="rounded-xl border border-slate-200 p-3 text-sm">
       <div className="flex items-start justify-between gap-3">
-        <div><p className="font-medium">{props.title}</p><p className="text-slate-500">{props.subtitle}</p></div>
-        <button className="text-xs font-semibold text-red-600" onClick={props.onRemove}>Unlink</button>
+        <div className="min-w-0"><p className="font-medium break-words">{props.title}</p><p className="text-slate-500">{props.subtitle}</p></div>
+        <button className="shrink-0 text-xs font-semibold text-red-600" onClick={props.onRemove}>Unlink</button>
       </div>
     </div>
   );
 }
-import type { ReactNode } from "react";

@@ -1,20 +1,55 @@
+import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function seedReferenceData() {
-  await prisma.user.upsert({
-    where: { email: "admin@example.com" },
-    update: { role: "ADMIN", active: true },
-    create: {
-      email: "admin@example.com",
-      name: "Admin User",
+// The initial admin login/name come from the environment (set by scripts/setup.sh),
+// falling back to the documented defaults.
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.trim() || "admin@example.com";
+const ADMIN_NAME = process.env.ADMIN_NAME?.trim() || "Admin User";
+
+async function seedAdminUser() {
+  const envPassword = process.env.ADMIN_PASSWORD?.trim() || undefined;
+  const existing = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
+
+  if (existing) {
+    // Never silently reset a password that may have been changed in the UI.
+    // Only reset it when an explicit ADMIN_PASSWORD is provided (recovery path).
+    await prisma.user.update({
+      where: { email: ADMIN_EMAIL },
+      data: {
+        role: "ADMIN",
+        active: true,
+        ...(process.env.ADMIN_NAME ? { name: ADMIN_NAME } : {}),
+        ...(envPassword ? { passwordHash: await bcrypt.hash(envPassword, 10) } : {}),
+      },
+    });
+    if (envPassword) console.log(`\n  Reset password for ${ADMIN_EMAIL} from ADMIN_PASSWORD.\n`);
+    return;
+  }
+
+  const password = envPassword ?? randomBytes(12).toString("base64url");
+  await prisma.user.create({
+    data: {
+      email: ADMIN_EMAIL,
+      name: ADMIN_NAME,
       role: "ADMIN",
       active: true,
-      passwordHash: await bcrypt.hash("admin123", 10),
+      passwordHash: await bcrypt.hash(password, 10),
     },
   });
+
+  console.log("\n  ────────────────────────────────────────────────");
+  console.log("  Created initial admin account");
+  console.log(`    Email:    ${ADMIN_EMAIL}`);
+  console.log(`    Password: ${password}`);
+  console.log("  Sign in, then change this password on the Users page.");
+  console.log("  ────────────────────────────────────────────────\n");
+}
+
+export async function seedReferenceData() {
+  await seedAdminUser();
 
   const frameworkCategories = [
     { framework: "NIST_AI_RMF", categoryId: "GOVERN", name: "Govern", description: "Policies, processes, procedures, and practices across AI risk management." },
@@ -57,6 +92,46 @@ export async function seedReferenceData() {
       where: { tier: tier.tier },
       update: { name: tier.name, description: tier.description },
       create: tier,
+    });
+  }
+
+  // Canonical MITRE ATLAS technique names offered for Risk.atlasTechnique.
+  const atlasTechniques = [
+    "LLM Prompt Injection",
+    "Exfiltration via Inference API",
+    "ML Supply Chain Compromise",
+    "Data Poisoning",
+    "Downstream Execution of Unvalidated Output",
+    "Exfiltration via AI Agent Tool Invocation",
+    "Discovery: LLM System Prompt",
+    "RAG Poisoning / False RAG Entry Injection",
+    "Sponge Example / Context Flooding",
+  ] as const;
+
+  for (const name of atlasTechniques) {
+    await prisma.atlasTechniqueReference.upsert({ where: { name }, update: {}, create: { name } });
+  }
+
+  // OWASP LLM Top 10 -> STRIDE-AI category + ATLAS technique lookup. Auto-populates
+  // an OWASP-linked risk's STRIDE-AI / ATLAS fields; both stay editable afterwards.
+  const strideAtlasMappings = [
+    { owaspCategoryId: "LLM01", strideAiCategory: "ALIGNMENT_BYPASS", atlasTechnique: "LLM Prompt Injection" },
+    { owaspCategoryId: "LLM02", strideAiCategory: "MODEL_INVERSION", atlasTechnique: "Exfiltration via Inference API" },
+    { owaspCategoryId: "LLM03", strideAiCategory: "MODEL_IMPERSONATION", atlasTechnique: "ML Supply Chain Compromise" },
+    { owaspCategoryId: "LLM04", strideAiCategory: "DATA_MODEL_POISONING", atlasTechnique: "Data Poisoning" },
+    { owaspCategoryId: "LLM05", strideAiCategory: "ALIGNMENT_BYPASS", atlasTechnique: "Downstream Execution of Unvalidated Output" },
+    { owaspCategoryId: "LLM06", strideAiCategory: "ALIGNMENT_BYPASS", atlasTechnique: "Exfiltration via AI Agent Tool Invocation" },
+    { owaspCategoryId: "LLM07", strideAiCategory: "PROVENANCE_LOSS", atlasTechnique: "Discovery: LLM System Prompt" },
+    { owaspCategoryId: "LLM08", strideAiCategory: "DATA_MODEL_POISONING", atlasTechnique: "RAG Poisoning / False RAG Entry Injection" },
+    { owaspCategoryId: "LLM09", strideAiCategory: "MODEL_INVERSION", atlasTechnique: null },
+    { owaspCategoryId: "LLM10", strideAiCategory: "RESOURCE_EXHAUSTION", atlasTechnique: "Sponge Example / Context Flooding" },
+  ] as const;
+
+  for (const mapping of strideAtlasMappings) {
+    await prisma.strideAtlasMapping.upsert({
+      where: { owaspCategoryId: mapping.owaspCategoryId },
+      update: { strideAiCategory: mapping.strideAiCategory, atlasTechnique: mapping.atlasTechnique },
+      create: mapping,
     });
   }
 }

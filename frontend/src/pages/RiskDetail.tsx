@@ -10,6 +10,9 @@ type RiskDetailData = {
   description: string;
   sourceFramework: string;
   sourceCategoryId: string;
+  euAiActRiskTier?: string | null;
+  strideAiCategory?: string | null;
+  atlasTechnique?: string | null;
   likelihood: number;
   impact: number;
   inherentRiskScore: number;
@@ -94,6 +97,10 @@ export default function RiskDetail(props: Props) {
           <dl className="mt-5 grid gap-3 text-sm md:grid-cols-2">
             <Info label="Status" value={props.label(props.risk.status)} />
             <Info label="Owner" value={props.risk.owner} />
+            <Info label="OWASP / NIST reference" value={`${props.risk.sourceFramework} / ${props.risk.sourceCategoryId}`} />
+            <Info label="EU AI Act tier" value={props.risk.euAiActRiskTier ? props.label(props.risk.euAiActRiskTier) : null} />
+            <Info label="STRIDE-AI category" value={props.risk.strideAiCategory ? props.label(props.risk.strideAiCategory) : null} />
+            <Info label="MITRE ATLAS technique" value={props.risk.atlasTechnique} />
             <Info label="Due Date" value={props.risk.dueDate ? new Date(props.risk.dueDate).toLocaleDateString() : null} />
             <Info label="Inherent Score" value={String(props.risk.inherentRiskScore)} />
             <Info label="Likelihood" value={String(props.risk.likelihood)} />

@@ -15,6 +15,7 @@ import { HIGH_SEVERITY_MIN_SCORE, severityOf } from "./riskScoring.js";
 import { buildSpdxDocument } from "./spdx.js";
 import { sendSlackRiskStatusChange } from "./integrations/slack.js";
 import { modelCardCompleteness } from "./modelCardScoring.js";
+import { resolveStrideAtlas, STRIDE_AI_CATEGORIES } from "./strideAtlas.js";
 
 const assetSchema = z.object({
   name: z.string().min(1),
@@ -72,6 +73,8 @@ const riskSchema = z.object({
   sourceFramework: z.enum(["NIST_AI_RMF", "EU_AI_ACT", "OWASP_LLM_TOP10"]),
   sourceCategoryId: z.string().min(1),
   euAiActRiskTier: z.enum(["UNACCEPTABLE", "HIGH", "LIMITED", "MINIMAL"]).optional().nullable(),
+  strideAiCategory: z.enum(STRIDE_AI_CATEGORIES).optional().nullable(),
+  atlasTechnique: z.string().min(1).optional().nullable(),
   description: z.string().min(1),
   likelihood: z.number().int().min(1).max(5),
   impact: z.number().int().min(1).max(5),
@@ -158,7 +161,14 @@ function riskResponse<T extends { assets?: Array<{ asset: unknown }> }>(risk: T)
 }
 
 function assetResponse<T extends { riskLinks?: Array<{ risk: unknown }> }>(asset: T) {
-  return { ...asset, risks: asset.riskLinks?.map((link) => link.risk) ?? [] };
+  return { ...asset, risks: asset.riskLinks?.map((link) => riskResponse(link.risk as never)) ?? [] };
+}
+
+async function strideAtlasFor(body: z.infer<typeof riskSchema>) {
+  const mapping = body.sourceFramework === "OWASP_LLM_TOP10"
+    ? await prisma.strideAtlasMapping.findUnique({ where: { owaspCategoryId: body.sourceCategoryId } })
+    : null;
+  return resolveStrideAtlas(body, mapping);
 }
 
 function assetListResponse<T extends { _count?: { riskLinks?: number; projectLinks?: number } }>(asset: T) {
@@ -174,16 +184,53 @@ function normalizeImportUrl(sourceUrl: string) {
   return url;
 }
 
-function isBlockedIp(address: string) {
-  if (address === "169.254.169.254") return true;
+function isBlockedIpv4(address: string) {
+  const parts = address.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+  const [a, b] = parts;
+  return (
+    a === 0 || // "this" network / 0.0.0.0
+    a === 10 || // private
+    a === 127 || // loopback
+    (a === 100 && b >= 64 && b <= 127) || // carrier-grade NAT 100.64.0.0/10
+    (a === 169 && b === 254) || // link-local, incl. 169.254.169.254 cloud metadata
+    (a === 172 && b >= 16 && b <= 31) || // private
+    (a === 192 && b === 168) || // private
+    (a === 198 && (b === 18 || b === 19)) || // benchmarking 198.18.0.0/15
+    a >= 224 // multicast + reserved 224.0.0.0/3
+  );
+}
 
-  if (isIP(address) === 4) {
-    const [a, b] = address.split(".").map(Number);
-    return a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254) || a === 0;
+function isBlockedIp(address: string) {
+  const normalized = address.toLowerCase().trim();
+
+  // IPv4-mapped IPv6 in dotted form, e.g. ::ffff:127.0.0.1 or ::127.0.0.1
+  const dotted = /^::(?:ffff:)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/.exec(normalized);
+  if (dotted) return isBlockedIpv4(dotted[1]);
+
+  // IPv4-mapped IPv6 in hex form, e.g. ::ffff:7f00:1 (Node normalizes to this)
+  const hex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(normalized);
+  if (hex) {
+    const hi = parseInt(hex[1], 16);
+    const lo = parseInt(hex[2], 16);
+    return isBlockedIpv4(`${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`);
   }
 
-  const normalized = address.toLowerCase();
-  return normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe80:") || normalized === "::";
+  if (isIP(normalized) === 4) return isBlockedIpv4(normalized);
+
+  if (isIP(normalized) === 6) {
+    return (
+      normalized === "::1" || // loopback
+      normalized === "::" || // unspecified
+      normalized.startsWith("fc") || normalized.startsWith("fd") || // unique local fc00::/7
+      normalized.startsWith("fe8") || normalized.startsWith("fe9") ||
+      normalized.startsWith("fea") || normalized.startsWith("feb") || // link-local fe80::/10
+      normalized.startsWith("ff") // multicast
+    );
+  }
+
+  // Not a recognizable IP literal — refuse rather than guess.
+  return true;
 }
 
 async function assertFetchableUrl(url: URL) {
@@ -195,6 +242,10 @@ async function assertFetchableUrl(url: URL) {
   if (!addresses.length || addresses.some((entry) => isBlockedIp(entry.address))) {
     throw new Error("URL host resolves to a blocked private, loopback, or link-local address");
   }
+
+  // NOTE: this validates the addresses at resolve time; the subsequent fetch()
+  // re-resolves the hostname, leaving a narrow DNS-rebinding window. This feature
+  // must be deployed with network-level egress controls (see docs/deployment.md).
 }
 
 async function readCappedResponse(response: Response) {
@@ -330,12 +381,36 @@ function csv(rows: unknown[][]) {
 
 export const app = express();
 
+// When deployed behind a reverse proxy / ingress, set TRUST_PROXY (e.g. "1" for a
+// single proxy hop, or a subnet) so express-rate-limit and req.ip see the real
+// client address instead of the proxy's. Left off by default for direct local use.
+if (process.env.TRUST_PROXY) {
+  const trustProxy = process.env.TRUST_PROXY;
+  app.set("trust proxy", /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy);
+}
+
 const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173,http://127.0.0.1:5173")
   .split(",")
   .map((origin) => origin.trim());
 
+app.disable("x-powered-by");
+
+// Baseline security headers. This is a JSON API with no HTML responses, so the
+// CSP is deliberately restrictive; the SPA is served separately by the frontend.
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+  res.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  next();
+});
+
 app.use(cors({ origin: allowedOrigins }));
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
@@ -503,6 +578,28 @@ app.get("/reference/eu-ai-act-risk-tiers", requireAuth, async (_req, res, next) 
   try {
     const tiers = await prisma.euAiActRiskTierReference.findMany({ orderBy: { name: "asc" } });
     res.json({ tiers });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/reference/stride-ai-categories", requireAuth, (_req, res) => {
+  res.json({ categories: STRIDE_AI_CATEGORIES });
+});
+
+app.get("/reference/atlas-techniques", requireAuth, async (_req, res, next) => {
+  try {
+    const techniques = await prisma.atlasTechniqueReference.findMany({ orderBy: { name: "asc" } });
+    res.json({ techniques });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/reference/stride-atlas-map", requireAuth, async (_req, res, next) => {
+  try {
+    const mappings = await prisma.strideAtlasMapping.findMany({ orderBy: { owaspCategoryId: "asc" } });
+    res.json({ mappings });
   } catch (error) {
     next(error);
   }
@@ -1118,8 +1215,8 @@ app.get("/risks/export/csv", requireAuth, async (req, res, next) => {
       orderBy: { inherentRiskScore: "desc" },
     });
     const body = csv([
-      ["id", "description", "severity", "sourceFramework", "sourceCategoryId", "status", "likelihood", "impact", "inherentRiskScore", "residualRiskScore", "owner", "dueDate", "assetNames", "controlIds", "archived"],
-      ...risks.map((risk) => [risk.id, risk.description, severityOf(risk.inherentRiskScore), risk.sourceFramework, risk.sourceCategoryId, risk.status, risk.likelihood, risk.impact, risk.inherentRiskScore, risk.residualRiskScore, risk.owner, risk.dueDate?.toISOString() ?? "", risk.assets.map((link) => link.asset.name).join("; "), risk.controlLinks.map((link) => link.control.mappedControlId).join("; "), risk.archived]),
+      ["id", "description", "severity", "sourceFramework", "sourceCategoryId", "strideAiCategory", "atlasTechnique", "status", "likelihood", "impact", "inherentRiskScore", "residualRiskScore", "owner", "dueDate", "assetNames", "controlIds", "archived"],
+      ...risks.map((risk) => [risk.id, risk.description, severityOf(risk.inherentRiskScore), risk.sourceFramework, risk.sourceCategoryId, risk.strideAiCategory ?? "", risk.atlasTechnique ?? "", risk.status, risk.likelihood, risk.impact, risk.inherentRiskScore, risk.residualRiskScore, risk.owner, risk.dueDate?.toISOString() ?? "", risk.assets.map((link) => link.asset.name).join("; "), risk.controlLinks.map((link) => link.control.mappedControlId).join("; "), risk.archived]),
     ]);
     res.header("Content-Type", "text/csv; charset=utf-8");
     res.attachment("risks.csv");
@@ -1136,6 +1233,7 @@ app.post("/risks", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, 
     const risk = await prisma.risk.create({
       data: {
         ...riskData,
+        ...(await strideAtlasFor(body)),
         dueDate: body.dueDate ? new Date(body.dueDate) : null,
         inherentRiskScore: body.likelihood * body.impact,
         createdById: req.user!.id,
@@ -1197,6 +1295,7 @@ app.put("/risks/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (re
       where: { id },
       data: {
         ...riskData,
+        ...(await strideAtlasFor(body)),
         dueDate: body.dueDate ? new Date(body.dueDate) : null,
         inherentRiskScore: body.likelihood * body.impact,
         assets: { connectOrCreate: { where: { assetId_riskId: { assetId, riskId: id } }, create: { assetId } } },

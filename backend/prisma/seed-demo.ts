@@ -3,7 +3,9 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  const admin = await prisma.user.findUniqueOrThrow({ where: { email: "admin@example.com" } });
+  const admin = await prisma.user.findUniqueOrThrow({
+    where: { email: process.env.ADMIN_EMAIL?.trim() || "admin@example.com" },
+  });
 
   const assets = [
     {
@@ -141,8 +143,8 @@ async function main() {
 
   const risks = [
     { id: "seed-risk-low-doc-staleness", sourceFramework: "NIST_AI_RMF", sourceCategoryId: "GOVERN", euAiActRiskTier: null, description: "Model documentation may lag minor threshold changes.", likelihood: 1, impact: 3, inherentRiskScore: 3, residualRiskScore: 2, treatmentPlan: "Quarterly documentation review.", owner: "Model Governance", dueDate: "2026-09-15", status: "MITIGATED" },
-    { id: "seed-risk-medium-vector-quality", sourceFramework: "OWASP_LLM_TOP10", sourceCategoryId: "LLM08", euAiActRiskTier: null, description: "Embedding drift could reduce retrieval relevance for policy searches.", likelihood: 2, impact: 4, inherentRiskScore: 8, residualRiskScore: 5, treatmentPlan: "Add retrieval quality regression suite.", owner: "Platform Engineering", dueDate: "2026-09-30", status: "IN_PROGRESS" },
-    { id: "seed-risk-high-prompt-injection", sourceFramework: "OWASP_LLM_TOP10", sourceCategoryId: "LLM01", euAiActRiskTier: "HIGH", description: "Prompt injection could cause the copilot to ignore underwriting guidance.", likelihood: 3, impact: 4, inherentRiskScore: 12, residualRiskScore: 8, treatmentPlan: "Deploy prompt firewall and red-team test suite.", owner: "AI Enablement", dueDate: "2026-08-20", status: "OPEN" },
+    { id: "seed-risk-medium-vector-quality", sourceFramework: "OWASP_LLM_TOP10", sourceCategoryId: "LLM08", euAiActRiskTier: null, strideAiCategory: "DATA_MODEL_POISONING", atlasTechnique: "RAG Poisoning / False RAG Entry Injection", description: "Embedding drift could reduce retrieval relevance for policy searches.", likelihood: 2, impact: 4, inherentRiskScore: 8, residualRiskScore: 5, treatmentPlan: "Add retrieval quality regression suite.", owner: "Platform Engineering", dueDate: "2026-09-30", status: "IN_PROGRESS" },
+    { id: "seed-risk-high-prompt-injection", sourceFramework: "OWASP_LLM_TOP10", sourceCategoryId: "LLM01", euAiActRiskTier: "HIGH", strideAiCategory: "ALIGNMENT_BYPASS", atlasTechnique: "LLM Prompt Injection", description: "Prompt injection could cause the copilot to ignore underwriting guidance.", likelihood: 3, impact: 4, inherentRiskScore: 12, residualRiskScore: 8, treatmentPlan: "Deploy prompt firewall and red-team test suite.", owner: "AI Enablement", dueDate: "2026-08-20", status: "OPEN" },
     { id: "seed-risk-critical-claims-bias", sourceFramework: "EU_AI_ACT", sourceCategoryId: "HIGH", euAiActRiskTier: "HIGH", description: "Claims triage model may create disparate handling outcomes across protected classes.", likelihood: 5, impact: 5, inherentRiskScore: 25, residualRiskScore: 16, treatmentPlan: "Complete fairness assessment and add human review thresholds.", owner: "Claims Risk", dueDate: "2026-08-10", status: "OPEN" },
     { id: "seed-risk-medium-data-retention", sourceFramework: "NIST_AI_RMF", sourceCategoryId: "MAP", euAiActRiskTier: null, description: "Retention pilot datasets may include stale opt-out attributes.", likelihood: 3, impact: 3, inherentRiskScore: 9, residualRiskScore: 4, treatmentPlan: "Refresh consent feed before pilot expansion.", owner: "Customer Growth", dueDate: "2026-10-05", status: "ACCEPTED" },
   ] as const;

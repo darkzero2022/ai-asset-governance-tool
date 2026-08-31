@@ -13,6 +13,11 @@ fi
 cd "$ROOT_DIR"
 
 if [ "$MODE" = "docker" ]; then
+  if [ -f backend/.env ]; then
+    set -a
+    . backend/.env
+    set +a
+  fi
   docker compose down
   exit 0
 fi

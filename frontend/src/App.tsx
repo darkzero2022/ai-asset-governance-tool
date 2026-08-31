@@ -45,6 +45,8 @@ type Risk = {
   sourceFramework: string;
   sourceCategoryId: string;
   euAiActRiskTier?: string | null;
+  strideAiCategory?: string | null;
+  atlasTechnique?: string | null;
   likelihood: number;
   impact: number;
   inherentRiskScore: number;
@@ -154,6 +156,8 @@ const emptyRisk = {
   sourceFramework: "OWASP_LLM_TOP10",
   sourceCategoryId: "LLM01",
   euAiActRiskTier: "",
+  strideAiCategory: "",
+  atlasTechnique: "",
   description: "",
   likelihood: 3,
   impact: 3,
@@ -217,6 +221,7 @@ function App() {
   const [assetImportSuggestion, setAssetImportSuggestion] = useState<ImportSuggestion | null>(null);
   const [modelCardImportSuggestion, setModelCardImportSuggestion] = useState<ImportSuggestion | null>(null);
   const [categories, setCategories] = useState<FrameworkCategory[]>([]);
+  const [atlasTechniques, setAtlasTechniques] = useState<string[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<AssetDetail | null>(null);
   const [assetForm, setAssetForm] = useState(emptyAsset);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
@@ -277,18 +282,20 @@ function App() {
     const riskParams = new URLSearchParams();
     if (filters.riskStatus) riskParams.set("status", filters.riskStatus);
     if (filters.sourceFramework) riskParams.set("sourceFramework", filters.sourceFramework);
-    const [assetData, riskData, referenceData, projectData, controlData] = await Promise.all([
+    const [assetData, riskData, referenceData, projectData, controlData, atlasData] = await Promise.all([
       api<{ assets: Asset[] }>(`/assets${assetParams.size ? `?${assetParams}` : ""}`),
       api<{ risks: Risk[] }>(`/risks${riskParams.size ? `?${riskParams}` : ""}`),
       api<{ categories: FrameworkCategory[] }>("/reference/framework-categories"),
       api<{ projects: Project[] }>("/projects"),
       api<{ controls: Control[] }>("/controls"),
+      api<{ techniques: Array<{ name: string }> }>("/reference/atlas-techniques"),
     ]);
     setAssets(assetData.assets);
     setRisks(riskData.risks);
     setCategories(referenceData.categories);
     setProjects(projectData.projects);
     setControls(controlData.controls);
+    setAtlasTechniques(atlasData.techniques.map((technique) => technique.name));
   }
 
   async function loadAsset(id: string) {
@@ -491,6 +498,8 @@ function App() {
         impact: Number(riskForm.impact),
         residualRiskScore: riskForm.residualRiskScore ? Number(riskForm.residualRiskScore) : null,
         euAiActRiskTier: riskForm.euAiActRiskTier || null,
+        strideAiCategory: riskForm.strideAiCategory || null,
+        atlasTechnique: riskForm.atlasTechnique || null,
         dueDate: riskForm.dueDate ? new Date(riskForm.dueDate).toISOString() : null,
       };
       const path = editingRiskId ? `/risks/${editingRiskId}` : "/risks";
@@ -511,6 +520,8 @@ function App() {
       sourceFramework: risk.sourceFramework,
       sourceCategoryId: risk.sourceCategoryId,
       euAiActRiskTier: risk.euAiActRiskTier ?? "",
+      strideAiCategory: risk.strideAiCategory ?? "",
+      atlasTechnique: risk.atlasTechnique ?? "",
       description: risk.description,
       likelihood: risk.likelihood,
       impact: risk.impact,
@@ -540,6 +551,8 @@ function App() {
             sourceFramework: risk.sourceFramework,
             sourceCategoryId: risk.sourceCategoryId,
             euAiActRiskTier: risk.euAiActRiskTier ?? null,
+            strideAiCategory: risk.strideAiCategory ?? null,
+            atlasTechnique: risk.atlasTechnique ?? null,
             description: risk.description,
             likelihood: risk.likelihood,
             impact: risk.impact,
@@ -952,6 +965,7 @@ function App() {
           risks={risks}
           assets={assets}
           categories={categories}
+          atlasTechniques={atlasTechniques}
           filters={filters}
           riskForm={riskForm}
           editingRiskId={editingRiskId}

@@ -98,6 +98,6 @@ no free-typing of framework categories.
 ## 7. CycloneDX Compliance Note
 
 Output JSON must validate against the current CycloneDX AI-BOM (ML-BOM) schema.
-Claude Code should pull the official CycloneDX schema (from the CycloneDX
+The implementation pulls the official CycloneDX schema (from the CycloneDX
 specification repository) as the source of truth for field names/structure rather
-than inferring it, and validate exported documents against it.
+than inferring it, and validates exported documents against it.

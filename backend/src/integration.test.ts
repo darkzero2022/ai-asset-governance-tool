@@ -110,6 +110,16 @@ beforeAll(async () => {
     update: { name: "Govern", description: "Test governance category" },
     create: { framework: "NIST_AI_RMF", categoryId: "GOVERN", name: "Govern", description: "Test governance category" },
   });
+  await prisma.frameworkCategory.upsert({
+    where: { framework_categoryId: { framework: "OWASP_LLM_TOP10", categoryId: "LLM03" } },
+    update: { name: "Supply Chain", description: "Test supply chain category" },
+    create: { framework: "OWASP_LLM_TOP10", categoryId: "LLM03", name: "Supply Chain", description: "Test supply chain category" },
+  });
+  await prisma.strideAtlasMapping.upsert({
+    where: { owaspCategoryId: "LLM03" },
+    update: { strideAiCategory: "MODEL_IMPERSONATION", atlasTechnique: "ML Supply Chain Compromise" },
+    create: { owaspCategoryId: "LLM03", strideAiCategory: "MODEL_IMPERSONATION", atlasTechnique: "ML Supply Chain Compromise" },
+  });
 
   for (const role of roles) {
     const user = await prisma.user.upsert({
@@ -354,6 +364,94 @@ describe("asset transition policy gates", () => {
   });
 });
 
+describe("STRIDE-AI and MITRE ATLAS mapping", () => {
+  const owaspRiskBody = (description: string, extra: Record<string, unknown> = {}) => ({
+    assetId: "",
+    sourceFramework: "OWASP_LLM_TOP10",
+    sourceCategoryId: "LLM03",
+    description,
+    likelihood: 4,
+    impact: 5,
+    ...extra,
+  });
+
+  it("auto-populates stride_ai_category and atlas_technique from the OWASP lookup", async () => {
+    const asset = await createAsset();
+    const response = await request(app)
+      .post("/risks")
+      .set(auth("ADMIN"))
+      .send({ ...owaspRiskBody(`${runId}-stride-auto`), assetId: asset.id })
+      .expect(201);
+
+    expect(response.body.risk).toMatchObject({
+      strideAiCategory: "MODEL_IMPERSONATION",
+      atlasTechnique: "ML Supply Chain Compromise",
+    });
+  });
+
+  it("keeps an explicit override instead of the lookup default", async () => {
+    const asset = await createAsset();
+    const response = await request(app)
+      .post("/risks")
+      .set(auth("ADMIN"))
+      .send({ ...owaspRiskBody(`${runId}-stride-override`), assetId: asset.id, strideAiCategory: "PROVENANCE_LOSS", atlasTechnique: "Data Poisoning" })
+      .expect(201);
+
+    expect(response.body.risk).toMatchObject({ strideAiCategory: "PROVENANCE_LOSS", atlasTechnique: "Data Poisoning" });
+  });
+
+  it("leaves the fields null for a non-OWASP risk with no provided values", async () => {
+    const asset = await createAsset();
+    const response = await request(app)
+      .post("/risks")
+      .set(auth("ADMIN"))
+      .send({ assetId: asset.id, sourceFramework: "NIST_AI_RMF", sourceCategoryId: "GOVERN", description: `${runId}-stride-nist`, likelihood: 2, impact: 2 })
+      .expect(201);
+
+    expect(response.body.risk.strideAiCategory).toBeNull();
+    expect(response.body.risk.atlasTechnique).toBeNull();
+  });
+
+  it("re-defaults on edit when the fields are cleared, and exposes them on the asset detail + CycloneDX export", async () => {
+    const asset = await createAsset({ type: "MODEL" });
+    const created = await request(app)
+      .post("/risks")
+      .set(auth("ADMIN"))
+      .send({ ...owaspRiskBody(`${runId}-stride-roundtrip`), assetId: asset.id, strideAiCategory: "ALIGNMENT_BYPASS" })
+      .expect(201);
+    const riskId = created.body.risk.id;
+
+    await request(app)
+      .put(`/risks/${riskId}`)
+      .set(auth("ADMIN"))
+      .send({ ...owaspRiskBody(`${runId}-stride-roundtrip`), assetId: asset.id, strideAiCategory: null, atlasTechnique: null })
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.risk).toMatchObject({ strideAiCategory: "MODEL_IMPERSONATION", atlasTechnique: "ML Supply Chain Compromise" });
+      });
+
+    await request(app).get(`/assets/${asset.id}`).set(auth("VIEWER")).expect(200).expect((response) => {
+      expect(response.body.asset.risks[0]).toMatchObject({ strideAiCategory: "MODEL_IMPERSONATION", atlasTechnique: "ML Supply Chain Compromise" });
+    });
+
+    const bom = await request(app).get(`/assets/${asset.id}/export/cyclonedx`).set(auth("VIEWER")).expect(200);
+    const props = bom.body.components[0].properties as Array<{ name: string; value: string }>;
+    expect(props).toContainEqual({ name: "aibom:risk:strideAiCategory", value: "MODEL_IMPERSONATION" });
+    expect(props).toContainEqual({ name: "aibom:risk:atlasTechnique", value: "ML Supply Chain Compromise" });
+  });
+});
+
+describe("asset detail response", () => {
+  it("includes computed severity on linked risks so the approval banner matches the backend gate", async () => {
+    const asset = await createAsset({ type: "MODEL" });
+    await createRisk(asset.id, { likelihood: 5, impact: 5, inherentRiskScore: 25, status: "OPEN" });
+
+    await request(app).get(`/assets/${asset.id}`).set(auth("VIEWER")).expect(200).expect((response) => {
+      expect(response.body.asset.risks[0]).toMatchObject({ severity: "CRITICAL", status: "OPEN" });
+    });
+  });
+});
+
 describe("segregation of duties", () => {
   it("blocks approving an asset moved to review by the same user", async () => {
     const asset = await createAsset({ type: "MODEL", status: "DRAFT" });
@@ -428,6 +526,21 @@ describe("URL import", () => {
       .expect((response) => {
         expect(response.body.error).toMatch(/blocked private, loopback, or link-local/);
       });
+
+    await request(app)
+      .post("/assets/import-url")
+      .set(auth("ADMIN"))
+      .send({ sourceUrl: "http://100.64.1.1/internal" })
+      .expect(400)
+      .expect((response) => {
+        expect(response.body.error).toMatch(/blocked private, loopback, or link-local/);
+      });
+
+    await request(app)
+      .post("/assets/import-url")
+      .set(auth("ADMIN"))
+      .send({ sourceUrl: "http://[::ffff:127.0.0.1]/internal" })
+      .expect(400);
   });
 });
 

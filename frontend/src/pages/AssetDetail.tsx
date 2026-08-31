@@ -28,6 +28,9 @@ type Risk = {
   description: string;
   sourceFramework: string;
   sourceCategoryId: string;
+  euAiActRiskTier?: string | null;
+  strideAiCategory?: string | null;
+  atlasTechnique?: string | null;
   inherentRiskScore: number;
   status: string;
 };
@@ -204,12 +207,13 @@ export default function AssetDetail(props: Props) {
             {props.asset.risks.map((risk) => (
               <div key={risk.id} className="rounded-xl border border-slate-200 p-3 text-sm">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{risk.description}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium break-words">{risk.description}</p>
                     <p className="text-slate-500">{props.label(risk.status)} | Score {risk.inherentRiskScore}</p>
                   </div>
-                  <button className="text-xs font-semibold text-red-600" onClick={() => props.onUnlinkRisk(risk.id)}>Unlink</button>
+                  <button className="shrink-0 text-xs font-semibold text-red-600" onClick={() => props.onUnlinkRisk(risk.id)}>Unlink</button>
                 </div>
+                <RiskReferenceTags risk={risk} label={props.label} />
               </div>
             ))}
             {!props.asset.risks.length && <p className="text-sm text-slate-500">No linked risks.</p>}
@@ -282,6 +286,47 @@ export default function AssetDetail(props: Props) {
         </Panel>
       </aside>
     </section>
+  );
+}
+
+const FRAMEWORK_LABELS: Record<string, string> = {
+  OWASP_LLM_TOP10: "OWASP LLM Top 10",
+  NIST_AI_RMF: "NIST AI RMF",
+  EU_AI_ACT: "EU AI Act",
+};
+
+function RiskReferenceTags(props: { risk: Risk; label: (value: string) => string }) {
+  const { risk } = props;
+  const frameworkName = FRAMEWORK_LABELS[risk.sourceFramework] ?? risk.sourceFramework;
+  const categoryText = risk.sourceFramework === "EU_AI_ACT" ? props.label(risk.sourceCategoryId) : risk.sourceCategoryId;
+  const tags: Array<{ key: string; text: string; className: string }> = [
+    { key: "framework", text: `${frameworkName}: ${categoryText}`, className: "bg-slate-100 text-slate-700 ring-slate-200" },
+  ];
+  if (risk.sourceFramework !== "NIST_AI_RMF") tags.push({ key: "nist", text: "NIST AI RMF: not mapped", className: "bg-slate-50 text-slate-400 ring-slate-200" });
+  if (risk.sourceFramework !== "EU_AI_ACT") {
+    tags.push({
+      key: "eu",
+      text: risk.euAiActRiskTier ? `EU AI Act: ${props.label(risk.euAiActRiskTier)}` : "EU AI Act: not mapped",
+      className: risk.euAiActRiskTier ? "bg-violet-50 text-violet-700 ring-violet-200" : "bg-slate-50 text-slate-400 ring-slate-200",
+    });
+  }
+  tags.push({
+    key: "stride",
+    text: risk.strideAiCategory ? `STRIDE-AI: ${props.label(risk.strideAiCategory)}` : "STRIDE-AI: not mapped",
+    className: risk.strideAiCategory ? "bg-amber-50 text-amber-800 ring-amber-200" : "bg-slate-50 text-slate-400 ring-slate-200",
+  });
+  tags.push({
+    key: "atlas",
+    text: risk.atlasTechnique ? `ATLAS: ${risk.atlasTechnique}` : "ATLAS: no technique",
+    className: risk.atlasTechnique ? "bg-rose-50 text-rose-700 ring-rose-200" : "bg-slate-50 text-slate-400 ring-slate-200",
+  });
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {tags.map((tag) => (
+        <span key={tag.key} className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${tag.className}`}>{tag.text}</span>
+      ))}
+    </div>
   );
 }
 

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 build/
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
@@ -11,9 +12,5 @@ backups/
 logs/
 .aibom-mode
 
-# Internal AI-assisted development workflow files — kept locally, not published
-CLAUDE.md
-AGENTS.md
-CHANGES.log
-docs/roadmap.md
-docs/codex-backlog.md
+# Local working notes — not published
+.project-notes/

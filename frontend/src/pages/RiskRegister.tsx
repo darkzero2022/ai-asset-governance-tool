@@ -4,6 +4,16 @@ import { RiskTable } from "../components/RiskTable";
 
 type Asset = { id: string; name: string; dataClassificationTouched?: string | null };
 type FrameworkCategory = { framework: string; categoryId: string; name: string };
+
+const STRIDE_AI_CATEGORIES = [
+  "MODEL_IMPERSONATION",
+  "DATA_MODEL_POISONING",
+  "PROVENANCE_LOSS",
+  "MODEL_INVERSION",
+  "RESOURCE_EXHAUSTION",
+  "ALIGNMENT_BYPASS",
+];
+
 type Risk = {
   id: string;
   assetId: string;
@@ -11,6 +21,8 @@ type Risk = {
   sourceFramework: string;
   sourceCategoryId: string;
   euAiActRiskTier?: string | null;
+  strideAiCategory?: string | null;
+  atlasTechnique?: string | null;
   likelihood: number;
   impact: number;
   inherentRiskScore: number;
@@ -28,6 +40,8 @@ type RiskForm = {
   sourceFramework: string;
   sourceCategoryId: string;
   euAiActRiskTier: string;
+  strideAiCategory: string;
+  atlasTechnique: string;
   description: string;
   likelihood: number;
   impact: number;
@@ -51,6 +65,7 @@ type Props = {
   risks: Risk[];
   assets: Asset[];
   categories: FrameworkCategory[];
+  atlasTechniques: string[];
   filters: Filters;
   riskForm: RiskForm;
   editingRiskId: string | null;
@@ -68,8 +83,13 @@ type Props = {
 
 export default function RiskRegister(props: Props) {
   const [heatmapFilter, setHeatmapFilter] = useState<{ likelihood: number; impact: number } | null>(null);
+  const [strideFilter, setStrideFilter] = useState("");
   const filteredCategories = props.categories.filter((category) => category.framework === props.riskForm.sourceFramework);
-  const displayedRisks = heatmapFilter ? props.risks.filter((risk) => risk.likelihood === heatmapFilter.likelihood && risk.impact === heatmapFilter.impact) : props.risks;
+  const displayedRisks = props.risks.filter((risk) => {
+    if (heatmapFilter && (risk.likelihood !== heatmapFilter.likelihood || risk.impact !== heatmapFilter.impact)) return false;
+    if (strideFilter && (risk.strideAiCategory ?? "") !== strideFilter) return false;
+    return true;
+  });
   const selectedAsset = props.assets.find((asset) => asset.id === props.riskForm.assetId);
   const suggestedEuTier = suggestEuAiActTier(selectedAsset, props.riskForm.sourceCategoryId);
   const updateFilter = (key: keyof Filters, value: string) => props.onFiltersChange({ ...props.filters, [key]: value });
@@ -93,9 +113,10 @@ export default function RiskRegister(props: Props) {
             <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={props.onNewRisk}>New risk</button>
           </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
             <Select label="Risk Status" value={props.filters.riskStatus} options={["", "OPEN", "IN_PROGRESS", "MITIGATED", "ACCEPTED"]} onChange={(value) => updateFilter("riskStatus", value)} labelValue={props.label} />
             <Select label="Framework" value={props.filters.sourceFramework} options={["", "NIST_AI_RMF", "EU_AI_ACT", "OWASP_LLM_TOP10"]} onChange={(value) => updateFilter("sourceFramework", value)} labelValue={props.label} />
+            <Select label="STRIDE-AI" value={strideFilter} options={["", ...STRIDE_AI_CATEGORIES]} onChange={setStrideFilter} labelValue={props.label} />
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -103,7 +124,7 @@ export default function RiskRegister(props: Props) {
             <button className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedRiskIds.length} onClick={() => props.onBulkUpdate("MITIGATED")}>Bulk Mitigated</button>
           </div>
 
-          {heatmapFilter && <button className="mt-4 text-sm font-semibold text-cyan-700" onClick={() => setHeatmapFilter(null)}>Clear heatmap filter</button>}
+          {(heatmapFilter || strideFilter) && <button className="mt-4 text-sm font-semibold text-cyan-700" onClick={() => { setHeatmapFilter(null); setStrideFilter(""); }}>Clear table filters</button>}
           <RiskHeatmap risks={props.risks} onCellClick={setHeatmapFilter} />
           <RiskTable risks={displayedRisks} selectedIds={props.selectedRiskIds} label={props.label} onToggle={props.onToggleRisk} onEdit={props.onEditRisk} onOpen={props.onOpenRisk} />
         </div>
@@ -117,6 +138,11 @@ export default function RiskRegister(props: Props) {
           <Select label="Category" value={props.riskForm.sourceCategoryId} options={filteredCategories.map((category) => category.categoryId)} optionLabels={Object.fromEntries(filteredCategories.map((category) => [category.categoryId, `${category.categoryId} - ${category.name}`]))} onChange={(value) => updateForm("sourceCategoryId", value)} labelValue={props.label} />
           <Select label="EU AI Act Tier" value={props.riskForm.euAiActRiskTier} options={["", "UNACCEPTABLE", "HIGH", "LIMITED", "MINIMAL"]} optionLabels={{ "": "Not applicable" }} onChange={(value) => updateForm("euAiActRiskTier", value)} labelValue={props.label} />
           {suggestedEuTier && <p className="-mt-2 text-xs text-slate-500">Suggested tier: {props.label(suggestedEuTier)}. Confirm or override before saving.</p>}
+          <Select label="STRIDE-AI Category" value={props.riskForm.strideAiCategory} options={["", ...STRIDE_AI_CATEGORIES]} optionLabels={{ "": "Auto from OWASP category" }} onChange={(value) => updateForm("strideAiCategory", value)} labelValue={props.label} />
+          <Select label="MITRE ATLAS Technique" value={props.riskForm.atlasTechnique} options={["", ...props.atlasTechniques]} optionLabels={Object.fromEntries([["", "Auto from OWASP category"], ...props.atlasTechniques.map((technique) => [technique, technique])])} onChange={(value) => updateForm("atlasTechnique", value)} labelValue={props.label} />
+          {props.riskForm.sourceFramework === "OWASP_LLM_TOP10" && !props.riskForm.strideAiCategory && !props.riskForm.atlasTechnique && (
+            <p className="-mt-2 text-xs text-slate-500">STRIDE-AI and ATLAS will be auto-filled from {props.riskForm.sourceCategoryId} on save. Pick a value to override.</p>
+          )}
           <Select label="Likelihood" value={String(props.riskForm.likelihood)} options={["1", "2", "3", "4", "5"]} onChange={(value) => updateForm("likelihood", Number(value))} labelValue={props.label} />
           <Select label="Impact" value={String(props.riskForm.impact)} options={["1", "2", "3", "4", "5"]} onChange={(value) => updateForm("impact", Number(value))} labelValue={props.label} />
           <Field label="Residual Risk Score" value={props.riskForm.residualRiskScore} onChange={(value) => updateForm("residualRiskScore", value)} />

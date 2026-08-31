@@ -7,6 +7,8 @@ type Risk = {
   description: string;
   sourceFramework: string;
   sourceCategoryId: string;
+  strideAiCategory?: string | null;
+  atlasTechnique?: string | null;
   inherentRiskScore: number;
   residualRiskScore?: number | null;
   likelihood?: number;
@@ -21,7 +23,7 @@ type Risk = {
   controlLinks?: Array<unknown>;
 };
 
-type SortKey = "severity" | "framework" | "status" | "dueDate" | "assets" | "controls" | "score";
+type SortKey = "severity" | "framework" | "strideAi" | "status" | "dueDate" | "assets" | "controls" | "score";
 
 const severityOrder: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
 
@@ -64,12 +66,13 @@ export function RiskTable({ risks, selectedIds, label, onToggle, onEdit, onOpen,
 
   return (
     <div className="mt-5 overflow-x-auto">
-      <table className="w-full min-w-[760px] text-left text-sm">
-        <thead className="border-b border-slate-700 text-xs uppercase tracking-wide text-slate-400">
+      <table className="w-full min-w-[1040px] text-left text-sm">
+        <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
           <tr>
             <th className="py-3 pr-3">Select</th>
             <SortableHeader label="Severity" active={sortKey === "severity"} direction={sortDirection} onClick={() => changeSort("severity")} />
             <SortableHeader label="Framework" active={sortKey === "framework"} direction={sortDirection} onClick={() => changeSort("framework")} />
+            <SortableHeader label="STRIDE-AI / ATLAS" active={sortKey === "strideAi"} direction={sortDirection} onClick={() => changeSort("strideAi")} />
             <SortableHeader label="Status" active={sortKey === "status"} direction={sortDirection} onClick={() => changeSort("status")} />
             <SortableHeader label="Due Date" active={sortKey === "dueDate"} direction={sortDirection} onClick={() => changeSort("dueDate")} />
             <SortableHeader label="Assets" active={sortKey === "assets"} direction={sortDirection} onClick={() => changeSort("assets")} />
@@ -78,26 +81,30 @@ export function RiskTable({ risks, selectedIds, label, onToggle, onEdit, onOpen,
             <th className="py-3">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800">
+        <tbody className="divide-y divide-slate-100">
           {sortedRisks.map((risk) => (
             <tr key={risk.id} className="align-top">
               <td className="py-4 pr-3"><input type="checkbox" checked={selectedIds.includes(risk.id)} onChange={() => onToggle(risk.id)} /></td>
               <td className="py-4 pr-3"><SeverityBadge severity={risk.severity} /></td>
-              <td className="py-4 pr-3"><span className="font-medium text-slate-100">{risk.sourceFramework}</span><span className="block text-xs text-slate-500">{risk.sourceCategoryId}</span></td>
-              <td className="py-4 pr-3">{label(risk.status)}</td>
-              <td className="py-4 pr-3">{risk.dueDate ? new Date(risk.dueDate).toLocaleDateString() : "Not set"}</td>
-              <td className="py-4 pr-3">{linkedAssetCount(risk)}</td>
-              <td className="py-4 pr-3">{linkedControlCount(risk)}</td>
-              <td className="py-4 pr-3"><span className="rounded-full bg-slate-800 px-2 py-1 text-xs font-bold text-slate-100">{risk.inherentRiskScore}</span></td>
-              <td className="py-4">
-                <p className="mb-2 max-w-xs text-slate-300">{risk.description}</p>
+              <td className="py-4 pr-3"><span className="font-medium text-slate-900">{risk.sourceFramework}</span><span className="block text-xs text-slate-500">{risk.sourceCategoryId}</span></td>
+              <td className="py-4 pr-3">
+                {risk.strideAiCategory ? <span className="font-medium text-slate-900">{label(risk.strideAiCategory)}</span> : <span className="text-slate-400">Not mapped</span>}
+                <span className="block text-xs text-slate-500">{risk.atlasTechnique ?? "No ATLAS technique"}</span>
+              </td>
+              <td className="py-4 pr-3 text-slate-700">{label(risk.status)}</td>
+              <td className="py-4 pr-3 text-slate-700">{risk.dueDate ? new Date(risk.dueDate).toLocaleDateString() : "Not set"}</td>
+              <td className="py-4 pr-3 text-slate-700">{linkedAssetCount(risk)}</td>
+              <td className="py-4 pr-3 text-slate-700">{linkedControlCount(risk)}</td>
+              <td className="py-4 pr-3"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-900">{risk.inherentRiskScore}</span></td>
+              <td className="max-w-sm py-4">
+                <p className="mb-1 line-clamp-2 text-slate-700">{risk.description}</p>
                 <p className="mb-2 text-xs text-slate-500">{risk.asset?.name ?? "Unlinked risk"}</p>
-                {onOpen && <button className="mr-3 text-sm font-semibold text-cyan-300" onClick={() => onOpen(risk.id)}>View risk</button>}
-                <button className="text-sm font-semibold text-cyan-300" onClick={() => onEdit(risk)}>Edit risk</button>
+                {onOpen && <button className="mr-3 text-sm font-semibold text-cyan-700" onClick={() => onOpen(risk.id)}>View risk</button>}
+                <button className="text-sm font-semibold text-cyan-700" onClick={() => onEdit(risk)}>Edit risk</button>
               </td>
             </tr>
           ))}
-          {sortedRisks.length === 0 && <tr><td className="py-8 text-center text-slate-400" colSpan={9}>No risks match the current filters.</td></tr>}
+          {sortedRisks.length === 0 && <tr><td className="py-8 text-center text-slate-500" colSpan={10}>No risks match the current filters.</td></tr>}
         </tbody>
       </table>
       {pagination && onPageChange && <Pagination pagination={pagination} onChange={onPageChange} />}
@@ -108,7 +115,7 @@ export function RiskTable({ risks, selectedIds, label, onToggle, onEdit, onOpen,
 function SortableHeader(props: { label: string; active: boolean; direction: "asc" | "desc"; onClick: () => void }) {
   return (
     <th className="py-3 pr-3">
-      <button className="font-semibold hover:text-slate-100" onClick={props.onClick}>
+      <button className="font-semibold hover:text-slate-900" onClick={props.onClick}>
         {props.label}{props.active ? ` ${props.direction === "asc" ? "up" : "down"}` : ""}
       </button>
     </th>
@@ -118,6 +125,7 @@ function SortableHeader(props: { label: string; active: boolean; direction: "asc
 function sortValue(risk: Risk, sortKey: SortKey) {
   if (sortKey === "severity") return severityOrder[risk.severity ?? ""] ?? 0;
   if (sortKey === "framework") return `${risk.sourceFramework}:${risk.sourceCategoryId}`;
+  if (sortKey === "strideAi") return `${risk.strideAiCategory ?? "~"}:${risk.atlasTechnique ?? "~"}`;
   if (sortKey === "status") return risk.status;
   if (sortKey === "dueDate") return risk.dueDate ? new Date(risk.dueDate).getTime() : 0;
   if (sortKey === "assets") return linkedAssetCount(risk);

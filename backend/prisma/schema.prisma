@@ -60,6 +60,15 @@ enum RiskStatus {
   ACCEPTED
 }
 
+enum StrideAiCategory {
+  MODEL_IMPERSONATION
+  DATA_MODEL_POISONING
+  PROVENANCE_LOSS
+  MODEL_INVERSION
+  RESOURCE_EXHAUSTION
+  ALIGNMENT_BYPASS
+}
+
 enum ControlImplementationStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -143,6 +152,8 @@ model Risk {
   sourceFramework       SourceFramework
   sourceCategoryId      String
   euAiActRiskTier       EuAiActRiskTier?
+  strideAiCategory      StrideAiCategory?
+  atlasTechnique        String?
   description           String
   likelihood            Int
   impact                Int
@@ -343,4 +354,21 @@ model EuAiActRiskTierReference {
   tier        EuAiActRiskTier @unique
   name        String
   description String
+}
+
+// Static lookup: an OWASP LLM Top 10 category -> its STRIDE-AI category and
+// (optionally) a MITRE ATLAS technique. Used to auto-populate Risk.strideAiCategory
+// and Risk.atlasTechnique when a risk is OWASP-linked. Seeded as reference data;
+// the mapping is a default, not a lock — both fields stay editable on the risk.
+model StrideAtlasMapping {
+  id               String           @id @default(cuid())
+  owaspCategoryId  String           @unique
+  strideAiCategory StrideAiCategory
+  atlasTechnique   String?
+}
+
+// Canonical list of MITRE ATLAS techniques offered for Risk.atlasTechnique.
+model AtlasTechniqueReference {
+  id   String @id @default(cuid())
+  name String @unique
 }

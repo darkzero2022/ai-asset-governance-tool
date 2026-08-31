@@ -48,6 +48,8 @@ function assetProperties(asset: AssetForBom) {
     { name: "aibom:risk:inherentScore", value: String(risk.inherentRiskScore) },
     optionalProperty("aibom:risk:residualScore", risk.residualRiskScore?.toString()),
     optionalProperty("aibom:risk:euAiActTier", risk.euAiActRiskTier),
+    optionalProperty("aibom:risk:strideAiCategory", risk.strideAiCategory),
+    optionalProperty("aibom:risk:atlasTechnique", risk.atlasTechnique),
     optionalProperty("aibom:risk:owner", risk.owner),
     optionalProperty("aibom:risk:treatmentPlan", risk.treatmentPlan),
     ...risk.controls.flatMap((control) => [
