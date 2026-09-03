@@ -4,8 +4,8 @@ import { ZodError, z } from "zod";
 import { Prisma } from "@prisma/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { errorHandler, notFoundHandler } from "./errorHandler.js";
-import { AppError } from "./httpError.js";
-import { logger } from "./log.js";
+import { AppError } from "../httpError.js";
+import { logger } from "../log.js";
 import { requestContext } from "./requestContext.js";
 
 function appThatThrows(thrower: () => unknown): express.Express {

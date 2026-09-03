@@ -1,8 +1,8 @@
 import type { ErrorRequestHandler, RequestHandler } from "express";
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
-import { AppError } from "./httpError.js";
-import { logger } from "./log.js";
+import { AppError } from "../httpError.js";
+import { logger } from "../log.js";
 import { getRequestId } from "./requestContext.js";
 
 /** Terminal 404 — any request that matched no route lands here as an AppError. */

@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import type { RequestHandler } from "express";
-import { logger } from "./log.js";
+import { logger } from "../log.js";
 
 type Store = { requestId: string; userId?: string };
 

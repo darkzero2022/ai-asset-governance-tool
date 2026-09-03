@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import type { Role } from "@prisma/client";
 import { prisma } from "./prisma.js";
-import { setUserId } from "./requestContext.js";
+import { setUserId } from "./middleware/requestContext.js";
 import { AppError, unauthorized } from "./httpError.js";
 
 export type AuthUser = {

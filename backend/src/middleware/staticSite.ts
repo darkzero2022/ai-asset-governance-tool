@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
-import { logger } from "./log.js";
+import { logger } from "../log.js";
 
 // Endpoints that must always return their real (non-HTML) response even when the
 // caller happens to accept text/html — infra probes hit these.
