@@ -11,6 +11,7 @@
 .project-notes
 backups
 logs
+data
 *.log
 docs
 scripts

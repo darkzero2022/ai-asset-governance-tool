@@ -10,6 +10,7 @@ if [ ! -f "$MODE_FILE" ]; then
 fi
 
 . "$MODE_FILE"
+DATABASE="${DATABASE:-docker}"
 cd "$ROOT_DIR"
 
 if [ -f .env ]; then
@@ -36,4 +37,8 @@ for name in backend frontend; do
   fi
 done
 
-docker compose stop postgres
+case "$DATABASE" in
+  managed) (cd backend && npm run --silent db:stop) ;;
+  docker) docker compose stop postgres ;;
+  url) : ;;
+esac

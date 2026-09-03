@@ -10,6 +10,7 @@ if [ ! -f "$MODE_FILE" ]; then
 fi
 
 . "$MODE_FILE"
+DATABASE="${DATABASE:-docker}"
 cd "$ROOT_DIR"
 
 if [ -f .env ]; then
@@ -28,7 +29,11 @@ if [ "$MODE" = "docker" ]; then
 fi
 
 mkdir -p logs
-docker compose up -d postgres
+case "$DATABASE" in
+  managed) (cd backend && npm run --silent db:start) ;;
+  docker) docker compose up -d postgres ;;
+  url) : ;;
+esac
 
 start_process() {
   local name="$1"

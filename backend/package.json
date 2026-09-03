@@ -14,7 +14,10 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:seed:reference": "tsx prisma/seed-reference.ts",
     "prisma:seed:demo": "tsx prisma/seed-demo.ts",
-    "notify:recertifications": "tsx src/jobs/notifyRecertifications.ts"
+    "notify:recertifications": "tsx src/jobs/notifyRecertifications.ts",
+    "db:start": "tsx src/db/managed.ts start",
+    "db:stop": "tsx src/db/managed.ts stop",
+    "db:status": "tsx src/db/managed.ts status"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -47,5 +50,8 @@
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "optionalDependencies": {
+    "embedded-postgres": "16.14.0-beta.17"
   }
 }
