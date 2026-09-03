@@ -463,6 +463,51 @@ app.post("/auth/login", loginRateLimit, async (req, res, next) => {
   }
 });
 
+// First-run setup: when there are no users yet, the SPA shows a "create
+// administrator" screen instead of the login form and calls POST /auth/bootstrap.
+app.get("/auth/bootstrap-status", async (_req, res, next) => {
+  try {
+    const userCount = await prisma.user.count();
+    res.json({ needsBootstrap: userCount === 0 });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/auth/bootstrap", loginRateLimit, async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        email: z.string().email(),
+        name: z.string().min(1).optional(),
+        password: z.string().min(8),
+      })
+      .parse(req.body);
+
+    const user = await prisma.$transaction(async (tx) => {
+      if ((await tx.user.count()) > 0) {
+        throw new AppError(409, "ALREADY_BOOTSTRAPPED", "An administrator account already exists — sign in instead.");
+      }
+      return tx.user.create({
+        data: {
+          email: body.email,
+          name: body.name ?? "Administrator",
+          role: "ADMIN",
+          active: true,
+          passwordHash: await bcrypt.hash(body.password, 10),
+        },
+      });
+    });
+
+    res.status(201).json({
+      token: signToken({ id: user.id, email: user.email, role: user.role }),
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get("/auth/me", requireAuth, async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { id: true, email: true, name: true, role: true, active: true } });

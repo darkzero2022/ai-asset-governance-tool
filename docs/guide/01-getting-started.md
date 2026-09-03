@@ -195,10 +195,14 @@ cd ../frontend && npm test && npm run build
 
 ## First login
 
-Sign in with the admin account setup created — email is echoed on the final
-`Admin login:` line, password is what you supplied or the random one printed by
-the reference seed. **Change it on the Users page** before entering real data.
-Lost it? Re-run setup with the same `--admin-email` and a new `--admin-password`.
+- **If setup created an admin** (you passed `--admin-password`, or chose `--data=demo`):
+  sign in with the email on the final `Admin login:` line and that password.
+- **Otherwise** (empty data, no password given): the first time you open the app it
+  shows a **"Create your administrator account"** screen. Fill it in — that account
+  becomes the first ADMIN and you're signed straight in.
+
+Either way, add the rest of your users on the **Users** page. Lost the admin
+password? Re-run setup with the same `--admin-email` and a new `--admin-password`.
 
 ## Troubleshooting
 

@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 
@@ -29,21 +28,31 @@ async function seedAdminUser() {
     return;
   }
 
-  const password = envPassword ?? randomBytes(12).toString("base64url");
+  // No ADMIN_PASSWORD and no existing admin: leave the account to be created
+  // through the app's first-run screen. (setup.sh supplies a password for
+  // --data=demo, which needs an owner.)
+  if (!envPassword) {
+    const userCount = await prisma.user.count();
+    if (userCount === 0) {
+      console.log("\n  No admin account seeded — open the app and create one on first visit.\n");
+    }
+    return;
+  }
+
   await prisma.user.create({
     data: {
       email: ADMIN_EMAIL,
       name: ADMIN_NAME,
       role: "ADMIN",
       active: true,
-      passwordHash: await bcrypt.hash(password, 10),
+      passwordHash: await bcrypt.hash(envPassword, 10),
     },
   });
 
   console.log("\n  ────────────────────────────────────────────────");
   console.log("  Created initial admin account");
   console.log(`    Email:    ${ADMIN_EMAIL}`);
-  console.log(`    Password: ${password}`);
+  console.log(`    Password: (the value you supplied)`);
   console.log("  Sign in, then change this password on the Users page.");
   console.log("  ────────────────────────────────────────────────\n");
 }

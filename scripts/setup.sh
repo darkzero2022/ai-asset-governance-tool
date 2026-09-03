@@ -240,6 +240,18 @@ if [ "$MODE" = "local" ]; then
   env_set backend/.env APP_URL "$(env_get .env APP_URL)"
 fi
 
+# Demo data needs an admin to own it, so generate a password when none was given.
+# Empty data leaves the admin account to the app's first-run screen.
+ADMIN_VIA_WIZARD="false"
+if [ -z "$ADMIN_PASSWORD" ]; then
+  if [ "$DATA" = "demo" ]; then
+    ADMIN_PASSWORD="$(rand_password)"
+    ADMIN_GENERATED="true"
+  else
+    ADMIN_VIA_WIZARD="true"
+  fi
+fi
+
 export ADMIN_EMAIL ADMIN_PASSWORD
 set -a
 # shellcheck disable=SC1091
@@ -278,15 +290,19 @@ DATABASE=$DATABASE
 DATA=$DATA
 EOF
 
+APP_URL_OUT="$(env_get .env APP_URL)"
 echo
 echo "Setup complete. Run scripts/start.sh to start AI-BOM."
 echo "Mode: $MODE   Database: $DATABASE"
 echo "Config is in .env (generated secrets are gitignored)."
-echo "Admin login: $ADMIN_EMAIL"
-if [ -n "$ADMIN_PASSWORD" ]; then
-  echo "Admin password: the value you supplied."
+if [ "$ADMIN_VIA_WIZARD" = "true" ]; then
+  echo "Admin account: none seeded — open ${APP_URL_OUT} and create it on first visit."
+elif [ "${ADMIN_GENERATED:-false}" = "true" ]; then
+  echo "Admin login: $ADMIN_EMAIL"
+  echo "Admin password: $ADMIN_PASSWORD   (generated — change it on the Users page)"
 else
-  echo "Admin password: printed by the reference seed above (randomly generated)."
+  echo "Admin login: $ADMIN_EMAIL"
+  echo "Admin password: the value you supplied."
 fi
-echo "Change it on the Users page after first login. To reset it later, re-run:"
+echo "To reset the admin password later, re-run:"
 echo "  scripts/setup.sh --mode=$MODE --database=$DATABASE --data=$DATA --admin-email='$ADMIN_EMAIL' --admin-password='NEW' --yes"

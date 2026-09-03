@@ -7,6 +7,7 @@ import ProjectList from "./pages/ProjectList";
 import RiskDetail from "./pages/RiskDetail";
 import RiskRegister from "./pages/RiskRegister";
 import Users from "./pages/Users";
+import Bootstrap from "./pages/Bootstrap";
 import { emptyModelCardForm, type ModelCard, type ModelCardCompleteness, type ModelCardFormState, modelCardToForm } from "./components/ModelCardForm";
 import { navigate, useRoute } from "./router";
 import { apiErrorMessage } from "./lib/apiError";
@@ -203,6 +204,7 @@ function label(value: string) {
 
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem("aibomToken") ?? "");
+  const [needsBootstrap, setNeedsBootstrap] = useState<boolean | null>(null);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -349,6 +351,14 @@ function App() {
     }
 
     api<{ user: CurrentUser }>("/auth/me").then((data) => setCurrentUser(data.user)).catch((err: Error) => setError(err.message));
+  }, [token]);
+
+  useEffect(() => {
+    if (token) return;
+    fetch(`${apiBaseUrl}/auth/bootstrap-status`, { headers: { Accept: "application/json" } })
+      .then((response) => (response.ok ? response.json() : { needsBootstrap: false }))
+      .then((data) => setNeedsBootstrap(Boolean(data.needsBootstrap)))
+      .catch(() => setNeedsBootstrap(false));
   }, [token]);
 
   useEffect(() => {
@@ -890,6 +900,19 @@ function App() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Export failed");
     }
+  }
+
+  if (!token && needsBootstrap === true) {
+    return (
+      <Bootstrap
+        apiBaseUrl={apiBaseUrl}
+        onComplete={(newToken) => {
+          localStorage.setItem("aibomToken", newToken);
+          setToken(newToken);
+          setNeedsBootstrap(false);
+        }}
+      />
+    );
   }
 
   if (!token) {
