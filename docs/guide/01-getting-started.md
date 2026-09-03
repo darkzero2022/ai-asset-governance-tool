@@ -126,6 +126,11 @@ WantedBy=multi-user.target
 sudo systemctl enable --now aibom.service
 ```
 
+`scripts/install-service.sh --systemd` prints a unit like this filled in for your
+paths. For a non-Docker Linux install it prints one that runs `serve-prod.sh`
+(the built app on one port); `scripts/install-service.sh` with no flag sets up
+pm2 instead and works on macOS/Windows too.
+
 ---
 
 ## Day-to-day scripts
@@ -136,6 +141,8 @@ sudo systemctl enable --now aibom.service
 | `scripts/status.sh` | Mode, versions, what's running, migration status, `/health` |
 | `scripts/upgrade.sh` | `git pull` → reinstall → migrate → rebuild → restart (refuses a dirty tree; backs up first) |
 | `scripts/reset.sh` | Drop all data and re-seed (asks for confirmation unless `--yes`) |
+| `scripts/install-service.sh` | Run on boot — pm2 (any OS) or `--systemd` (Linux). Docker mode: prints the "start on login" steps |
+| `scripts/serve-prod.sh` | Run the built app in production locally (DB + API + SPA on `$PORT`, no dev servers) |
 | `scripts/backup.sh` / `scripts/restore.sh <file>` | `pg_dump` to `backups/` / restore one |
 
 Re-running `scripts/setup.sh` is safe and idempotent — it never overwrites an
