@@ -13,6 +13,8 @@ env:
   POSTGRES_DB: aibom
   DATABASE_URL: postgresql://aibom:ci-postgres-pw@127.0.0.1:55432/aibom?schema=public
   JWT_SECRET: ci-secret
+  ADMIN_EMAIL: admin@example.com
+  ADMIN_PASSWORD: ci-admin-pw
 
 jobs:
   build-test:
@@ -48,6 +50,21 @@ jobs:
         run: |
           npx prisma migrate deploy
           npm run prisma:seed
+
+      - name: Backup / restore round-trip
+        run: |
+          set -e
+          count() { docker compose exec -T postgres psql -U aibom -d aibom -tAc \
+            "SELECT (SELECT count(*) FROM \"AIAsset\") || '/' || (SELECT count(*) FROM \"Risk\")"; }
+          before="$(count)"
+          echo "rows before: $before"
+          scripts/backup.sh
+          file="$(ls -t backups/aibom-*.sql | head -1)"
+          docker compose exec -T postgres psql -U aibom -d aibom -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" >/dev/null
+          scripts/restore.sh --yes "$file"
+          after="$(count)"
+          echo "rows after: $after"
+          test "$before" = "$after"
 
       - name: Test backend
         working-directory: backend
