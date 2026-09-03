@@ -134,6 +134,70 @@ fi
 
 cd "$ROOT_DIR"
 
+# --- preflight: fail early, before touching anything -------------------
+port_listening() {
+  (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && { exec 3>&- 3<&-; return 0; } || return 1
+}
+
+preflight() {
+  local errors=0
+
+  # Node 22+ for local mode.
+  if [ "$MODE" = "local" ]; then
+    local major
+    major="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
+    if [ "$major" -lt 22 ]; then
+      echo "Node 22+ is required for local mode (found $(node -v 2>/dev/null || echo none)) — install a newer Node or use --mode=docker." >&2
+      errors=1
+    fi
+  fi
+
+  # App port.
+  local app_port; app_port="$(env_get .env PORT)"; app_port="${app_port:-4000}"
+  if port_listening "$app_port"; then
+    echo "Port $app_port is in use — stop the other process or set PORT in .env." >&2
+    errors=1
+  fi
+
+  # Vite dev port (local mode only).
+  if [ "$MODE" = "local" ] && port_listening 5173; then
+    echo "Port 5173 (frontend dev server) is in use — stop the other process before running scripts/start.sh." >&2
+    errors=1
+  fi
+
+  # Database port — only when we would be the one to bind it.
+  case "$DATABASE" in
+    managed)
+      # Skip if data/pg already exists — a running instance there is our own.
+      if [ ! -d data/pg ] && port_listening 55432; then
+        echo "Port 55432 is in use — the bundled database can't start. Stop whatever is on 55432 or use --database=url." >&2
+        errors=1
+      fi
+      ;;
+    docker)
+      if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -qx aibom-postgres && port_listening 55432; then
+        echo "Port 55432 is in use — free it or point --database=url at the existing server." >&2
+        errors=1
+      fi
+      ;;
+    url)
+      local url host port
+      url="$(env_get .env DATABASE_URL)"
+      host="$(printf '%s' "$url" | sed -nE 's#.*@([^:/]+):([0-9]+)/.*#\1#p')"
+      port="$(printf '%s' "$url" | sed -nE 's#.*@([^:/]+):([0-9]+)/.*#\2#p')"
+      if [ -n "$host" ] && [ -n "$port" ] && [ "$host" = "127.0.0.1" -o "$host" = "localhost" ]; then
+        if ! port_listening "$port"; then
+          echo "DATABASE_URL points at $host:$port but nothing is listening there — start your database first." >&2
+          errors=1
+        fi
+      fi
+      ;;
+  esac
+
+  [ "$errors" -eq 0 ] || { echo "Preflight checks failed. Nothing was changed." >&2; exit 1; }
+}
+preflight
+
 # --- Root .env: the single source of truth ---------------------------
 if [ ! -f .env ]; then
   cp .env.example .env
