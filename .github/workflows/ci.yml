@@ -5,6 +5,15 @@ on:
     branches: [main, master]
   pull_request:
 
+env:
+  # Throwaway credentials for the ephemeral CI Postgres (localhost only, created
+  # fresh each run, never exposed).
+  POSTGRES_USER: aibom
+  POSTGRES_PASSWORD: ci-postgres-pw
+  POSTGRES_DB: aibom
+  DATABASE_URL: postgresql://aibom:ci-postgres-pw@127.0.0.1:55432/aibom?schema=public
+  JWT_SECRET: ci-secret
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
@@ -26,7 +35,7 @@ jobs:
         run: |
           docker compose up -d postgres
           for i in $(seq 1 30); do
-            docker compose exec -T postgres pg_isready -U aibom -d aibom && break
+            docker compose exec -T postgres pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" && break
             sleep 2
           done
 
@@ -36,25 +45,16 @@ jobs:
 
       - name: Prepare backend database
         working-directory: backend
-        env:
-          DATABASE_URL: postgresql://aibom:aibom@127.0.0.1:55432/aibom?schema=public
-          JWT_SECRET: ci-secret
         run: |
           npx prisma migrate deploy
           npm run prisma:seed
 
       - name: Test backend
         working-directory: backend
-        env:
-          DATABASE_URL: postgresql://aibom:aibom@127.0.0.1:55432/aibom?schema=public
-          JWT_SECRET: ci-secret
         run: npm run test
 
       - name: Build backend
         working-directory: backend
-        env:
-          DATABASE_URL: postgresql://aibom:aibom@127.0.0.1:55432/aibom?schema=public
-          JWT_SECRET: ci-secret
         run: npm run build
 
       - name: Install frontend dependencies
@@ -67,6 +67,4 @@ jobs:
 
       - name: Build frontend
         working-directory: frontend
-        env:
-          VITE_API_BASE_URL: http://localhost:4000
         run: npm run build

@@ -1,8 +1,6 @@
-import { config } from "dotenv";
+import "../env.js";
 import { prisma } from "../prisma.js";
 import { sendSlackMessage } from "../integrations/slack.js";
-
-config();
 
 const dueSoonDays = Number(process.env.RECERTIFICATION_DUE_SOON_DAYS ?? 30);
 const staleAssetDays = Number(process.env.STALE_ASSET_DAYS ?? 14);

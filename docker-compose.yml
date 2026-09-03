@@ -4,15 +4,15 @@ services:
     container_name: aibom-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: aibom
-      POSTGRES_PASSWORD: aibom
-      POSTGRES_DB: aibom
+      POSTGRES_USER: ${POSTGRES_USER:-aibom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required — run scripts/setup.sh}
+      POSTGRES_DB: ${POSTGRES_DB:-aibom}
     ports:
-      - "55432:5432"
+      - "${BIND_HOST:-127.0.0.1}:55432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aibom -d aibom"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aibom} -d ${POSTGRES_DB:-aibom}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -31,14 +31,17 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://aibom:aibom@postgres:5432/aibom?schema=public
-      JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aibom}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required — run scripts/setup.sh}@postgres:5432/${POSTGRES_DB:-aibom}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required — run scripts/setup.sh}
       PORT: 4000
       NODE_ENV: production
       SERVE_STATIC: "true"
+      APP_URL: ${APP_URL:-http://localhost:4000}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:4000}
+      TRUST_PROXY: ${TRUST_PROXY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
-      - "4000:4000"
+      - "${BIND_HOST:-127.0.0.1}:4000:4000"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s
@@ -53,14 +56,14 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_BASE_URL: http://localhost:4000
+        VITE_API_BASE_URL: ${APP_URL:-http://localhost:4000}
     container_name: aibom-frontend
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
     ports:
-      - "5173:5173"
+      - "${BIND_HOST:-127.0.0.1}:5173:5173"
 
 volumes:
   postgres-data:

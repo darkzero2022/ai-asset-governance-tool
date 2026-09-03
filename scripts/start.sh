@@ -12,13 +12,18 @@ fi
 . "$MODE_FILE"
 cd "$ROOT_DIR"
 
-if [ "$MODE" = "docker" ]; then
+if [ -f .env ]; then
   set -a
-  . backend/.env
+  # shellcheck disable=SC1091
+  . ./.env
   set +a
+fi
+APP_PORT="${PORT:-4000}"
+
+if [ "$MODE" = "docker" ]; then
   docker compose up -d
-  echo "Frontend: http://localhost:5173"
-  echo "Backend:  http://localhost:4000/health"
+  echo "App:    http://localhost:${APP_PORT}"
+  echo "Health: http://localhost:${APP_PORT}/health"
   exit 0
 fi
 

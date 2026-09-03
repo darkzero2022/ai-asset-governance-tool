@@ -12,12 +12,14 @@ fi
 . "$MODE_FILE"
 cd "$ROOT_DIR"
 
+if [ -f .env ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . ./.env
+  set +a
+fi
+
 if [ "$MODE" = "docker" ]; then
-  if [ -f backend/.env ]; then
-    set -a
-    . backend/.env
-    set +a
-  fi
   docker compose down
   exit 0
 fi
