@@ -1,15 +1,16 @@
 import type { NextFunction, Request, Response } from "express";
 import type { Role } from "@prisma/client";
+import { forbidden, unauthorized } from "./httpError.js";
 
 export function requireRole(...roles: Role[]) {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
-      res.status(401).json({ error: "Authentication required" });
+      next(unauthorized());
       return;
     }
 
     if (!roles.includes(req.user.role)) {
-      res.status(403).json({ error: "Insufficient permissions" });
+      next(forbidden("Insufficient permissions"));
       return;
     }
 

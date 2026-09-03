@@ -336,6 +336,27 @@ describe("user management", () => {
   });
 });
 
+describe("error envelope", () => {
+  it("returns { error: { code, message }, requestId } for an unmatched route", async () => {
+    const res = await request(app).get("/no-such-endpoint").set("Accept", "application/json").expect(404);
+    expect(res.body.error).toMatchObject({ code: "NOT_FOUND", message: "Not found" });
+    expect(res.body.requestId).toEqual(expect.any(String));
+    expect(res.headers["x-request-id"]).toBe(res.body.requestId);
+  });
+
+  it("returns the envelope with a 401 code when unauthenticated", async () => {
+    const res = await request(app).get("/assets").expect(401);
+    expect(res.body.error).toMatchObject({ code: "UNAUTHENTICATED" });
+    expect(res.body.requestId).toEqual(expect.any(String));
+  });
+
+  it("returns a 422 VALIDATION_FAILED envelope for a malformed body", async () => {
+    const res = await request(app).post("/risks").set(auth("RISK_OWNER")).send({ likelihood: 9 }).expect(422);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+    expect(res.body.error.details).toBeDefined();
+  });
+});
+
 describe("asset transition policy gates", () => {
   it("blocks approval for open high risks, then allows approval after mitigation and complete model card", async () => {
     const asset = await createAsset({ type: "MODEL", status: "UNDER_REVIEW" });
@@ -343,7 +364,7 @@ describe("asset transition policy gates", () => {
     await prisma.modelCard.create({ data: { assetId: asset.id, ...modelCardBody } });
 
     await request(app).post(`/assets/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(400).expect((response) => {
-      expect(response.body.error).toBe("Asset has open high or critical risks");
+      expect(response.body.error.message).toBe("Asset has open high or critical risks");
     });
 
     await prisma.risk.update({ where: { id: risk.id }, data: { status: "MITIGATED" } });
@@ -355,8 +376,8 @@ describe("asset transition policy gates", () => {
     await prisma.modelCard.create({ data: { assetId: asset.id, task: "generation" } });
 
     await request(app).post(`/assets/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(400).expect((response) => {
-      expect(response.body.error).toBe("Model card incomplete");
-      expect(response.body.missingFields).toContain("architecture");
+      expect(response.body.error.message).toBe("Model card incomplete");
+      expect(response.body.error.details.missingFields).toContain("architecture");
     });
 
     await prisma.modelCard.update({ where: { assetId: asset.id }, data: modelCardBody });
@@ -459,7 +480,7 @@ describe("segregation of duties", () => {
 
     await request(app).post(`/assets/${asset.id}/transition`).set(auth("ADMIN")).send({ toStatus: "UNDER_REVIEW" }).expect(200);
     await request(app).post(`/assets/${asset.id}/transition`).set(auth("ADMIN")).send({ toStatus: "APPROVED" }).expect(403).expect((response) => {
-      expect(response.body.error).toMatch(/Segregation of duties/);
+      expect(response.body.error.message).toMatch(/Segregation of duties/);
     });
     await request(app).post(`/assets/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(200);
   });
@@ -470,7 +491,7 @@ describe("segregation of duties", () => {
     const payload = { assetId: asset.id, sourceFramework: "NIST_AI_RMF", sourceCategoryId: "GOVERN", description: `${runId}-sod-risk`, likelihood: 2, impact: 3, status: "ACCEPTED" };
 
     await request(app).put(`/risks/${risk.id}`).set(auth("RISK_OWNER")).send(payload).expect(403).expect((response) => {
-      expect(response.body.error).toMatch(/Segregation of duties/);
+      expect(response.body.error.message).toMatch(/Segregation of duties/);
     });
     await request(app).put(`/risks/${risk.id}`).set(auth("ADMIN")).send(payload).expect(200);
   });
@@ -515,7 +536,7 @@ describe("URL import", () => {
       .send({ sourceUrl: "http://127.0.0.1/internal" })
       .expect(400)
       .expect((response) => {
-        expect(response.body.error).toMatch(/blocked private, loopback, or link-local/);
+        expect(response.body.error.message).toMatch(/blocked private, loopback, or link-local/);
       });
 
     await request(app)
@@ -524,7 +545,7 @@ describe("URL import", () => {
       .send({ sourceUrl: "http://169.254.169.254/latest/meta-data" })
       .expect(400)
       .expect((response) => {
-        expect(response.body.error).toMatch(/blocked private, loopback, or link-local/);
+        expect(response.body.error.message).toMatch(/blocked private, loopback, or link-local/);
       });
 
     await request(app)
@@ -533,7 +554,7 @@ describe("URL import", () => {
       .send({ sourceUrl: "http://100.64.1.1/internal" })
       .expect(400)
       .expect((response) => {
-        expect(response.body.error).toMatch(/blocked private, loopback, or link-local/);
+        expect(response.body.error.message).toMatch(/blocked private, loopback, or link-local/);
       });
 
     await request(app)

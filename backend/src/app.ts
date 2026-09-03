@@ -18,6 +18,8 @@ import { modelCardCompleteness } from "./modelCardScoring.js";
 import { resolveStrideAtlas, STRIDE_AI_CATEGORIES } from "./strideAtlas.js";
 import { mountStaticSite, shouldServeStatic } from "./staticSite.js";
 import { httpLogger, requestContext } from "./requestContext.js";
+import { AppError, badRequest, forbidden, notFound, notImplemented } from "./httpError.js";
+import { errorHandler, notFoundHandler } from "./errorHandler.js";
 
 const assetSchema = z.object({
   name: z.string().min(1),
@@ -452,8 +454,7 @@ app.post("/auth/login", loginRateLimit, async (req, res, next) => {
     const user = await prisma.user.findUnique({ where: { email: body.email } });
 
     if (!user || !user.active || !(await bcrypt.compare(body.password, user.passwordHash))) {
-      res.status(401).json({ error: "Invalid credentials" });
-      return;
+      throw new AppError(401, "INVALID_CREDENTIALS", "Invalid credentials");
     }
 
     res.json({ token: signToken({ id: user.id, email: user.email, role: user.role }), user: { id: user.id, email: user.email, name: user.name, role: user.role } });
@@ -474,8 +475,7 @@ app.get("/auth/me", requireAuth, async (req, res, next) => {
 app.get("/auth/oidc/login", async (_req, res, next) => {
   try {
     if (!oidcConfigured()) {
-      res.status(501).json({ error: "OIDC is not configured" });
-      return;
+      throw notImplemented("OIDC is not configured");
     }
 
     cleanExpiredOidcStates();
@@ -500,8 +500,7 @@ app.get("/auth/oidc/login", async (_req, res, next) => {
 app.get("/auth/oidc/callback", async (req, res, next) => {
   try {
     if (!oidcConfigured()) {
-      res.status(501).json({ error: "OIDC is not configured" });
-      return;
+      throw notImplemented("OIDC is not configured");
     }
 
     cleanExpiredOidcStates();
@@ -509,8 +508,7 @@ app.get("/auth/oidc/callback", async (req, res, next) => {
     const storedState = oidcStates.get(state);
 
     if (!storedState) {
-      res.status(400).json({ error: "Invalid or expired OIDC state" });
-      return;
+      throw badRequest("Invalid or expired OIDC state");
     }
 
     oidcStates.delete(state);
@@ -521,8 +519,7 @@ app.get("/auth/oidc/callback", async (req, res, next) => {
     const email = claims.email;
 
     if (!email) {
-      res.status(400).json({ error: "OIDC provider did not return an email claim" });
-      return;
+      throw badRequest("OIDC provider did not return an email claim");
     }
 
     const user = await prisma.user.upsert({
@@ -677,7 +674,7 @@ app.post("/assets/import-url", requireAuth, requireRole("ADMIN", "RISK_OWNER"), 
     res.json({ sourceUrl: finalUrl, ...extractHtmlSuggestion(html) });
   } catch (error) {
     if (error instanceof Error) {
-      res.status(400).json({ error: error.message });
+      next(new AppError(400, "URL_IMPORT_FAILED", error.message));
       return;
     }
     next(error);
@@ -726,8 +723,7 @@ app.get("/assets/:id", requireAuth, async (req, res, next) => {
     });
 
     if (!asset) {
-      res.status(404).json({ error: "Asset not found" });
-      return;
+      throw notFound("Asset not found");
     }
 
     res.json({ asset: { ...assetResponse(asset), projectUsageCount: asset._count.projectLinks } });
@@ -742,8 +738,7 @@ app.get("/assets/:id/model-card", requireAuth, async (req, res, next) => {
     const asset = await prisma.aIAsset.findUnique({ where: { id: assetId }, select: { id: true } });
 
     if (!asset) {
-      res.status(404).json({ error: "Asset not found" });
-      return;
+      throw notFound("Asset not found");
     }
 
     const modelCard = await prisma.modelCard.findUnique({ where: { assetId }, include: { metrics: { orderBy: { recordedAt: "desc" } } } });
@@ -760,8 +755,7 @@ app.put("/assets/:id/model-card", requireAuth, requireRole("ADMIN", "RISK_OWNER"
     const asset = await prisma.aIAsset.findUnique({ where: { id: assetId }, select: { id: true } });
 
     if (!asset) {
-      res.status(404).json({ error: "Asset not found" });
-      return;
+      throw notFound("Asset not found");
     }
 
     const before = await prisma.modelCard.findUnique({ where: { assetId } });
@@ -785,8 +779,7 @@ app.post("/assets/:id/model-card/metrics", requireAuth, requireRole("ADMIN", "RI
     const asset = await prisma.aIAsset.findUnique({ where: { id: assetId }, select: { id: true } });
 
     if (!asset) {
-      res.status(404).json({ error: "Asset not found" });
-      return;
+      throw notFound("Asset not found");
     }
 
     const modelCard = await prisma.modelCard.upsert({ where: { assetId }, update: {}, create: { assetId } });
@@ -848,8 +841,7 @@ app.put("/assets/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (r
     const before = await prisma.aIAsset.findUniqueOrThrow({ where: { id } });
 
     if (req.user!.role === "RISK_OWNER" && before.createdById !== req.user!.id) {
-      res.status(403).json({ error: "RISK_OWNER can only edit assets they created" });
-      return;
+      throw forbidden("RISK_OWNER can only edit assets they created");
     }
 
     const asset = await prisma.aIAsset.update({ where: { id }, data: body });
@@ -867,20 +859,18 @@ app.post("/assets/:id/import-url", requireAuth, requireRole("ADMIN", "RISK_OWNER
     const asset = await prisma.aIAsset.findUnique({ where: { id } });
 
     if (!asset) {
-      res.status(404).json({ error: "Asset not found" });
-      return;
+      throw notFound("Asset not found");
     }
 
     if (req.user!.role === "RISK_OWNER" && asset.createdById !== req.user!.id) {
-      res.status(403).json({ error: "RISK_OWNER can only import URLs for assets they created" });
-      return;
+      throw forbidden("RISK_OWNER can only import URLs for assets they created");
     }
 
     const { finalUrl, html } = await fetchImportHtml(body.sourceUrl);
     res.json({ sourceUrl: finalUrl, ...extractHtmlSuggestion(html) });
   } catch (error) {
     if (error instanceof Error) {
-      res.status(400).json({ error: error.message });
+      next(new AppError(400, "URL_IMPORT_FAILED", error.message));
       return;
     }
     next(error);
@@ -906,21 +896,18 @@ app.post("/assets/:id/transition", requireAuth, async (req, res, next) => {
     const asset = await prisma.aIAsset.findUniqueOrThrow({ where: { id } });
 
     if (!allowedTransitions[asset.status].includes(body.toStatus)) {
-      res.status(400).json({ error: `Invalid transition from ${asset.status} to ${body.toStatus}` });
-      return;
+      throw badRequest(`Invalid transition from ${asset.status} to ${body.toStatus}`);
     }
 
     if (!canTransitionAsset(req.user!.role, body.toStatus)) {
-      res.status(403).json({ error: "Insufficient permissions for asset transition" });
-      return;
+      throw forbidden("Insufficient permissions for asset transition");
     }
 
     if (body.toStatus === "APPROVED") {
       const underReviewStep = await prisma.governanceWorkflow.findFirst({ where: { assetId: asset.id, toStatus: "UNDER_REVIEW" }, orderBy: { timestamp: "desc" } });
 
       if (underReviewStep?.approvedById === req.user!.id) {
-        res.status(403).json({ error: "Segregation of duties prevents approving an asset you moved to review" });
-        return;
+        throw forbidden("Segregation of duties prevents approving an asset you moved to review");
       }
     }
 
@@ -931,8 +918,7 @@ app.post("/assets/:id/transition", requireAuth, async (req, res, next) => {
       });
 
       if (blockingRisks.length) {
-        res.status(400).json({ error: "Asset has open high or critical risks", blockingRisks });
-        return;
+        throw new AppError(400, "ASSET_HAS_OPEN_RISKS", "Asset has open high or critical risks", { blockingRisks });
       }
 
       if (asset.type === "MODEL" || asset.type === "SERVICE") {
@@ -940,8 +926,7 @@ app.post("/assets/:id/transition", requireAuth, async (req, res, next) => {
         const completeness = modelCardCompleteness(modelCard);
 
         if (completeness.missingFields.length) {
-          res.status(400).json({ error: "Model card incomplete", missingFields: completeness.missingFields });
-          return;
+          throw new AppError(400, "MODEL_CARD_INCOMPLETE", "Model card incomplete", { missingFields: completeness.missingFields });
         }
       }
     }
@@ -1097,8 +1082,7 @@ app.get("/projects/:id", requireAuth, async (req, res, next) => {
     });
 
     if (!project) {
-      res.status(404).json({ error: "Project not found" });
-      return;
+      throw notFound("Project not found");
     }
 
     res.json({ project });
@@ -1284,8 +1268,7 @@ app.get("/risks/:id", requireAuth, async (req, res, next) => {
     const risk = await prisma.risk.findUnique({ where: { id }, include: { assets: { include: { asset: true } }, projects: { include: { project: true } }, controlLinks: { include: { control: true } }, frameworkCategory: true } });
 
     if (!risk) {
-      res.status(404).json({ error: "Risk not found" });
-      return;
+      throw notFound("Risk not found");
     }
 
     res.json({ risk: riskResponse(risk) });
@@ -1312,13 +1295,11 @@ app.put("/risks/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (re
     const before = await prisma.risk.findUniqueOrThrow({ where: { id }, include: { assets: true, controlLinks: { include: { control: true } }, frameworkCategory: true } });
 
     if (req.user!.role === "RISK_OWNER" && before.createdById !== req.user!.id) {
-      res.status(403).json({ error: "RISK_OWNER can only edit risks they created" });
-      return;
+      throw forbidden("RISK_OWNER can only edit risks they created");
     }
 
     if (riskData.status === "ACCEPTED" && before.createdById === req.user!.id) {
-      res.status(403).json({ error: "Segregation of duties prevents accepting a risk you created" });
-      return;
+      throw forbidden("Segregation of duties prevents accepting a risk you created");
     }
 
     const risk = await prisma.risk.update({
@@ -1668,16 +1649,14 @@ app.get("/assets/:id/export/cyclonedx", requireAuth, async (req, res, next) => {
     const asset = await prisma.aIAsset.findUnique({ where: { id }, include: { modelCard: { include: { metrics: true } }, riskLinks: { include: { risk: { include: { controlLinks: { include: { control: true } } } } } } } });
 
     if (!asset) {
-      res.status(404).json({ error: "Asset not found" });
-      return;
+      throw notFound("Asset not found");
     }
 
     const bom = buildCycloneDxBom([assetForBom(asset) as never]);
     const validation = await validateCycloneDxBom(bom);
 
     if (!validation.valid) {
-      res.status(500).json({ error: "Generated CycloneDX BOM failed schema validation", validation });
-      return;
+      throw new AppError(500, "BOM_VALIDATION_FAILED", "Generated CycloneDX BOM failed schema validation", { validation });
     }
 
     res.json(bom);
@@ -1692,8 +1671,7 @@ app.get("/assets/:id/export/spdx", requireAuth, async (req, res, next) => {
     const asset = await prisma.aIAsset.findUnique({ where: { id } });
 
     if (!asset) {
-      res.status(404).json({ error: "Asset not found" });
-      return;
+      throw notFound("Asset not found");
     }
 
     res.json(buildSpdxDocument([asset]));
@@ -1711,16 +1689,14 @@ app.get("/projects/:id/export/cyclonedx", requireAuth, async (req, res, next) =>
     });
 
     if (!project) {
-      res.status(404).json({ error: "Project not found" });
-      return;
+      throw notFound("Project not found");
     }
 
     const bom = buildCycloneDxBom(project.assetLinks.map((link) => assetForBom(link.asset)) as never);
     const validation = await validateCycloneDxBom(bom);
 
     if (!validation.valid) {
-      res.status(500).json({ error: "Generated CycloneDX BOM failed schema validation", validation });
-      return;
+      throw new AppError(500, "BOM_VALIDATION_FAILED", "Generated CycloneDX BOM failed schema validation", { validation });
     }
 
     res.json(bom);
@@ -1735,16 +1711,14 @@ app.post("/exports/cyclonedx", requireAuth, async (req, res, next) => {
     const assets = await prisma.aIAsset.findMany({ where: { id: { in: body.assetIds } }, include: { modelCard: { include: { metrics: true } }, riskLinks: { include: { risk: { include: { controlLinks: { include: { control: true } } } } } } } });
 
     if (assets.length !== body.assetIds.length) {
-      res.status(404).json({ error: "One or more assets were not found" });
-      return;
+      throw notFound("One or more assets were not found");
     }
 
     const bom = buildCycloneDxBom(assets.map(assetForBom) as never);
     const validation = await validateCycloneDxBom(bom);
 
     if (!validation.valid) {
-      res.status(500).json({ error: "Generated CycloneDX BOM failed schema validation", validation });
-      return;
+      throw new AppError(500, "BOM_VALIDATION_FAILED", "Generated CycloneDX BOM failed schema validation", { validation });
     }
 
     res.json(bom);
@@ -1753,22 +1727,6 @@ app.post("/exports/cyclonedx", requireAuth, async (req, res, next) => {
   }
 });
 
-// Any unmatched route returns JSON, never Express's default HTML 404 page.
-app.use((_req, res) => {
-  res.status(404).json({ error: "Not found" });
-});
-
-app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  if (error instanceof z.ZodError) {
-    res.status(400).json({ error: "Validation failed", details: error.flatten() });
-    return;
-  }
-
-  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-    res.status(404).json({ error: "Record not found" });
-    return;
-  }
-
-  console.error(error);
-  res.status(500).json({ error: "Internal server error" });
-});
+// Any unmatched route returns the JSON error envelope, never Express's HTML 404.
+app.use(notFoundHandler);
+app.use(errorHandler);

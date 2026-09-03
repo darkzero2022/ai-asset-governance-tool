@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import type { Role } from "@prisma/client";
 import { prisma } from "./prisma.js";
 import { setUserId } from "./requestContext.js";
+import { AppError, unauthorized } from "./httpError.js";
 
 export type AuthUser = {
   id: string;
@@ -30,12 +31,12 @@ export function signToken(user: AuthUser) {
   return jwt.sign(user, jwtSecret(), { expiresIn: "8h" });
 }
 
-export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+export async function requireAuth(req: Request, _res: Response, next: NextFunction) {
   const header = req.header("authorization");
   const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
 
   if (!token) {
-    res.status(401).json({ error: "Authentication required" });
+    next(unauthorized());
     return;
   }
 
@@ -44,7 +45,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     const activeUser = await prisma.user.findUnique({ where: { id: user.id }, select: { active: true } });
 
     if (!activeUser?.active) {
-      res.status(401).json({ error: "User account is deactivated" });
+      next(new AppError(401, "ACCOUNT_DEACTIVATED", "User account is deactivated"));
       return;
     }
 
@@ -52,6 +53,6 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     setUserId(user.id);
     next();
   } catch {
-    res.status(401).json({ error: "Invalid or expired token" });
+    next(new AppError(401, "INVALID_TOKEN", "Invalid or expired token"));
   }
 }

@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { apiErrorMessage } from "../lib/apiError";
 
 type User = {
   id: string;
@@ -24,7 +25,7 @@ export default function Users({ apiBaseUrl, token }: { apiBaseUrl: string; token
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error(body.error ?? "User request failed");
+      throw new Error(apiErrorMessage(body) ?? "User request failed");
     }
     if (response.status === 204) return undefined as T;
     return response.json();

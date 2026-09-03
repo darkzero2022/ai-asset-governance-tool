@@ -9,6 +9,7 @@ import RiskRegister from "./pages/RiskRegister";
 import Users from "./pages/Users";
 import { emptyModelCardForm, type ModelCard, type ModelCardCompleteness, type ModelCardFormState, modelCardToForm } from "./components/ModelCardForm";
 import { navigate, useRoute } from "./router";
+import { apiErrorMessage } from "./lib/apiError";
 
 // Empty by default: the SPA and API share an origin (the backend serves the
 // built app, and `vite dev` proxies the API paths). Set VITE_API_BASE_URL only
@@ -267,9 +268,9 @@ function App() {
         setToken("");
       }
       if (response.status === 401 || response.status === 403) {
-        throw new Error(body.error ?? (response.status === 401 ? "Please sign in again" : "You do not have permission to perform this action"));
+        throw new Error(apiErrorMessage(body) ?? (response.status === 401 ? "Please sign in again" : "You do not have permission to perform this action"));
       }
-      throw new Error(body.error ?? "Request failed");
+      throw new Error(apiErrorMessage(body) ?? "Request failed");
     }
 
     if (response.status === 204) return undefined as T;
@@ -387,7 +388,7 @@ function App() {
       });
       const result = await response.json();
 
-      if (!result.token) throw new Error(result.error ?? "Login failed");
+      if (!result.token) throw new Error(apiErrorMessage(result) ?? "Login failed");
       localStorage.setItem("aibomToken", result.token);
       setToken(result.token);
       setCurrentUser(result.user);
