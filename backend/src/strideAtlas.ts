@@ -1,13 +1,5 @@
 import type { StrideAiCategory } from "@prisma/client";
-
-export const STRIDE_AI_CATEGORIES = [
-  "MODEL_IMPERSONATION",
-  "DATA_MODEL_POISONING",
-  "PROVENANCE_LOSS",
-  "MODEL_INVERSION",
-  "RESOURCE_EXHAUSTION",
-  "ALIGNMENT_BYPASS",
-] as const;
+export { STRIDE_AI_CATEGORIES } from "@aibom/shared";
 
 type StrideAtlasMapping = { strideAiCategory: StrideAiCategory; atlasTechnique: string | null } | null;
 

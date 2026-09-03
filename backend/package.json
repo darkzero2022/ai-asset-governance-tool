@@ -20,6 +20,7 @@
     "db:status": "tsx src/db/managed.ts status"
   },
   "dependencies": {
+    "@aibom/shared": "file:../packages/shared",
     "@prisma/client": "^5.22.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",

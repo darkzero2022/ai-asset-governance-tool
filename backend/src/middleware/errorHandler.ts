@@ -5,6 +5,18 @@ import { AppError } from "../httpError.js";
 import { logger } from "../log.js";
 import { getRequestId } from "./requestContext.js";
 
+// Duck-type so a ZodError thrown by a different zod instance (the shared package
+// may resolve its own copy) is still recognised.
+function isZodError(err: unknown): err is ZodError {
+  return (
+    err instanceof ZodError ||
+    (!!err &&
+      typeof err === "object" &&
+      (err as { name?: string }).name === "ZodError" &&
+      typeof (err as { flatten?: unknown }).flatten === "function")
+  );
+}
+
 /** Terminal 404 — any request that matched no route lands here as an AppError. */
 export const notFoundHandler: RequestHandler = (_req, _res, next) => {
   next(new AppError(404, "NOT_FOUND", "Not found"));
@@ -30,7 +42,7 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     code = err.code;
     message = err.message;
     details = err.details;
-  } else if (err instanceof ZodError) {
+  } else if (isZodError(err)) {
     status = 422;
     code = "VALIDATION_FAILED";
     message = "Request validation failed";

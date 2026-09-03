@@ -30,6 +30,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: |
+            packages/shared/package-lock.json
             backend/package-lock.json
             frontend/package-lock.json
 
@@ -40,6 +41,10 @@ jobs:
             docker compose exec -T postgres pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" && break
             sleep 2
           done
+
+      - name: Build shared package
+        working-directory: packages/shared
+        run: npm ci && npm run build
 
       - name: Install backend dependencies
         working-directory: backend

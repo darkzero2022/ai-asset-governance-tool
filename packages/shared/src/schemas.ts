@@ -1,0 +1,117 @@
+import { z } from "zod";
+import {
+  ASSET_TYPES,
+  CONTROL_STATUSES,
+  EU_AI_ACT_TIERS,
+  HOSTING_MODELS,
+  NETWORK_DEPENDENCIES,
+  PROJECT_STATUSES,
+  RISK_STATUSES,
+  ROLES,
+  SOURCE_FRAMEWORKS,
+  STRIDE_AI_CATEGORIES,
+} from "./enums.js";
+
+export const assetSchema = z.object({
+  name: z.string().min(1),
+  version: z.string().min(1),
+  type: z.enum(ASSET_TYPES),
+  supplier: z.string().min(1),
+  provider: z.string().optional().nullable(),
+  hostingModel: z.enum(HOSTING_MODELS),
+  networkDependency: z.enum(NETWORK_DEPENDENCIES).optional(),
+  license: z.string().optional().nullable(),
+  dataClassificationTouched: z.string().optional().nullable(),
+  trainingDataProvenance: z.string().optional().nullable(),
+  downstreamConsumers: z.string().optional().nullable(),
+  sourceUrl: z.string().url().optional().nullable(),
+});
+
+export const importUrlSchema = z.object({ sourceUrl: z.string().url() });
+
+export const projectSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional().nullable(),
+  businessOwner: z.string().optional().nullable(),
+  status: z.enum(PROJECT_STATUSES).optional(),
+});
+
+export const modelCardSchema = z.object({
+  approach: z.string().optional().nullable(),
+  task: z.string().optional().nullable(),
+  architectureFamily: z.string().optional().nullable(),
+  modelArchitecture: z.string().optional().nullable(),
+  datasetsDescription: z.string().optional().nullable(),
+  inputsDescription: z.string().optional().nullable(),
+  outputsDescription: z.string().optional().nullable(),
+  intendedUsers: z.string().optional().nullable(),
+  useCases: z.string().optional().nullable(),
+  technicalLimitations: z.string().optional().nullable(),
+  performanceTradeoffs: z.string().optional().nullable(),
+  ethicalConsiderations: z.string().optional().nullable(),
+  fairnessAssessments: z.string().optional().nullable(),
+  environmentalConsiderations: z.string().optional().nullable(),
+  performanceMetrics: z.unknown().optional().nullable(),
+});
+
+export const modelCardMetricSchema = z.object({
+  metricName: z.string().min(1),
+  metricValue: z.number(),
+  slice: z.string().optional().nullable(),
+  recordedAt: z.string().datetime().optional(),
+});
+
+export const riskSchema = z.object({
+  assetId: z.string().min(1),
+  sourceFramework: z.enum(SOURCE_FRAMEWORKS),
+  sourceCategoryId: z.string().min(1),
+  euAiActRiskTier: z.enum(EU_AI_ACT_TIERS).optional().nullable(),
+  strideAiCategory: z.enum(STRIDE_AI_CATEGORIES).optional().nullable(),
+  atlasTechnique: z.string().min(1).optional().nullable(),
+  description: z.string().min(1),
+  likelihood: z.number().int().min(1).max(5),
+  impact: z.number().int().min(1).max(5),
+  residualRiskScore: z.number().int().min(1).max(25).optional().nullable(),
+  treatmentPlan: z.string().optional().nullable(),
+  owner: z.string().optional().nullable(),
+  dueDate: z.string().datetime().optional().nullable(),
+  status: z.enum(RISK_STATUSES).optional(),
+});
+
+export const controlSchema = z.object({
+  mappedFramework: z.enum(SOURCE_FRAMEWORKS),
+  mappedControlId: z.string().min(1),
+  implementationStatus: z.enum(CONTROL_STATUSES).optional(),
+  evidenceNotes: z.string().optional().nullable(),
+});
+
+export const userCreateSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1),
+  role: z.enum(ROLES),
+  password: z.string().min(8),
+});
+
+export const userUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  role: z.enum(ROLES).optional(),
+  active: z.boolean().optional(),
+  password: z.string().min(8).optional(),
+});
+
+// Update variants carry an optimistic-concurrency token: the updatedAt the client
+// last saw. The server rejects the write (409 STALE_WRITE) if the row moved on.
+const withLock = { expectedUpdatedAt: z.string().datetime().optional() };
+export const assetUpdateSchema = assetSchema.extend(withLock);
+export const projectUpdateSchema = projectSchema.extend(withLock);
+export const riskUpdateSchema = riskSchema.extend(withLock);
+export const controlUpdateSchema = controlSchema.extend(withLock);
+export const modelCardUpdateSchema = modelCardSchema.extend(withLock);
+
+export type AssetInput = z.infer<typeof assetSchema>;
+export type ProjectInput = z.infer<typeof projectSchema>;
+export type RiskInput = z.infer<typeof riskSchema>;
+export type ControlInput = z.infer<typeof controlSchema>;
+export type ModelCardInput = z.infer<typeof modelCardSchema>;
+export type UserCreateInput = z.infer<typeof userCreateSchema>;
+export type UserUpdateInput = z.infer<typeof userUpdateSchema>;

@@ -41,6 +41,7 @@ if [ "$MANAGER" = "pm2" ] && ! command -v pm2 >/dev/null 2>&1; then
 fi
 
 echo "Building the production bundle…"
+(cd packages/shared && npm install && npm run build)
 (cd backend && npm install && npm run prisma:generate && npm run build)
 (cd frontend && npm install && npm run build)
 

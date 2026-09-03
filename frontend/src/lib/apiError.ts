@@ -1,3 +1,7 @@
+import type { ApiErrorBody } from "@aibom/shared";
+
+export type { ApiErrorBody };
+
 // The API error envelope is `{ error: { code, message, details? }, requestId }`.
 // Tolerate a bare string in `error` too, for resilience.
 export function apiErrorMessage(body: unknown): string | undefined {

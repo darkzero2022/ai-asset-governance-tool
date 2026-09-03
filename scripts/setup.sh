@@ -268,6 +268,7 @@ if [ "$MODE" = "docker" ]; then
     docker compose run --rm -e ADMIN_EMAIL backend npm run prisma:seed:demo
   fi
 else
+  (cd packages/shared && npm install && npm run build)
   (cd backend && npm install && npm run prisma:generate)
   (cd frontend && npm install)
 

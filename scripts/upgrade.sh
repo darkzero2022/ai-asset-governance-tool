@@ -35,6 +35,7 @@ if [ "$MODE" = "docker" ]; then
   docker compose run --rm backend npx prisma migrate deploy
   docker compose up -d
 else
+  (cd packages/shared && npm install && npm run build)
   (cd backend && npm install && npm run prisma:generate && npm run build)
   (cd frontend && npm install && npm run build)
   case "$DATABASE" in

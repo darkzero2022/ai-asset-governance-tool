@@ -11,116 +11,23 @@ import Bootstrap from "./pages/Bootstrap";
 import { emptyModelCardForm, type ModelCard, type ModelCardCompleteness, type ModelCardFormState, modelCardToForm } from "./components/ModelCardForm";
 import { navigate, useRoute } from "./router";
 import { apiErrorMessage } from "./lib/apiError";
+import type {
+  Asset,
+  AssetDetail as AssetDetailData,
+  Risk,
+  Control,
+  AuditLog,
+  CurrentUser,
+  FrameworkCategory,
+  WorkflowEntry,
+  Project,
+} from "@aibom/shared";
 
 // Empty by default: the SPA and API share an origin (the backend serves the
 // built app, and `vite dev` proxies the API paths). Set VITE_API_BASE_URL only
 // when the API lives on a different origin.
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 
-type Asset = {
-  id: string;
-  name: string;
-  version: string;
-  type: string;
-  supplier: string;
-  provider?: string | null;
-  hostingModel: string;
-  networkDependency: string;
-  license?: string | null;
-  dataClassificationTouched?: string | null;
-  trainingDataProvenance?: string | null;
-  downstreamConsumers?: string | null;
-  sourceUrl?: string | null;
-  status: string;
-  updatedAt: string;
-  _count?: { risks: number };
-};
-
-type AssetDetail = Asset & {
-  risks: Risk[];
-  workflow: WorkflowEntry[];
-  parentDependencies?: Array<{ childAsset: { id: string; name: string; type: string } }>;
-  childDependencies?: Array<{ parentAsset: { id: string; name: string; type: string } }>;
-};
-
-type Risk = {
-  id: string;
-  assetId: string;
-  updatedAt?: string;
-  description: string;
-  sourceFramework: string;
-  sourceCategoryId: string;
-  euAiActRiskTier?: string | null;
-  strideAiCategory?: string | null;
-  atlasTechnique?: string | null;
-  likelihood: number;
-  impact: number;
-  inherentRiskScore: number;
-  residualRiskScore?: number | null;
-  treatmentPlan?: string | null;
-  owner?: string | null;
-  dueDate?: string | null;
-  status: string;
-  severity?: string | null;
-  asset?: { name: string } | null;
-  assets?: Array<{ assetId: string; asset: Asset }>;
-  projects?: Array<{ projectId: string; project: Project }>;
-  controls?: Array<Control & { implementationStatus?: string; evidenceNotes?: string | null }>;
-};
-
-type Control = {
-  id: string;
-  name: string;
-  mappedFramework: string;
-  mappedControlId: string;
-  description?: string | null;
-};
-
-type AuditLog = {
-  id: string;
-  action: string;
-  timestamp: string;
-  actor?: { name: string; email: string };
-  beforeJson?: Record<string, unknown> | null;
-  afterJson?: Record<string, unknown> | null;
-};
-
-type CurrentUser = {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  active: boolean;
-};
-
-type FrameworkCategory = {
-  id: string;
-  framework: string;
-  categoryId: string;
-  name: string;
-  description: string;
-};
-
-type WorkflowEntry = {
-  id: string;
-  fromStatus: string;
-  toStatus: string;
-  comments?: string | null;
-  timestamp: string;
-  approvedBy: { name: string; email: string };
-};
-
-type Project = {
-  id: string;
-  name: string;
-  updatedAt?: string;
-  description?: string | null;
-  status: string;
-  businessOwner?: string | null;
-  _count?: { assetLinks?: number; riskLinks?: number };
-  assetLinks?: Array<{ assetId: string; asset: Asset }>;
-  riskLinks?: Array<{ riskId: string; risk: Risk }>;
-};
 
 type ProjectForm = {
   name: string;
@@ -233,7 +140,7 @@ function App() {
   const [modelCardImportSuggestion, setModelCardImportSuggestion] = useState<ImportSuggestion | null>(null);
   const [categories, setCategories] = useState<FrameworkCategory[]>([]);
   const [atlasTechniques, setAtlasTechniques] = useState<string[]>([]);
-  const [selectedAsset, setSelectedAsset] = useState<AssetDetail | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<AssetDetailData | null>(null);
   const [assetForm, setAssetForm] = useState(emptyAsset);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
   const [riskForm, setRiskForm] = useState(emptyRisk);
@@ -312,7 +219,7 @@ function App() {
 
   async function loadAsset(id: string) {
     const [data, projectData, modelCardData, auditData] = await Promise.all([
-      api<{ asset: AssetDetail }>(`/assets/${id}`),
+      api<{ asset: AssetDetailData }>(`/assets/${id}`),
       api<{ projects: Project[] }>(`/assets/${id}/projects`),
       api<{ modelCard: ModelCard | null; completeness: ModelCardCompleteness }>(`/assets/${id}/model-card`),
       api<{ logs: AuditLog[] }>(`/audit-logs?entityType=AIAsset&entityId=${encodeURIComponent(id)}`),
