@@ -87,3 +87,13 @@ export const userUpdateSchema = z.object({
   active: z.boolean().optional(),
   password: z.string().min(8).optional(),
 });
+
+// Update variants carry an optimistic-concurrency token: the updatedAt the
+// client last saw. The server rejects the write (409 STALE_WRITE) if the row
+// has changed since. Omitted -> no check (backwards compatible).
+const withLock = { expectedUpdatedAt: z.string().datetime().optional() };
+export const assetUpdateSchema = assetSchema.extend(withLock);
+export const projectUpdateSchema = projectSchema.extend(withLock);
+export const riskUpdateSchema = riskSchema.extend(withLock);
+export const controlUpdateSchema = controlSchema.extend(withLock);
+export const modelCardUpdateSchema = modelCardSchema.extend(withLock);

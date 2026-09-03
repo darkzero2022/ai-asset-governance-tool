@@ -534,6 +534,39 @@ describe("Model Card metric CRUD", () => {
   });
 });
 
+describe("optimistic concurrency", () => {
+  it("rejects a second edit that carries a stale updatedAt", async () => {
+    const asset = await createAsset();
+    const staleVersion = asset.updatedAt.toISOString();
+
+    const first = await request(app)
+      .put(`/assets/${asset.id}`)
+      .set(auth("ADMIN"))
+      .send({ ...assetBody(`${asset.name}`), supplier: "Supplier A", expectedUpdatedAt: staleVersion })
+      .expect(200);
+    expect(first.body.asset.supplier).toBe("Supplier A");
+
+    const stale = await request(app)
+      .put(`/assets/${asset.id}`)
+      .set(auth("ADMIN"))
+      .send({ ...assetBody(`${asset.name}`), supplier: "Supplier B", expectedUpdatedAt: staleVersion })
+      .expect(409);
+    expect(stale.body.error.code).toBe("STALE_WRITE");
+
+    const current = await prisma.aIAsset.findUniqueOrThrow({ where: { id: asset.id } });
+    expect(current.supplier).toBe("Supplier A");
+  });
+
+  it("still allows an update with no expectedUpdatedAt (backwards compatible)", async () => {
+    const asset = await createAsset();
+    await request(app)
+      .put(`/assets/${asset.id}`)
+      .set(auth("ADMIN"))
+      .send({ ...assetBody(asset.name), supplier: "No-lock update" })
+      .expect(200);
+  });
+});
+
 describe("audit trail extension", () => {
   it("audits a link mutation that has no explicit audit() call", async () => {
     const asset = await createAsset();

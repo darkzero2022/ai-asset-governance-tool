@@ -4,7 +4,8 @@ import { requireAuth } from "../auth.js";
 import { requireRole } from "../rbac.js";
 import { audit } from "../lib/audit.js";
 import { MAX_LIST_ROWS } from "../lib/http.js";
-import { controlSchema } from "../schemas.js";
+import { controlSchema, controlUpdateSchema } from "../schemas.js";
+import { lockWhere, staleWrite } from "../lib/concurrency.js";
 
 const router = express.Router();
 
@@ -21,9 +22,14 @@ router.get("/controls", requireAuth, async (req, res, next) => {
 router.put("/controls/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const id = String(req.params.id);
-    const body = controlSchema.parse(req.body);
+    const body = controlUpdateSchema.parse(req.body);
     const before = await prisma.control.findUniqueOrThrow({ where: { id } });
-    const control = await prisma.control.update({ where: { id }, data: { name: body.mappedControlId, mappedFramework: body.mappedFramework, mappedControlId: body.mappedControlId } });
+    const { count } = await prisma.control.updateMany({
+      where: lockWhere(id, body.expectedUpdatedAt),
+      data: { name: body.mappedControlId, mappedFramework: body.mappedFramework, mappedControlId: body.mappedControlId },
+    });
+    if (count === 0) throw staleWrite();
+    const control = await prisma.control.findUniqueOrThrow({ where: { id } });
     await audit(req.user!.id, "Control", control.id, "UPDATE", before, control);
     res.json({ control });
   } catch (error) {

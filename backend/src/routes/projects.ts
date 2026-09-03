@@ -6,7 +6,8 @@ import { notFound } from "../httpError.js";
 import { pagination } from "../lib/http.js";
 import { audit } from "../lib/audit.js";
 import { riskResponse } from "../lib/responses.js";
-import { projectSchema } from "../schemas.js";
+import { projectSchema, projectUpdateSchema } from "../schemas.js";
+import { lockWhere, staleWrite } from "../lib/concurrency.js";
 
 const router = express.Router();
 
@@ -61,9 +62,11 @@ router.get("/projects/:id", requireAuth, async (req, res, next) => {
 router.put("/projects/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const id = String(req.params.id);
-    const body = projectSchema.parse(req.body);
+    const { expectedUpdatedAt, ...body } = projectUpdateSchema.parse(req.body);
     const before = await prisma.project.findUniqueOrThrow({ where: { id } });
-    const project = await prisma.project.update({ where: { id }, data: body });
+    const { count } = await prisma.project.updateMany({ where: lockWhere(id, expectedUpdatedAt), data: body });
+    if (count === 0) throw staleWrite();
+    const project = await prisma.project.findUniqueOrThrow({ where: { id } });
     await audit(req.user!.id, "Project", id, "UPDATE", before, project);
     res.json({ project });
   } catch (error) {

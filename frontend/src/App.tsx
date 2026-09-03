@@ -46,6 +46,7 @@ type AssetDetail = Asset & {
 type Risk = {
   id: string;
   assetId: string;
+  updatedAt?: string;
   description: string;
   sourceFramework: string;
   sourceCategoryId: string;
@@ -112,6 +113,7 @@ type WorkflowEntry = {
 type Project = {
   id: string;
   name: string;
+  updatedAt?: string;
   description?: string | null;
   status: string;
   businessOwner?: string | null;
@@ -218,6 +220,9 @@ function App() {
   const [projectRisks, setProjectRisks] = useState<Risk[]>([]);
   const [projectForm, setProjectForm] = useState<ProjectForm>(emptyProject);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  // updatedAt of the record when editing started — sent as expectedUpdatedAt so
+  // the API rejects the save (409) if someone else changed it in the meantime.
+  const [editBaseVersion, setEditBaseVersion] = useState<string | null>(null);
   const [controls, setControls] = useState<Control[]>([]);
   const [assetProjects, setAssetProjects] = useState<Project[]>([]);
   const [assetModelCard, setAssetModelCard] = useState<ModelCard | null>(null);
@@ -413,9 +418,10 @@ function App() {
 
     try {
       const path = editingAssetId ? `/assets/${editingAssetId}` : "/assets";
-      await api(path, { method: editingAssetId ? "PUT" : "POST", body: JSON.stringify(assetForm) });
+      await api(path, { method: editingAssetId ? "PUT" : "POST", body: JSON.stringify(editingAssetId && editBaseVersion ? { ...assetForm, expectedUpdatedAt: editBaseVersion } : assetForm) });
       setAssetForm(emptyAsset);
       setEditingAssetId(null);
+      setEditBaseVersion(null);
       await loadData();
       if (editingAssetId) await loadAsset(editingAssetId);
     } catch (err) {
@@ -425,6 +431,7 @@ function App() {
 
   function editAsset(asset: Asset) {
     setEditingAssetId(asset.id);
+    setEditBaseVersion(asset.updatedAt ?? null);
     setAssetForm({
       name: asset.name,
       version: asset.version,
@@ -477,9 +484,10 @@ function App() {
 
     try {
       const path = editingProjectId ? `/projects/${editingProjectId}` : "/projects";
-      await api(path, { method: editingProjectId ? "PUT" : "POST", body: JSON.stringify(projectForm) });
+      await api(path, { method: editingProjectId ? "PUT" : "POST", body: JSON.stringify(editingProjectId && editBaseVersion ? { ...projectForm, expectedUpdatedAt: editBaseVersion } : projectForm) });
       setProjectForm(emptyProject);
       setEditingProjectId(null);
+      setEditBaseVersion(null);
       await loadData();
       if (editingProjectId) await loadProject(editingProjectId);
     } catch (err) {
@@ -489,6 +497,7 @@ function App() {
 
   function editProject(project: Project) {
     setEditingProjectId(project.id);
+    setEditBaseVersion(project.updatedAt ?? null);
     setProjectForm({
       name: project.name,
       description: project.description ?? "",
@@ -516,11 +525,13 @@ function App() {
         strideAiCategory: riskForm.strideAiCategory || null,
         atlasTechnique: riskForm.atlasTechnique || null,
         dueDate: riskForm.dueDate ? new Date(riskForm.dueDate).toISOString() : null,
+        ...(editingRiskId && editBaseVersion ? { expectedUpdatedAt: editBaseVersion } : {}),
       };
       const path = editingRiskId ? `/risks/${editingRiskId}` : "/risks";
       await api(path, { method: editingRiskId ? "PUT" : "POST", body: JSON.stringify(payload) });
       setRiskForm(emptyRisk);
       setEditingRiskId(null);
+      setEditBaseVersion(null);
       await loadData();
       if (selectedAsset) await loadAsset(selectedAsset.id);
     } catch (err) {
@@ -530,6 +541,7 @@ function App() {
 
   function editRisk(risk: Risk) {
     setEditingRiskId(risk.id);
+    setEditBaseVersion(risk.updatedAt ?? null);
     setRiskForm({
       assetId: risk.assetId,
       sourceFramework: risk.sourceFramework,
@@ -1002,7 +1014,7 @@ function App() {
           onFiltersChange={setFilters}
           onRiskFormChange={setRiskForm}
           onSubmitRisk={saveRisk}
-          onNewRisk={() => { setEditingRiskId(null); setRiskForm(emptyRisk); }}
+          onNewRisk={() => { setEditingRiskId(null); setEditBaseVersion(null); setRiskForm(emptyRisk); }}
           onEditRisk={editRisk}
           onOpenRisk={openRisk}
           onToggleRisk={(id) => setSelectedRiskIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
@@ -1034,7 +1046,7 @@ function App() {
           label={label}
           onFormChange={setProjectForm}
           onSubmit={saveProject}
-          onNewProject={() => { setEditingProjectId(null); setProjectForm(emptyProject); }}
+          onNewProject={() => { setEditingProjectId(null); setEditBaseVersion(null); setProjectForm(emptyProject); }}
           onOpenProject={openProject}
           onEditProject={editProject}
         />
@@ -1086,7 +1098,7 @@ function App() {
           importSuggestion={assetImportSuggestion}
           onFetchImport={fetchAssetImport}
           onSubmit={saveAsset}
-          onNewAsset={() => { setEditingAssetId(null); setAssetForm(emptyAsset); }}
+          onNewAsset={() => { setEditingAssetId(null); setEditBaseVersion(null); setAssetForm(emptyAsset); }}
           onSelect={(id) => { navigate(`/assets/${id}`); loadAsset(id).catch((err: Error) => setError(err.message)); }}
           onEdit={editAsset}
           onExport={exportBom}

@@ -10,7 +10,8 @@ import { audit } from "../lib/audit.js";
 import { assetResponse, assetListResponse, modelCardResponse, modelCardData } from "../lib/responses.js";
 import { fetchImportHtml, extractHtmlSuggestion } from "../lib/urlImport.js";
 import { allowedTransitions, requiredRoleForTransition } from "../lib/transitions.js";
-import { assetSchema, importUrlSchema, modelCardSchema, modelCardMetricSchema } from "../schemas.js";
+import { assetSchema, assetUpdateSchema, importUrlSchema, modelCardSchema, modelCardUpdateSchema, modelCardMetricSchema } from "../schemas.js";
+import { lockWhere, staleWrite } from "../lib/concurrency.js";
 import { modelCardCompleteness } from "../modelCardScoring.js";
 import { HIGH_SEVERITY_MIN_SCORE } from "../riskScoring.js";
 
@@ -136,7 +137,7 @@ router.get("/assets/:id/model-card", requireAuth, async (req, res, next) => {
 router.put("/assets/:id/model-card", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const assetId = String(req.params.id);
-    const body = modelCardSchema.parse(req.body);
+    const { expectedUpdatedAt, ...body } = modelCardUpdateSchema.parse(req.body);
     const asset = await prisma.aIAsset.findUnique({ where: { id: assetId }, select: { id: true } });
 
     if (!asset) {
@@ -144,6 +145,9 @@ router.put("/assets/:id/model-card", requireAuth, requireRole("ADMIN", "RISK_OWN
     }
 
     const before = await prisma.modelCard.findUnique({ where: { assetId } });
+    if (before && expectedUpdatedAt && before.updatedAt.getTime() !== new Date(expectedUpdatedAt).getTime()) {
+      throw staleWrite();
+    }
     const data = modelCardData(body);
     const modelCard = await prisma.modelCard.upsert({
       where: { assetId },
@@ -222,14 +226,16 @@ router.delete("/assets/:id/model-card/metrics/:metricId", requireAuth, requireRo
 router.put("/assets/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const id = String(req.params.id);
-    const body = assetSchema.parse(req.body);
+    const { expectedUpdatedAt, ...body } = assetUpdateSchema.parse(req.body);
     const before = await prisma.aIAsset.findUniqueOrThrow({ where: { id } });
 
     if (req.user!.role === "RISK_OWNER" && before.createdById !== req.user!.id) {
       throw forbidden("RISK_OWNER can only edit assets they created");
     }
 
-    const asset = await prisma.aIAsset.update({ where: { id }, data: body });
+    const { count } = await prisma.aIAsset.updateMany({ where: lockWhere(id, expectedUpdatedAt), data: body });
+    if (count === 0) throw staleWrite();
+    const asset = await prisma.aIAsset.findUniqueOrThrow({ where: { id } });
     await audit(req.user!.id, "AIAsset", asset.id, "UPDATE", before, asset);
     res.json({ asset });
   } catch (error) {

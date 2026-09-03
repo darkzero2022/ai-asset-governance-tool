@@ -8,7 +8,8 @@ import { pagination, csv, MAX_EXPORT_ROWS } from "../lib/http.js";
 import { audit } from "../lib/audit.js";
 import { riskResponse } from "../lib/responses.js";
 import { strideAtlasFor } from "../lib/riskAggregates.js";
-import { riskSchema, controlSchema } from "../schemas.js";
+import { riskSchema, riskUpdateSchema, controlSchema } from "../schemas.js";
+import { staleWrite } from "../lib/concurrency.js";
 import { sendSlackRiskStatusChange } from "../integrations/slack.js";
 import { severityOf } from "../riskScoring.js";
 
@@ -106,8 +107,8 @@ router.get("/risks/:id", requireAuth, async (req, res, next) => {
 router.put("/risks/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const id = String(req.params.id);
-    const body = riskSchema.parse(req.body);
-    const { assetId, ...riskData } = body;
+    const body = riskUpdateSchema.parse(req.body);
+    const { assetId, expectedUpdatedAt, ...riskData } = body;
     const before = await prisma.risk.findUniqueOrThrow({ where: { id }, include: { assets: true, controlLinks: { include: { control: true } }, frameworkCategory: true } });
 
     if (req.user!.role === "RISK_OWNER" && before.createdById !== req.user!.id) {
@@ -116,6 +117,12 @@ router.put("/risks/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async 
 
     if (riskData.status === "ACCEPTED" && before.createdById === req.user!.id) {
       throw forbidden("Segregation of duties prevents accepting a risk you created");
+    }
+
+    // Risk updates write relations (connectOrCreate), which updateMany can't do,
+    // so this is a check-then-update rather than an atomic conditional update.
+    if (expectedUpdatedAt && before.updatedAt.getTime() !== new Date(expectedUpdatedAt).getTime()) {
+      throw staleWrite();
     }
 
     const risk = await prisma.risk.update({
