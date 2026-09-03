@@ -358,7 +358,6 @@ router.post("/assets/:assetId/risks/:riskId", requireAuth, requireRole("ADMIN", 
     const assetId = String(req.params.assetId);
     const riskId = String(req.params.riskId);
     const link = await prisma.assetRisk.upsert({ where: { assetId_riskId: { assetId, riskId } }, update: {}, create: { assetId, riskId } });
-    await audit(req.user!.id, "AssetRisk", link.id, "CREATE", undefined, link);
     res.status(201).json({ link });
   } catch (error) {
     next(error);
@@ -369,9 +368,8 @@ router.delete("/assets/:assetId/risks/:riskId", requireAuth, requireRole("ADMIN"
   try {
     const assetId = String(req.params.assetId);
     const riskId = String(req.params.riskId);
-    const before = await prisma.assetRisk.findUniqueOrThrow({ where: { assetId_riskId: { assetId, riskId } } });
+    await prisma.assetRisk.findUniqueOrThrow({ where: { assetId_riskId: { assetId, riskId } } });
     await prisma.assetRisk.delete({ where: { assetId_riskId: { assetId, riskId } } });
-    await audit(req.user!.id, "AssetRisk", before.id, "DELETE", before, undefined);
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -383,7 +381,6 @@ router.post("/assets/:parentAssetId/dependencies/:childAssetId", requireAuth, re
     const parentAssetId = String(req.params.parentAssetId);
     const childAssetId = String(req.params.childAssetId);
     const dependency = await prisma.assetDependency.upsert({ where: { parentAssetId_childAssetId: { parentAssetId, childAssetId } }, update: {}, create: { parentAssetId, childAssetId } });
-    await audit(req.user!.id, "AssetDependency", dependency.id, "CREATE", undefined, dependency);
     res.status(201).json({ dependency });
   } catch (error) {
     next(error);
@@ -394,9 +391,8 @@ router.delete("/assets/:parentAssetId/dependencies/:childAssetId", requireAuth, 
   try {
     const parentAssetId = String(req.params.parentAssetId);
     const childAssetId = String(req.params.childAssetId);
-    const before = await prisma.assetDependency.findUniqueOrThrow({ where: { parentAssetId_childAssetId: { parentAssetId, childAssetId } } });
+    await prisma.assetDependency.findUniqueOrThrow({ where: { parentAssetId_childAssetId: { parentAssetId, childAssetId } } });
     await prisma.assetDependency.delete({ where: { parentAssetId_childAssetId: { parentAssetId, childAssetId } } });
-    await audit(req.user!.id, "AssetDependency", before.id, "DELETE", before, undefined);
     res.status(204).send();
   } catch (error) {
     next(error);

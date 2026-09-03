@@ -3,7 +3,13 @@ import { randomUUID } from "node:crypto";
 import type { RequestHandler } from "express";
 import { logger } from "../log.js";
 
-type Store = { requestId: string; userId?: string };
+type Store = {
+  requestId: string;
+  userId?: string;
+  /** entityType:entityId -> id of an audit row the audit extension wrote, so an
+   * explicit audit() for the same entity can supersede it (see lib/audit.ts). */
+  autoAuditIds?: Map<string, string>;
+};
 
 const storage = new AsyncLocalStorage<Store>();
 
@@ -20,6 +26,26 @@ export function getUserId(): string | undefined {
 export function setUserId(userId: string): void {
   const store = storage.getStore();
   if (store) store.userId = userId;
+}
+
+/** The audit extension records the row it auto-wrote for an entity. */
+export function recordAutoAudit(key: string, auditRowId: string): void {
+  const store = storage.getStore();
+  if (!store) return;
+  (store.autoAuditIds ??= new Map()).set(key, auditRowId);
+}
+
+/** An explicit audit() takes over: returns and forgets any auto-written row id. */
+export function takeAutoAudit(key: string): string | undefined {
+  const store = storage.getStore();
+  const id = store?.autoAuditIds?.get(key);
+  store?.autoAuditIds?.delete(key);
+  return id;
+}
+
+/** Test helper: run `fn` inside a request-context store. */
+export function runInContext<T>(store: Partial<Store> & { requestId: string }, fn: () => T): T {
+  return storage.run(store as Store, fn);
 }
 
 /**

@@ -534,6 +534,43 @@ describe("Model Card metric CRUD", () => {
   });
 });
 
+describe("audit trail extension", () => {
+  it("audits a link mutation that has no explicit audit() call", async () => {
+    const asset = await createAsset();
+    const project = await createProject();
+
+    await request(app).post(`/projects/${project.id}/assets/${asset.id}`).set(auth("ADMIN")).expect(201);
+    await request(app).delete(`/projects/${project.id}/assets/${asset.id}`).set(auth("ADMIN")).expect(204);
+
+    const rows = await prisma.auditLog.findMany({
+      where: { entityType: "ProjectAsset" },
+      orderBy: { timestamp: "asc" },
+    });
+    const forThisPair = rows.filter(
+      (r) =>
+        (r.afterJson as { projectId?: string } | null)?.projectId === project.id ||
+        (r.beforeJson as { projectId?: string } | null)?.projectId === project.id,
+    );
+    expect(forThisPair.map((r) => r.action)).toEqual(["CREATE", "DELETE"]);
+    expect(forThisPair.every((r) => r.actorId === userIds.get("ADMIN"))).toBe(true);
+    expect((forThisPair[0].afterJson as { assetId?: string }).assetId).toBe(asset.id);
+    expect((forThisPair[1].beforeJson as { assetId?: string }).assetId).toBe(asset.id);
+  });
+
+  it("does not double-audit a route that still calls audit() explicitly", async () => {
+    const created = await request(app)
+      .post("/assets")
+      .set(auth("ADMIN"))
+      .send({ name: `${runId}-audit-once`, version: "1.0.0", type: "DATASET", supplier: "S", hostingModel: "SELF_HOSTED" })
+      .expect(201);
+    const id = created.body.asset.id;
+
+    const rows = await prisma.auditLog.findMany({ where: { entityType: "AIAsset", entityId: id } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].action).toBe("CREATE");
+  });
+});
+
 describe("URL import", () => {
   it("rejects loopback and cloud metadata URLs before fetching", async () => {
     await request(app)

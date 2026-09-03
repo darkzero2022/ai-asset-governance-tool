@@ -88,7 +88,6 @@ router.post("/projects/:projectId/assets/:assetId", requireAuth, requireRole("AD
     const projectId = String(req.params.projectId);
     const assetId = String(req.params.assetId);
     const link = await prisma.projectAsset.upsert({ where: { projectId_assetId: { projectId, assetId } }, update: {}, create: { projectId, assetId } });
-    await audit(req.user!.id, "ProjectAsset", link.id, "CREATE", undefined, link);
     res.status(201).json({ link });
   } catch (error) {
     next(error);
@@ -99,9 +98,8 @@ router.delete("/projects/:projectId/assets/:assetId", requireAuth, requireRole("
   try {
     const projectId = String(req.params.projectId);
     const assetId = String(req.params.assetId);
-    const before = await prisma.projectAsset.findUniqueOrThrow({ where: { projectId_assetId: { projectId, assetId } } });
+    await prisma.projectAsset.findUniqueOrThrow({ where: { projectId_assetId: { projectId, assetId } } });
     await prisma.projectAsset.delete({ where: { projectId_assetId: { projectId, assetId } } });
-    await audit(req.user!.id, "ProjectAsset", before.id, "DELETE", before, undefined);
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -113,7 +111,6 @@ router.post("/projects/:projectId/risks/:riskId", requireAuth, requireRole("ADMI
     const projectId = String(req.params.projectId);
     const riskId = String(req.params.riskId);
     const link = await prisma.projectRisk.upsert({ where: { projectId_riskId: { projectId, riskId } }, update: {}, create: { projectId, riskId } });
-    await audit(req.user!.id, "ProjectRisk", link.id, "CREATE", undefined, link);
     res.status(201).json({ link });
   } catch (error) {
     next(error);
@@ -124,9 +121,8 @@ router.delete("/projects/:projectId/risks/:riskId", requireAuth, requireRole("AD
   try {
     const projectId = String(req.params.projectId);
     const riskId = String(req.params.riskId);
-    const before = await prisma.projectRisk.findUniqueOrThrow({ where: { projectId_riskId: { projectId, riskId } } });
+    await prisma.projectRisk.findUniqueOrThrow({ where: { projectId_riskId: { projectId, riskId } } });
     await prisma.projectRisk.delete({ where: { projectId_riskId: { projectId, riskId } } });
-    await audit(req.user!.id, "ProjectRisk", before.id, "DELETE", before, undefined);
     res.status(204).send();
   } catch (error) {
     next(error);
