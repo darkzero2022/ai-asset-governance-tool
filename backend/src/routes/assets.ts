@@ -5,7 +5,7 @@ import { prisma } from "../prisma.js";
 import { requireAuth } from "../auth.js";
 import { requireRole, canTransitionAsset } from "../rbac.js";
 import { AppError, badRequest, forbidden, notFound } from "../httpError.js";
-import { pagination, csv } from "../lib/http.js";
+import { pagination, csv, MAX_EXPORT_ROWS } from "../lib/http.js";
 import { audit } from "../lib/audit.js";
 import { assetResponse, assetListResponse, modelCardResponse, modelCardData } from "../lib/responses.js";
 import { fetchImportHtml, extractHtmlSuggestion } from "../lib/urlImport.js";
@@ -77,6 +77,7 @@ router.get("/assets/export/csv", requireAuth, async (req, res, next) => {
       },
       include: { _count: { select: { riskLinks: true, projectLinks: true } } },
       orderBy: { updatedAt: "desc" },
+      take: MAX_EXPORT_ROWS,
     });
     const body = csv([
       ["id", "name", "version", "type", "supplier", "provider", "hostingModel", "networkDependency", "status", "riskCount", "projectUsageCount", "updatedAt"],
@@ -296,6 +297,7 @@ router.post("/assets/:id/transition", requireAuth, async (req, res, next) => {
     }
 
     if (body.toStatus === "APPROVED" || body.toStatus === "DEPLOYED") {
+      // Bounded: open high/critical risks linked to this one asset.
       const blockingRisks = await prisma.risk.findMany({
         where: { archived: false, assets: { some: { assetId: asset.id } }, status: { in: ["OPEN", "IN_PROGRESS"] }, inherentRiskScore: { gte: HIGH_SEVERITY_MIN_SCORE } },
         select: { id: true, description: true, inherentRiskScore: true },
@@ -343,6 +345,7 @@ router.post("/assets/:id/transition", requireAuth, async (req, res, next) => {
 router.get("/assets/:id/projects", requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id);
+    // Bounded: the projects a single asset is linked to.
     const links = await prisma.projectAsset.findMany({ where: { assetId: id }, include: { project: true }, orderBy: { linkedAt: "desc" } });
     res.json({ projects: links.map((link) => link.project) });
   } catch (error) {

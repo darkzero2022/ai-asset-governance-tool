@@ -3,6 +3,7 @@ import { prisma } from "../prisma.js";
 import { requireAuth } from "../auth.js";
 import { requireRole } from "../rbac.js";
 import { audit } from "../lib/audit.js";
+import { MAX_LIST_ROWS } from "../lib/http.js";
 import { controlSchema } from "../schemas.js";
 
 const router = express.Router();
@@ -10,7 +11,7 @@ const router = express.Router();
 router.get("/controls", requireAuth, async (req, res, next) => {
   try {
     const includeArchived = req.query.includeArchived === "true";
-    const controls = await prisma.control.findMany({ where: includeArchived ? {} : { archived: false }, include: { _count: { select: { links: true } } }, orderBy: [{ mappedFramework: "asc" }, { mappedControlId: "asc" }] });
+    const controls = await prisma.control.findMany({ where: includeArchived ? {} : { archived: false }, include: { _count: { select: { links: true } } }, orderBy: [{ mappedFramework: "asc" }, { mappedControlId: "asc" }] , take: MAX_LIST_ROWS });
     res.json({ controls });
   } catch (error) {
     next(error);

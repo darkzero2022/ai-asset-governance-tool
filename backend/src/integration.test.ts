@@ -355,6 +355,12 @@ describe("error envelope", () => {
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
     expect(res.body.error.details).toBeDefined();
   });
+
+  it("rejects an oversized bulk export request", async () => {
+    const assetIds = Array.from({ length: 501 }, (_, i) => `id-${i}`);
+    const res = await request(app).post("/exports/cyclonedx").set(auth("VIEWER")).send({ assetIds }).expect(422);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+  });
 });
 
 describe("asset transition policy gates", () => {

@@ -4,7 +4,7 @@ import { prisma } from "../prisma.js";
 import { requireAuth } from "../auth.js";
 import { requireRole } from "../rbac.js";
 import { forbidden, notFound } from "../httpError.js";
-import { pagination, csv } from "../lib/http.js";
+import { pagination, csv, MAX_EXPORT_ROWS } from "../lib/http.js";
 import { audit } from "../lib/audit.js";
 import { riskResponse } from "../lib/responses.js";
 import { strideAtlasFor } from "../lib/riskAggregates.js";
@@ -52,6 +52,7 @@ router.get("/risks/export/csv", requireAuth, async (req, res, next) => {
       },
       include: { assets: { include: { asset: true } }, controlLinks: { include: { control: true } } },
       orderBy: { inherentRiskScore: "desc" },
+      take: MAX_EXPORT_ROWS,
     });
     const body = csv([
       ["id", "description", "severity", "sourceFramework", "sourceCategoryId", "strideAiCategory", "atlasTechnique", "status", "likelihood", "impact", "inherentRiskScore", "residualRiskScore", "owner", "dueDate", "assetNames", "controlIds", "archived"],

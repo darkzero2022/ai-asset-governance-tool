@@ -73,7 +73,7 @@ router.get("/projects/:id/export/cyclonedx", requireAuth, async (req, res, next)
 
 router.post("/exports/cyclonedx", requireAuth, async (req, res, next) => {
   try {
-    const body = z.object({ assetIds: z.array(z.string()).min(1) }).parse(req.body);
+    const body = z.object({ assetIds: z.array(z.string()).min(1).max(500) }).parse(req.body);
     const assets = await prisma.aIAsset.findMany({ where: { id: { in: body.assetIds } }, include: { modelCard: { include: { metrics: true } }, riskLinks: { include: { risk: { include: { controlLinks: { include: { control: true } } } } } } } });
 
     if (assets.length !== body.assetIds.length) {

@@ -2,6 +2,7 @@ import express from "express";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../auth.js";
 import { countRiskSeverityBuckets } from "../lib/riskAggregates.js";
+import { MAX_LIST_ROWS } from "../lib/http.js";
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ router.get("/reports/framework-coverage", requireAuth, async (req, res, next) =>
   try {
     const riskWhere = req.query.includeArchived === "true" ? {} : { archived: false };
     const [categories, risks] = await Promise.all([
-      prisma.frameworkCategory.findMany({ orderBy: [{ framework: "asc" }, { categoryId: "asc" }] }),
+      /* fixed reference set */ prisma.frameworkCategory.findMany({ orderBy: [{ framework: "asc" }, { categoryId: "asc" }] }),
       prisma.risk.groupBy({ by: ["sourceFramework", "sourceCategoryId"], where: riskWhere, _count: true }),
     ]);
     const riskCounts = new Map(risks.map((risk) => [`${risk.sourceFramework}:${risk.sourceCategoryId}`, risk._count]));
@@ -43,6 +44,7 @@ router.get("/reports/model-metrics", requireAuth, async (req, res, next) => {
       where: metricName ? { metricName } : undefined,
       include: { modelCard: { include: { asset: true } } },
       orderBy: [{ metricName: "asc" }, { recordedAt: "desc" }],
+      take: MAX_LIST_ROWS,
     });
     const aggregate = new Map<string, { group: string; values: number[] }>();
 

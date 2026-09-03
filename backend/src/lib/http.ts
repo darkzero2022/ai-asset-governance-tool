@@ -1,5 +1,10 @@
 import type express from "express";
 
+// Hard ceilings for endpoints that return a whole set rather than a page. A cap
+// here is a safety valve against a runaway table, not a UX pagination limit.
+export const MAX_EXPORT_ROWS = 10_000; // CSV / bulk exports
+export const MAX_LIST_ROWS = 2_000; // pickers, admin lists, dashboard scans
+
 /** Bounded pagination for list endpoints: skip >= 0, take in [1, 100]. */
 export function pagination(query: express.Request["query"]) {
   const skip = Math.max(Number(query.skip ?? 0) || 0, 0);

@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../auth.js";
 import { requireRole } from "../rbac.js";
+import { MAX_LIST_ROWS } from "../lib/http.js";
 import { audit } from "../lib/audit.js";
 import { userCreateSchema, userUpdateSchema } from "../schemas.js";
 
@@ -10,7 +11,7 @@ const router = express.Router();
 
 router.get("/users", requireAuth, requireRole("ADMIN"), async (_req, res, next) => {
   try {
-    const users = await prisma.user.findMany({ select: { id: true, email: true, name: true, role: true, active: true, createdAt: true }, orderBy: { createdAt: "desc" } });
+    const users = await prisma.user.findMany({ select: { id: true, email: true, name: true, role: true, active: true, createdAt: true }, orderBy: { createdAt: "desc" } , take: MAX_LIST_ROWS });
     res.json({ users });
   } catch (error) {
     next(error);

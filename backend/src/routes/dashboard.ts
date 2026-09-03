@@ -5,6 +5,7 @@ import { assetListResponse } from "../lib/responses.js";
 import { countRiskSeverityBuckets } from "../lib/riskAggregates.js";
 import { modelCardCompleteness } from "../modelCardScoring.js";
 import { severityOf, HIGH_SEVERITY_MIN_SCORE } from "../riskScoring.js";
+import { MAX_LIST_ROWS } from "../lib/http.js";
 
 const router = express.Router();
 
@@ -53,6 +54,7 @@ router.get("/dashboard/recertification", requireAuth, async (req, res, next) => 
       },
       include: { asset: true },
       orderBy: { nextDueDate: "asc" },
+      take: MAX_LIST_ROWS,
     });
 
     res.json({
@@ -73,6 +75,8 @@ router.get("/dashboard/model-card-coverage", requireAuth, async (_req, res, next
       where: { type: { in: ["MODEL", "SERVICE"] } },
       include: { modelCard: true },
       orderBy: { updatedAt: "desc" },
+      take: MAX_LIST_ROWS, // aggregate scan — safety cap; missingAssets/average reflect up to this many
+
     });
     const withCard = assets.filter((asset) => asset.modelCard).length;
     const completenessScores = assets.map((asset) => modelCardCompleteness(asset.modelCard).percent);

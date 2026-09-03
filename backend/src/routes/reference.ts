@@ -8,6 +8,7 @@ const router = express.Router();
 router.get("/reference/framework-categories", requireAuth, async (req, res, next) => {
   try {
     const framework = req.query.framework as string | undefined;
+    // Reference tables are small fixed sets (<20 rows) — no pagination.
     const categories = await prisma.frameworkCategory.findMany({
       where: framework ? { framework: framework as never } : undefined,
       orderBy: [{ framework: "asc" }, { categoryId: "asc" }],
@@ -20,6 +21,7 @@ router.get("/reference/framework-categories", requireAuth, async (req, res, next
 
 router.get("/reference/eu-ai-act-risk-tiers", requireAuth, async (_req, res, next) => {
   try {
+    // Fixed reference set.
     const tiers = await prisma.euAiActRiskTierReference.findMany({ orderBy: { name: "asc" } });
     res.json({ tiers });
   } catch (error) {
@@ -33,6 +35,7 @@ router.get("/reference/stride-ai-categories", requireAuth, (_req, res) => {
 
 router.get("/reference/atlas-techniques", requireAuth, async (_req, res, next) => {
   try {
+    // Fixed reference set.
     const techniques = await prisma.atlasTechniqueReference.findMany({ orderBy: { name: "asc" } });
     res.json({ techniques });
   } catch (error) {
@@ -42,6 +45,7 @@ router.get("/reference/atlas-techniques", requireAuth, async (_req, res, next) =
 
 router.get("/reference/stride-atlas-map", requireAuth, async (_req, res, next) => {
   try {
+    // Fixed reference set (OWASP LLM Top 10 -> STRIDE-AI/ATLAS).
     const mappings = await prisma.strideAtlasMapping.findMany({ orderBy: { owaspCategoryId: "asc" } });
     res.json({ mappings });
   } catch (error) {
