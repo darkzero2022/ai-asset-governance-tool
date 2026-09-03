@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
+import { logger } from "./log.js";
 
 // Endpoints that must always return their real (non-HTML) response even when the
 // caller happens to accept text/html — infra probes hit these.
@@ -53,8 +54,9 @@ export function mountStaticSite(app: express.Express): void {
   if (!shouldServeStatic()) return;
   const index = resolvedIndexHtml();
   if (!index) {
-    console.warn(
-      `SERVE_STATIC is enabled but no build was found at ${frontendDistDir()} — the API will run without the SPA.`,
+    logger.warn(
+      { dir: frontendDistDir() },
+      "SERVE_STATIC is enabled but no build was found — the API will run without the SPA",
     );
     return;
   }

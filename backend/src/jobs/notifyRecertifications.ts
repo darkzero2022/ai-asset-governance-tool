@@ -1,6 +1,7 @@
 import "../env.js";
 import { prisma } from "../prisma.js";
 import { sendSlackMessage } from "../integrations/slack.js";
+import { logger } from "../log.js";
 
 const dueSoonDays = Number(process.env.RECERTIFICATION_DUE_SOON_DAYS ?? 30);
 const staleAssetDays = Number(process.env.STALE_ASSET_DAYS ?? 14);
@@ -36,14 +37,17 @@ async function main() {
     await sendSlackMessage(`Stale asset workflow: ${asset.name} (${asset.id}) has been ${asset.status} since ${asset.updatedAt.toISOString().slice(0, 10)}`);
   }
 
-  console.log(`Sent notification scan: ${recertifications.length} recertification item(s), ${staleAssets.length} stale asset item(s).`);
+  logger.info(
+    { recertifications: recertifications.length, staleAssets: staleAssets.length },
+    "notification scan complete",
+  );
 }
 
 main()
   .finally(async () => {
     await prisma.$disconnect();
   })
-  .catch(async (error) => {
-    console.error(error);
+  .catch((error) => {
+    logger.error({ err: error }, "notification scan failed");
     process.exit(1);
   });

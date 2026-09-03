@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import type { Role } from "@prisma/client";
 import { prisma } from "./prisma.js";
+import { setUserId } from "./requestContext.js";
 
 export type AuthUser = {
   id: string;
@@ -48,6 +49,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
 
     req.user = user;
+    setUserId(user.id);
     next();
   } catch {
     res.status(401).json({ error: "Invalid or expired token" });

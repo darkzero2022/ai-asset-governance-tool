@@ -17,6 +17,7 @@ import { sendSlackRiskStatusChange } from "./integrations/slack.js";
 import { modelCardCompleteness } from "./modelCardScoring.js";
 import { resolveStrideAtlas, STRIDE_AI_CATEGORIES } from "./strideAtlas.js";
 import { mountStaticSite, shouldServeStatic } from "./staticSite.js";
+import { httpLogger, requestContext } from "./requestContext.js";
 
 const assetSchema = z.object({
   name: z.string().min(1),
@@ -395,6 +396,11 @@ const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173,http:/
   .map((origin) => origin.trim());
 
 app.disable("x-powered-by");
+
+// First in the chain: assign a request id (echoed as X-Request-Id) and log one
+// structured line per request.
+app.use(requestContext);
+app.use(httpLogger);
 
 // Baseline security headers. When this process only serves the JSON API the CSP
 // is locked all the way down (`default-src 'none'`). When it also serves the
