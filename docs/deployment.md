@@ -23,6 +23,45 @@ This project is still optimized for local evaluation, but a real deployment shou
 - `ADMIN_EMAIL` / `ADMIN_NAME` / `ADMIN_PASSWORD` (seed-time only, read by `prisma:seed:reference`): the initial admin account. `scripts/setup.sh` prompts for the email and password; pass `--admin-email` / `--admin-password` (or set the env vars) to seed non-interactively. `ADMIN_EMAIL` defaults to `admin@example.com`; a blank `ADMIN_PASSWORD` on a fresh DB generates a random password and prints it once. Setting `ADMIN_PASSWORD` on a later run resets it (recovery). Changing `ADMIN_EMAIL` on a later run creates an additional admin rather than renaming the existing one.
 - Frontend config should provide `VITE_API_BASE_URL` at build time.
 
+## Serving model
+
+Since the enhancement plan's A1, the backend serves the built SPA itself when
+`SERVE_STATIC` is set (default on under `NODE_ENV=production`), so a single
+`node dist/server.js` process — and a single container — is the whole app on one
+port. The standalone `frontend` container in `docker-compose.yml` is now behind
+the `standalone-frontend` profile for deployments that still want to serve the
+SPA separately. `FRONTEND_DIST` overrides where the backend looks for the build.
+
+## Reverse proxy (TLS)
+
+Bind the app to localhost (`BIND_HOST=127.0.0.1`, the default) and terminate TLS
+at a proxy. A complete Caddy config:
+
+```
+app.example.com {
+    reverse_proxy 127.0.0.1:4000
+}
+```
+
+nginx equivalent:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name app.example.com;
+    # ssl_certificate / ssl_certificate_key ...
+    location / {
+        proxy_pass http://127.0.0.1:4000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Then set `APP_URL=https://app.example.com`, `CORS_ORIGIN=https://app.example.com`,
+and `TRUST_PROXY=1` in `.env`.
+
 ## Network & Security Hardening
 
 - **Reverse proxy**: terminate TLS at a proxy/ingress and set the backend `TRUST_PROXY`

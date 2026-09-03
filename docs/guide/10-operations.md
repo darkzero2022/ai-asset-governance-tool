@@ -4,13 +4,24 @@ This page summarizes operational commands and maintenance tasks. For deployment 
 
 ## Setup
 
-Run `scripts/setup.sh` for interactive setup or pass `--mode=local|docker`, `--data=empty|demo`, and `--yes` for repeatable setup. Local mode keeps Node processes on the host and Postgres in Docker. Docker mode runs the full app stack in Compose.
+Run `scripts/setup.sh` interactively, or pass `--mode=local|docker`,
+`--database=managed|docker|url`, `--data=empty|demo`, and `--yes`. All
+configuration lands in a single root `.env` (generated, gitignored). `--database=managed`
+runs a bundled PostgreSQL with no Docker; `--database=docker` uses the compose
+service; `--database=url` uses an existing server via `DATABASE_URL`. Setup runs
+preflight checks (ports, Node version) and refuses to change anything if they fail.
 
-## Start And Stop
+## Start, Stop, Status
 
-Run `scripts/start.sh` to start the chosen mode recorded in `.aibom-mode`. Local mode starts Postgres, backend, and frontend with logs under `logs/`. Docker mode runs `docker compose up -d`.
-
-Run `scripts/stop.sh` to stop tracked local PIDs and Postgres, or to run `docker compose down` in Docker mode.
+- `scripts/start.sh` / `scripts/stop.sh` — start/stop everything for the mode
+  recorded in `.aibom-mode`. Docker mode is `docker compose up -d` / `down`;
+  local mode manages backend/frontend PIDs (logs under `logs/`) plus the database
+  (`npm run db:start`/`db:stop` for managed, the postgres container for docker).
+- `scripts/status.sh` — mode, versions, what's running, `prisma migrate status`,
+  `/health`.
+- `scripts/upgrade.sh` — `git pull` → reinstall → migrate → rebuild → restart.
+  Refuses a dirty/untracked tree; backs up first.
+- `scripts/reset.sh [--yes]` — drop all tables and re-seed the recorded data mode.
 
 ## Backup
 
@@ -20,7 +31,9 @@ Run:
 scripts/backup.sh
 ```
 
-The script writes `backups/aibom-<timestamp>.sql` using `pg_dump` through the Docker-managed Postgres container. Backups are ignored by git.
+The script writes `backups/aibom-<timestamp>.sql` using `pg_dump` against the
+configured database. Backups are ignored by git. Take one before `scripts/upgrade.sh`
+or `scripts/reset.sh` (upgrade does this automatically).
 
 ## Restore
 

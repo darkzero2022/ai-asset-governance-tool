@@ -55,50 +55,40 @@ flowchart LR
 
 ## Quick start
 
-**Prerequisites:** Docker Engine + Docker Compose v2, Git, and (for *local* install
-mode only) Node.js 22+ / npm. The `scripts/*.sh` helpers need Bash — on Windows use
-WSL or Git Bash, or follow the manual commands in the guide.
-
 ```bash
 git clone https://github.com/darkzero2022/ai-asset-governance-tool.git
 cd ai-asset-governance-tool
 scripts/setup.sh          # interactive
 ```
 
-The full step-by-step install guide — prerequisites, a scriptless manual path, verification,
-and troubleshooting — is in **[docs/guide/01-getting-started.md](docs/guide/01-getting-started.md)**.
+Pick one of three tracks (full guide: **[docs/guide/01-getting-started.md](docs/guide/01-getting-started.md)**):
 
-Two install modes, and two data modes — pick one of each.
-
-| | Local | Docker |
+| Track | Command | Needs |
 |---|---|---|
-| **What runs where** | Backend/frontend run as host Node processes; PostgreSQL runs in Docker | Everything (Postgres, backend, frontend) runs in Docker |
-| **Best for** | Active development, debugging, fast iteration | A repeatable, self-contained stack |
+| **Docker** (recommended) | `scripts/setup.sh --mode=docker --data=demo --yes` | Docker + `docker compose` |
+| **No-Docker local** | `scripts/setup.sh --mode=local --database=managed --data=demo --yes` | Node 22+, Bash (a PostgreSQL is bundled) |
+| **Existing PostgreSQL** | set `DATABASE_URL` in `.env`, then `--mode=local --database=url` | Node 22+, a reachable database |
 
-| | Empty | Demo |
-|---|---|---|
-| **What you get** | Only required reference data (framework categories, EU AI Act tiers, the admin account) | Reference data plus a realistic fictional portfolio (assets, risks, projects, controls, a filled-in Model Card) |
-| **Best for** | Real evaluation/production data entry | Learning the UI or demoing without typing anything in first |
+Data modes: **empty** (reference data + admin only) or **demo** (adds a fictional
+portfolio). The `scripts/*.sh` helpers need Bash — on Windows use WSL2 or Git Bash,
+or follow the manual commands in the guide.
 
 ```bash
-# Interactive — asks for install mode, data mode, and the admin email + password
-scripts/setup.sh
-
-# Or non-interactive (defaults for anything not passed):
-scripts/setup.sh --mode=local  --data=empty --yes
 scripts/setup.sh --mode=docker --data=demo \
   --admin-email=you@yourco.com --admin-password='choose-a-strong-one' --yes
-
-# Start / stop (reads the mode recorded by setup.sh, no need to specify it again)
-scripts/start.sh
-scripts/stop.sh
+scripts/start.sh      # reads .aibom-mode; scripts/stop.sh to stop
 ```
 
 Once running:
 
-- Frontend: http://localhost:5173
-- Backend health check: http://localhost:4000/health
-- Sign in with the admin account you chose during setup (default `admin@example.com`). If you left the password blank, setup **prints a randomly generated one** — copy it from that output. Change it on the Users page after first login.
+- **Docker track:** the app is at http://localhost:4000 (one service serves the API and the web app).
+- **Local track:** web app at http://localhost:5173, API at http://localhost:4000.
+- Health check: http://localhost:4000/health
+- Sign in with the admin account from setup (default `admin@example.com`). A blank password means setup **printed a random one** — copy it from that output, then change it on the Users page.
+
+Config is one file: **`.env`** at the repo root (created by setup, gitignored).
+`scripts/status.sh` shows what's running; `scripts/upgrade.sh` pulls and
+redeploys; `scripts/reset.sh` wipes and re-seeds.
 
 ## Backing up and restoring
 

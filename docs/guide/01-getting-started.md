@@ -1,20 +1,17 @@
 # 01 - Getting Started
 
-This is the full setup and install guide. For a one-paragraph version see the
+The full setup and install guide. For the one-paragraph version see the
 [project README](../../README.md#quick-start).
 
-## Prerequisites
+There are three ways to run AI-BOM. Pick the row that matches you:
 
-| Tool | Needed for | Notes |
+| Track | You get | Needs |
 |---|---|---|
-| **Docker Engine + Docker Compose v2** | Both install modes | Docker Desktop on macOS/Windows, or Docker Engine + the `docker compose` plugin on Linux. `docker compose version` must work. |
-| **Git** | Cloning the repo | — |
-| **Node.js 22+ and npm** | *Local* install mode only | Not needed for Docker mode. Check with `node -v`. |
-| **Bash** | Running `scripts/*.sh` | Pre-installed on macOS/Linux. On Windows use **WSL** or **Git Bash**, or follow the [Manual setup](#manual-setup-no-scripts) commands instead. |
-| `openssl` | `scripts/setup.sh` (JWT secret) | Present on macOS/Linux and in Git Bash. |
+| **[Docker](#track-a--docker-recommended)** (recommended) | Whole stack in containers, app on one port, restarts itself | Docker Desktop / Docker Engine + `docker compose` |
+| **[No-Docker local](#track-b--no-docker-local)** | Backend + frontend on host Node, a *bundled* PostgreSQL — nothing else to install | Node 22+, Bash (WSL or Git Bash on Windows) |
+| **[Linux server](#track-c--linux-server-always-on)** | The Docker track plus a systemd unit so it survives reboots | A Linux host with Docker |
 
-Ports used on the host: **5173** (frontend), **4000** (backend), **55432** (Postgres).
-Make sure they are free, or see [Troubleshooting](#troubleshooting).
+---
 
 ## Clone
 
@@ -23,153 +20,194 @@ git clone https://github.com/darkzero2022/ai-asset-governance-tool.git
 cd ai-asset-governance-tool
 ```
 
-## Install modes
+## Configuration — one file
 
-**Local mode** runs the backend and frontend directly with host Node/npm, while
-PostgreSQL runs in Docker. Use it for active development, file watching, and
-debugging.
+All configuration lives in a single **`.env`** at the repo root. `scripts/setup.sh`
+creates it from [`.env.example`](../../.env.example) on first run and fills in a
+random `JWT_SECRET` and `POSTGRES_PASSWORD`. In local mode it also derives a
+`backend/.env` for the Prisma CLI. `.env` is gitignored — the generated secrets
+never leave your machine.
 
-**Docker mode** runs Postgres, backend, and frontend all in Docker Compose. Use it
-for a repeatable, self-contained stack with nothing to manage on the host after
-setup.
+Key settings: `DB_MODE` (`managed` / `docker` / `url`), `PORT` (default 4000),
+`BIND_HOST` (default `127.0.0.1` — set `0.0.0.0` only behind a reverse proxy),
+`APP_URL`, `LOG_LEVEL`.
 
 ## Data modes
 
-**Empty** seeds only reference data (framework categories, EU AI Act tiers, the
-STRIDE-AI / MITRE ATLAS lookup, and your admin account). Choose this for real
-evaluation or production data entry.
+- **empty** — reference data only (framework categories, EU AI Act tiers, the
+  STRIDE-AI / MITRE ATLAS lookup) plus your admin account. For real data entry.
+- **demo** — additionally loads a fictional portfolio (assets, risks, controls,
+  projects, a filled-in Model Card, metrics, recertification schedules).
 
-**Demo** additionally loads a fictional portfolio — assets, risks, controls,
-projects, a filled-in Model Card, metrics, and recertification schedules — so you
-can explore the UI without typing anything in.
+---
 
-## Setup (recommended)
+## Track A — Docker (recommended)
 
-Run interactive setup from the repository root:
+**Prerequisites:** Docker Desktop (macOS/Windows) or Docker Engine + the
+`docker compose` plugin (Linux); Bash for the scripts (Git Bash on Windows).
+`docker compose version` must work. You do **not** need Node.
 
 ```bash
-scripts/setup.sh
+scripts/setup.sh --mode=docker --data=demo --yes
+scripts/start.sh
 ```
 
-It prompts for:
+Setup builds the image (it bundles the frontend), starts Postgres, migrates,
+seeds, and records your choices in `.aibom-mode`. The app is then at
+**http://localhost:4000** — one container serves both the API and the web app.
 
-1. **Install mode** — `local` or `docker`
-2. **Data mode** — `empty` or `demo`
-3. **Admin email** — the login for the first admin account (default `admin@example.com`)
-4. **Admin password** — typed twice, hidden; leave blank to generate a strong random
-   one and print it. The password is used for that run only and is never written to disk.
-
-Non-interactive: pass what you want, add `--yes` for the rest.
+Non-interactively you can supply the admin account:
 
 ```bash
-# Local, empty data, default admin (random password printed at the end)
-scripts/setup.sh --mode=local --data=empty --yes
-
-# Docker, demo data, your own admin credentials
 scripts/setup.sh --mode=docker --data=demo \
   --admin-email=grc-admin@yourco.com --admin-password='choose-a-strong-one' --yes
 ```
 
-Setup checks prerequisites, creates `backend/.env` from `backend/.env.example` if
-missing, generates a strong `JWT_SECRET`, installs dependencies or builds
-containers, runs `prisma migrate deploy`, seeds the chosen data set with your admin
-account, and writes `.aibom-mode` so `start.sh` / `stop.sh` know what to run.
+Leave `--admin-password` off and the reference seed prints a random one.
 
-Re-running setup is safe and idempotent. It will **not** overwrite an admin
-password you later changed in the UI unless you pass `--admin-password` again — and
-that doubles as a password reset.
+**Always-on:** the containers use `restart: unless-stopped`. Set Docker Desktop to
+start on login (Settings → General) and the app comes back after every reboot.
 
-`scripts/setup.sh --help` lists every flag.
+---
 
-## Start and stop
+## Track B — No-Docker local
+
+**Prerequisites:** Node 22+ and npm; Bash (WSL2 or Git Bash on Windows);
+`openssl`. No Docker, no system PostgreSQL — setup downloads and runs a bundled
+PostgreSQL for you.
 
 ```bash
-scripts/start.sh   # reads .aibom-mode; prints the URLs once the backend is healthy
-scripts/stop.sh
+scripts/setup.sh --mode=local --database=managed --data=demo --yes
+scripts/start.sh
 ```
 
-Local mode writes backend/frontend logs and PID files under `logs/`. Docker mode
-delegates to `docker compose`.
+`--database=managed` is the default when `--mode=local`. Setup installs
+dependencies, starts the bundled database (data under `data/pg/`, port 55432,
+bound to localhost), migrates, and seeds. `start.sh` then runs the backend
+(`:4000`) and the Vite dev server (`:5173`); open **http://localhost:5173**.
+
+Other database choices for local mode:
+
+```bash
+scripts/setup.sh --mode=local --database=docker --yes   # PostgreSQL in a container
+scripts/setup.sh --mode=local --database=url --yes       # set DATABASE_URL in .env first
+```
+
+**Windows:** run the scripts from **WSL2** or **Git Bash**. Plain PowerShell/CMD
+can't run `.sh` files — use Track A instead, or the [manual steps](#manual-setup-no-scripts).
+
+---
+
+## Track C — Linux server (always-on)
+
+Do the Docker track, then keep it running across reboots with systemd. Bind to
+localhost and put a TLS-terminating reverse proxy in front — see
+[deployment.md](../deployment.md) for a ready-to-use Caddy config.
+
+```ini
+# /etc/systemd/system/aibom.service
+[Unit]
+Description=AI Asset Governance Tool
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/ai-asset-governance-tool
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl enable --now aibom.service
+```
+
+---
+
+## Day-to-day scripts
+
+| Script | Does |
+|---|---|
+| `scripts/start.sh` / `scripts/stop.sh` | Start / stop everything for the recorded mode |
+| `scripts/status.sh` | Mode, versions, what's running, migration status, `/health` |
+| `scripts/upgrade.sh` | `git pull` → reinstall → migrate → rebuild → restart (refuses a dirty tree; backs up first) |
+| `scripts/reset.sh` | Drop all data and re-seed (asks for confirmation unless `--yes`) |
+| `scripts/backup.sh` / `scripts/restore.sh <file>` | `pg_dump` to `backups/` / restore one |
+
+Re-running `scripts/setup.sh` is safe and idempotent — it never overwrites an
+existing secret or an admin password you changed in the UI (pass
+`--admin-password` again to reset it).
+
+---
 
 ## Manual setup (no scripts)
 
-If you can't run the bash scripts (e.g. Windows without WSL/Git Bash), do the same
-steps by hand.
+Same steps by hand, for Windows without WSL/Git Bash.
 
-### Docker mode, by hand
+### Docker, by hand
 
 ```bash
-# 1. A strong JWT secret for docker compose to interpolate
-export JWT_SECRET=$(openssl rand -hex 32)        # PowerShell: $env:JWT_SECRET = "<64 hex chars>"
+# PowerShell: use $env:NAME = "..." for each export
+export POSTGRES_PASSWORD=$(openssl rand -hex 16)
+export JWT_SECRET=$(openssl rand -hex 32)
+printf 'POSTGRES_PASSWORD=%s\nJWT_SECRET=%s\n' "$POSTGRES_PASSWORD" "$JWT_SECRET" > .env
 
-# 2. Build and start the database
-docker compose build backend frontend
+docker compose build backend
 docker compose up -d postgres
-
-# 3. Migrate and seed (choose your admin credentials here)
-docker compose run --rm -e ADMIN_EMAIL=admin@example.com -e ADMIN_PASSWORD='choose-a-strong-one' \
-  backend npx prisma migrate deploy
-docker compose run --rm -e ADMIN_EMAIL=admin@example.com -e ADMIN_PASSWORD='choose-a-strong-one' \
-  backend npm run prisma:seed:reference
-# optional demo data:
-docker compose run --rm -e ADMIN_EMAIL=admin@example.com backend npm run prisma:seed:demo
-
-# 4. Bring up the full stack
+docker compose run --rm backend npx prisma migrate deploy
+docker compose run --rm -e ADMIN_EMAIL=admin@example.com backend npm run prisma:seed:reference
+docker compose run --rm -e ADMIN_EMAIL=admin@example.com backend npm run prisma:seed:demo   # optional
 docker compose up -d
+# app: http://localhost:4000
 ```
 
-### Local mode, by hand
+### Local, by hand
 
 ```bash
-cp backend/.env.example backend/.env
-# edit backend/.env: set JWT_SECRET to `openssl rand -hex 32`
-
-docker compose up -d postgres
+cp .env.example .env
+# edit .env: set JWT_SECRET (openssl rand -hex 32), POSTGRES_PASSWORD, and
+# DATABASE_URL=postgresql://aibom:<POSTGRES_PASSWORD>@127.0.0.1:55432/aibom?schema=public
+cp .env backend/.env
 
 cd backend
 npm install
 npm run prisma:generate
+npm run db:start                 # bundled PostgreSQL   (or: docker compose up -d postgres)
 npx prisma migrate deploy
-ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD='choose-a-strong-one' npm run prisma:seed:reference
-npm run prisma:seed:demo          # optional demo data
-npm run dev &                     # backend on :4000
-cd ../frontend
-npm install
-npm run dev                       # frontend on :5173
+ADMIN_EMAIL=admin@example.com npm run prisma:seed:reference
+npm run prisma:seed:demo         # optional
+npm run dev &                    # backend :4000
+cd ../frontend && npm install && npm run dev    # frontend :5173
 ```
-
-If you leave `ADMIN_PASSWORD` unset, the reference seed generates a random password
-and prints it in a boxed message — copy it from that output.
 
 ## Verify
 
-- Backend health: `curl http://localhost:4000/health` → `{"status":"ok"}`
-- Frontend: open `http://localhost:5173`
-- CI-equivalent checks (from a clean checkout):
-  ```bash
-  cd backend  && npm test && npm run build && npm run validate:cyclonedx
-  cd ../frontend && npm test && npm run build
-  ```
+```bash
+curl http://localhost:4000/health          # {"status":"ok"}
+# CI-equivalent, from a clean checkout:
+cd backend  && npm test && npm run build && npm run validate:cyclonedx
+cd ../frontend && npm test && npm run build
+```
 
 ## First login
 
-Open `http://localhost:5173` and sign in with the admin account from setup:
-
-- **Email** — what you entered (default `admin@example.com`); setup echoes it on the
-  final `Admin login:` line.
-- **Password** — what you entered, or the random one printed during setup if you
-  left it blank.
-
-Change this password on the **Users** page before entering real governance data.
+Sign in with the admin account setup created — email is echoed on the final
+`Admin login:` line, password is what you supplied or the random one printed by
+the reference seed. **Change it on the Users page** before entering real data.
 Lost it? Re-run setup with the same `--admin-email` and a new `--admin-password`.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| `port is already allocated` (5173 / 4000 / 55432) | Stop whatever holds the port, or change the mapping in `docker-compose.yml` (and `VITE_API_BASE_URL` / `CORS_ORIGIN` to match). |
-| Frontend loads but every request fails with "Failed to fetch" | CORS: the browser origin isn't in `CORS_ORIGIN`. Set it (comma-separated) to the URL you're opening the app at and recreate the backend. |
-| `vite preview` returns 403 behind a proxy or a custom hostname | Set `VITE_ALLOWED_HOSTS` (comma-separated hostnames) on the frontend before it starts. |
-| Seed fails with "record not found" for the admin | The demo seed needs the same `ADMIN_EMAIL` the reference seed used — pass it to both. |
-| `docker compose` can't interpolate `JWT_SECRET` | Export it in your shell (or put it in `backend/.env` and let `start.sh` load it) before running compose. |
-| Migrations don't apply on first backend start | The backend container runs `prisma migrate deploy` on boot; check `docker compose logs backend`. |
+| `Port 4000 is in use` from setup | Stop the other process, or set `PORT` in `.env`. Setup checks this before changing anything. |
+| Port 5173 / 55432 in use | Local dev uses 5173; the database uses 55432. Free them or (55432) switch to `--database=url`. |
+| `POSTGRES_PASSWORD is required` from `docker compose` | Run `scripts/setup.sh` — it generates `.env`. For manual runs, create `.env` with `POSTGRES_PASSWORD` and `JWT_SECRET`. |
+| Requests fail with "Failed to fetch" after a manual/custom setup | The SPA and API must share an origin. Only set `VITE_API_BASE_URL` / `CORS_ORIGIN` if you deliberately split them. |
+| Managed database won't start | Needs the optional `embedded-postgres` binaries — re-run `npm install` in `backend/`, or use `--database=docker` / `--database=url`. |
+| `vite preview` returns 403 behind a proxy | Set `VITE_ALLOWED_HOSTS` (comma-separated) before it starts. |
+| Demo seed: "record not found" for the admin | The demo seed needs the same `ADMIN_EMAIL` the reference seed used. |

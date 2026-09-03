@@ -4,7 +4,7 @@ This guide is the operator and user manual for the AI-BOM Governance application
 
 Start here:
 
-- [01 - Getting Started](01-getting-started.md): prerequisites, install modes, `setup.sh` and a scriptless manual path, start/stop, verification, first login, troubleshooting.
+- [01 - Getting Started](01-getting-started.md): the three install tracks (Docker, no-Docker local with a bundled PostgreSQL, Linux server), the single .env, setup.sh/start.sh/stop.sh/status.sh/upgrade.sh/reset.sh, a scriptless manual path, verification, first login, troubleshooting.
 - [02 - Asset Management](02-asset-management.md): AI asset fields, lifecycle, dependencies, exports, URL imports.
 - [03 - Risk Register](03-risk-register.md): risk creation, scoring, heatmap, bulk updates, linking, EU AI Act suggestions.
 - [04 - Projects](04-projects.md): projects, reuse tracking, project risks, project SBOM exports.
