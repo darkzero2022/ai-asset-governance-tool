@@ -13,6 +13,7 @@ logs/
 # Local runtime state: managed PostgreSQL data dir, attachments, etc.
 data/
 .aibom-mode
+ecosystem.config.cjs
 
 # Local working notes — not published
 .project-notes/
