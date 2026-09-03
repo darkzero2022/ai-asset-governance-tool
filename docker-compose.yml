@@ -19,7 +19,12 @@ services:
 
   backend:
     build:
-      context: ./backend
+      # Root context so this image can also build and bundle the SPA, which the
+      # API process then serves on its own port (one container, one port).
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
     container_name: aibom-backend
     restart: unless-stopped
     depends_on:
@@ -30,7 +35,8 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       PORT: 4000
       NODE_ENV: production
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://127.0.0.1:5173}
+      SERVE_STATIC: "true"
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:4000}
     ports:
       - "4000:4000"
     healthcheck:
@@ -40,7 +46,10 @@ services:
       retries: 12
       start_period: 20s
 
+  # Optional: serve the SPA from its own container instead of from the backend.
+  # Enable with: docker compose --profile standalone-frontend up
   frontend:
+    profiles: ["standalone-frontend"]
     build:
       context: ./frontend
       args:

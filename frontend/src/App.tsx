@@ -10,7 +10,10 @@ import Users from "./pages/Users";
 import { emptyModelCardForm, type ModelCard, type ModelCardCompleteness, type ModelCardFormState, modelCardToForm } from "./components/ModelCardForm";
 import { navigate, useRoute } from "./router";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
+// Empty by default: the SPA and API share an origin (the backend serves the
+// built app, and `vite dev` proxies the API paths). Set VITE_API_BASE_URL only
+// when the API lives on a different origin.
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 
 type Asset = {
   id: string;
@@ -251,6 +254,7 @@ function App() {
       ...init,
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...init?.headers,
       },
@@ -378,7 +382,7 @@ function App() {
     try {
       const response = await fetch(`${apiBaseUrl}/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ email, password }),
       });
       const result = await response.json();

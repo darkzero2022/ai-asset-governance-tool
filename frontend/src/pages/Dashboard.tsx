@@ -65,7 +65,7 @@ export default function Dashboard({ apiBaseUrl, token }: DashboardProps) {
   const [error, setError] = useState("");
 
   async function api<T>(path: string): Promise<T> {
-    const response = await fetch(`${apiBaseUrl}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+    const response = await fetch(`${apiBaseUrl}${path}`, { headers: { Accept: "application/json", Authorization: `Bearer ${token}` } });
     if (!response.ok) throw new Error(`Dashboard request failed: ${response.status}`);
     return response.json();
   }

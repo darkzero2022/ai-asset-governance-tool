@@ -20,7 +20,7 @@ export default function Users({ apiBaseUrl, token }: { apiBaseUrl: string; token
   async function api<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(`${apiBaseUrl}${path}`, {
       ...init,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...init?.headers },
+      headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Bearer ${token}`, ...init?.headers },
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({ error: response.statusText }));

@@ -16,6 +16,7 @@ import { buildSpdxDocument } from "./spdx.js";
 import { sendSlackRiskStatusChange } from "./integrations/slack.js";
 import { modelCardCompleteness } from "./modelCardScoring.js";
 import { resolveStrideAtlas, STRIDE_AI_CATEGORIES } from "./strideAtlas.js";
+import { mountStaticSite, shouldServeStatic } from "./staticSite.js";
 
 const assetSchema = z.object({
   name: z.string().min(1),
@@ -395,14 +396,32 @@ const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173,http:/
 
 app.disable("x-powered-by");
 
-// Baseline security headers. This is a JSON API with no HTML responses, so the
-// CSP is deliberately restrictive; the SPA is served separately by the frontend.
+// Baseline security headers. When this process only serves the JSON API the CSP
+// is locked all the way down (`default-src 'none'`). When it also serves the
+// built SPA (SERVE_STATIC) the same origin has to allow the app's own scripts,
+// styles, fonts, images and API calls — still same-origin only, no external
+// hosts, matching the frontend's strict CSP posture.
+const servingStatic = shouldServeStatic();
+const contentSecurityPolicy = servingStatic
+  ? [
+      "default-src 'self'",
+      "script-src 'self'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data:",
+      "font-src 'self'",
+      "connect-src 'self'",
+      "base-uri 'none'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+    ].join("; ")
+  : "default-src 'none'; frame-ancestors 'none'";
+
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "no-referrer");
   res.setHeader("Cross-Origin-Resource-Policy", "same-site");
-  res.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+  res.setHeader("Content-Security-Policy", contentSecurityPolicy);
   if (process.env.NODE_ENV === "production") {
     res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   }
@@ -411,6 +430,11 @@ app.use((_req, res, next) => {
 
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json({ limit: "1mb" }));
+
+// Serve the built SPA (when enabled) before the API routes: hashed bundles are
+// returned as files and browser navigations to client-router paths get
+// index.html ahead of any colliding API route. API/XHR calls fall through.
+mountStaticSite(app);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
@@ -1721,6 +1745,11 @@ app.post("/exports/cyclonedx", requireAuth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+// Any unmatched route returns JSON, never Express's default HTML 404 page.
+app.use((_req, res) => {
+  res.status(404).json({ error: "Not found" });
 });
 
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

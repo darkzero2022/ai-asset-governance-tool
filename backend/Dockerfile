@@ -1,16 +1,30 @@
-FROM node:22-alpine AS build
+# Build context is the repo root (see docker-compose.yml) so this image can bundle
+# the built SPA and serve it from the API process — one container, one port.
 
+# --- Frontend build ---
+FROM node:22-alpine AS frontend
+WORKDIR /fe
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+# Empty base URL: the SPA calls the API on its own origin (the backend serves it).
+ARG VITE_API_BASE_URL=""
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+RUN npm run build
+
+# --- Backend build ---
+FROM node:22-alpine AS build
 WORKDIR /app
 RUN apk add --no-cache openssl
-COPY package*.json ./
+COPY backend/package*.json ./
 RUN npm ci
-COPY prisma ./prisma
-COPY tsconfig.json ./
-COPY src ./src
+COPY backend/prisma ./prisma
+COPY backend/tsconfig.json ./
+COPY backend/src ./src
 RUN npm run prisma:generate && npm run build
 
+# --- Runtime ---
 FROM node:22-alpine AS runtime
-
 WORKDIR /app
 RUN apk add --no-cache openssl
 # Carry the fully installed dependency tree (incl. the generated Prisma client, the
@@ -20,8 +34,11 @@ RUN apk add --no-cache openssl
 # both need.
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
-COPY package*.json ./
-COPY prisma ./prisma
+COPY backend/package*.json ./
+COPY backend/prisma ./prisma
+COPY --from=frontend /fe/dist ./frontend/dist
 ENV NODE_ENV=production
+ENV SERVE_STATIC=true
+ENV FRONTEND_DIST=/app/frontend/dist
 EXPOSE 4000
 CMD ["sh", "-c", "npx --no-install prisma migrate deploy && node dist/server.js"]

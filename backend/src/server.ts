@@ -6,7 +6,11 @@ if (!process.env.JWT_SECRET) {
 
 const port = Number(process.env.PORT ?? 4000);
 const { app } = await import("./app.js");
+const { shouldServeStatic } = await import("./staticSite.js");
 
 app.listen(port, () => {
   console.log(`API listening on http://localhost:${port}`);
+  if (shouldServeStatic()) {
+    console.log(`Web app served on http://localhost:${port}`);
+  }
 });
