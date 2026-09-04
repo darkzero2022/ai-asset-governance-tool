@@ -5,6 +5,9 @@ import { apiErrorCode, apiErrorMessage } from "../lib/apiError";
 // when the API lives on a different origin.
 export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 
+// All backend domain endpoints live under /api/v1 (see backend/src/app.ts).
+const API_PREFIX = "/api/v1";
+
 /** Thrown by apiFetch for any non-2xx response. */
 export class ApiClientError extends Error {
   readonly status: number;
@@ -37,7 +40,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   mergedHeaders.set("Accept", "application/json");
   if (token) mergedHeaders.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers: mergedHeaders });
+  const response = await fetch(`${apiBaseUrl}${API_PREFIX}${path}`, { ...init, headers: mergedHeaders });
 
   if (!response.ok) {
     const body = await response.json().catch(() => undefined);

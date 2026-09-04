@@ -3,6 +3,7 @@ import express from "express";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { httpLogger, requestContext } from "./middleware/requestContext.js";
 import { mountStaticSite, shouldServeStatic } from "./middleware/staticSite.js";
+import { mountApiDocs } from "./openapi.js";
 import authRouter from "./routes/auth.js";
 import usersRouter from "./routes/users.js";
 import referenceRouter from "./routes/reference.js";
@@ -80,18 +81,27 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-app.use(authRouter);
-app.use(usersRouter);
-app.use(referenceRouter);
-app.use(assetsRouter);
-app.use(projectsRouter);
-app.use(risksRouter);
-app.use(controlsRouter);
-app.use(auditRouter);
-app.use(searchRouter);
-app.use(dashboardRouter);
-app.use(reportsRouter);
-app.use(exportsRouter);
+// All domain endpoints live under /api/v1. /health (above) is the one
+// intentional exception, kept unprefixed for infra probes that hit it directly.
+const apiV1 = express.Router();
+apiV1.use(authRouter);
+apiV1.use(usersRouter);
+apiV1.use(referenceRouter);
+apiV1.use(assetsRouter);
+apiV1.use(projectsRouter);
+apiV1.use(risksRouter);
+apiV1.use(controlsRouter);
+apiV1.use(auditRouter);
+apiV1.use(searchRouter);
+apiV1.use(dashboardRouter);
+apiV1.use(reportsRouter);
+apiV1.use(exportsRouter);
+app.use("/api/v1", apiV1);
+
+// /api/docs (Swagger UI + the raw document) lives outside the versioned prefix
+// — it documents the API rather than being an operation on it. Gated by
+// ENABLE_API_DOCS (see openapi.ts): on by default outside production.
+mountApiDocs(app, apiV1);
 
 // Any unmatched route returns the JSON error envelope, never Express's HTML 404.
 app.use(notFoundHandler);

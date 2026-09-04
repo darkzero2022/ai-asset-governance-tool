@@ -3,27 +3,10 @@ import react from "@vitejs/plugin-react";
 
 // The SPA and API share an origin in every deployment mode (the backend serves
 // the built app in production). In `vite dev`/`preview` we reproduce that by
-// proxying the API path prefixes to the backend. Several prefixes (`/assets`,
-// `/risks`, `/projects`, `/dashboard`, `/users`) are also client-router paths,
-// so a browser navigation (`Accept: text/html`) is served the SPA and only
-// XHR/fetch calls (`Accept: application/json`) are proxied — the same
-// negotiation the backend does for its own history fallback.
-const API_PREFIXES = [
-  "/health",
-  "/ready",
-  "/auth",
-  "/users",
-  "/reference",
-  "/assets",
-  "/projects",
-  "/risks",
-  "/controls",
-  "/audit-logs",
-  "/search",
-  "/dashboard",
-  "/reports",
-  "/exports",
-];
+// proxying the API path prefixes to the backend. Every domain endpoint lives
+// under /api/v1 (see backend/src/app.ts), which no longer collides with any
+// client-router path, plus the two unprefixed infra probes.
+const API_PREFIXES = ["/health", "/ready", "/api/v1"];
 
 const backendTarget = process.env.VITE_DEV_API_TARGET ?? "http://localhost:4000";
 

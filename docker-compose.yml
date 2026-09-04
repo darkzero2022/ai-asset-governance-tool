@@ -40,6 +40,7 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:4000}
       TRUST_PROXY: ${TRUST_PROXY:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      ENABLE_API_DOCS: ${ENABLE_API_DOCS:-}
     ports:
       - "${BIND_HOST:-127.0.0.1}:4000:4000"
     healthcheck:

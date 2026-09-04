@@ -23,6 +23,15 @@ preflight checks (ports, Node version) and refuses to change anything if they fa
   Refuses a dirty/untracked tree; backs up first.
 - `scripts/reset.sh [--yes]` — drop all tables and re-seed the recorded data mode.
 
+## API reference
+
+Every endpoint lives under `/api/v1` (e.g. `/api/v1/assets`); `/health` is the
+one unprefixed exception, kept for infra probes. A generated OpenAPI 3.0
+document plus a browsable Swagger UI are served at `/api/docs` — on by default
+outside production, and opt-in in production via `ENABLE_API_DOCS=true` (set
+it in `.env`) since it's a discoverability aid, not something every deployment
+needs exposed.
+
 ## Backup
 
 Run:

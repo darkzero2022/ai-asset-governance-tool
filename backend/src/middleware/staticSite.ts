@@ -5,8 +5,14 @@ import express from "express";
 import { logger } from "../log.js";
 
 // Endpoints that must always return their real (non-HTML) response even when the
-// caller happens to accept text/html — infra probes hit these.
+// caller happens to accept text/html — infra probes hit these, and /api/docs is
+// itself an HTML page (Swagger UI) that must not be swallowed by the SPA shell.
 const ALWAYS_API_PATHS = new Set(["/health", "/ready"]);
+const ALWAYS_API_PREFIXES = ["/api/"];
+
+function isAlwaysApiPath(path: string): boolean {
+  return ALWAYS_API_PATHS.has(path) || ALWAYS_API_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
 
 /**
  * Whether this process should serve the built frontend alongside the API.
@@ -66,7 +72,7 @@ export function mountStaticSite(app: express.Express): void {
   app.use(express.static(frontendDistDir(), { index: false, redirect: false, maxAge: "1h" }));
 
   app.use((req, res, next) => {
-    if (ALWAYS_API_PATHS.has(req.path)) return next();
+    if (isAlwaysApiPath(req.path)) return next();
     if (isDocumentNavigation(req.method, req.headers.accept)) {
       res.sendFile(index);
       return;

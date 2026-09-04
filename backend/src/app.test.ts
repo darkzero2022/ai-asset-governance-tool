@@ -28,13 +28,13 @@ afterAll(async () => {
 
 describe("POST /auth/login", () => {
   it("returns a token for valid credentials", async () => {
-    const response = await request(app).post("/auth/login").send({ email, password }).expect(200);
+    const response = await request(app).post("/api/v1/auth/login").send({ email, password }).expect(200);
 
     expect(response.body.token).toEqual(expect.any(String));
     expect(response.body.user).toMatchObject({ email, role: "ADMIN" });
   });
 
   it("rejects invalid credentials", async () => {
-    await request(app).post("/auth/login").send({ email, password: "wrong-password" }).expect(401);
+    await request(app).post("/api/v1/auth/login").send({ email, password: "wrong-password" }).expect(401);
   });
 });

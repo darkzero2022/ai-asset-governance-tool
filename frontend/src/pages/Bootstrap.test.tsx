@@ -34,7 +34,7 @@ describe("Bootstrap", () => {
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledWith("tok-123"));
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe("/auth/bootstrap");
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe("/api/v1/auth/bootstrap");
   });
 
   it("surfaces the API error envelope message", async () => {

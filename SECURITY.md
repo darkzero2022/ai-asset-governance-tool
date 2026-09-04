@@ -16,10 +16,10 @@ This is an evaluation/pilot-grade project. Known hardening items are tracked in
 [`docs/deployment.md`](docs/deployment.md), including:
 
 - The SPA stores its JWT in `localStorage`.
-- `POST /assets/import-url` fetches user-supplied URLs; it filters private/loopback/
+- `POST /api/v1/assets/import-url` fetches user-supplied URLs; it filters private/loopback/
   link-local/CGNAT/metadata addresses at DNS-resolve time but should be run with
   network-level egress controls in production.
-- Rate limiting is applied to `POST /auth/login` only; set `TRUST_PROXY` behind a proxy.
+- Rate limiting is applied to `POST /api/v1/auth/login` only; set `TRUST_PROXY` behind a proxy.
 
 ## Supported versions
 

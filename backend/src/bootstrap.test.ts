@@ -34,28 +34,28 @@ describe("first-run bootstrap", () => {
   });
 
   it("reports needsBootstrap while there are no users", async () => {
-    const res = await request(app).get("/auth/bootstrap-status").expect(200);
+    const res = await request(app).get("/api/v1/auth/bootstrap-status").expect(200);
     expect(res.body).toEqual({ needsBootstrap: true });
   });
 
   it("creates the first admin and returns a usable token", async () => {
     const res = await request(app)
-      .post("/auth/bootstrap")
+      .post("/api/v1/auth/bootstrap")
       .send({ name: "First Admin", email: "first-admin@example.com", password: "bootstrap-pw-123" })
       .expect(201);
 
     expect(res.body.user).toMatchObject({ email: "first-admin@example.com", role: "ADMIN" });
     expect(res.body.token).toEqual(expect.any(String));
 
-    await request(app).get("/auth/me").set("Authorization", `Bearer ${res.body.token}`).expect(200);
+    await request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${res.body.token}`).expect(200);
   });
 
   it("stops reporting needsBootstrap and rejects a second bootstrap", async () => {
-    const status = await request(app).get("/auth/bootstrap-status").expect(200);
+    const status = await request(app).get("/api/v1/auth/bootstrap-status").expect(200);
     expect(status.body).toEqual({ needsBootstrap: false });
 
     const res = await request(app)
-      .post("/auth/bootstrap")
+      .post("/api/v1/auth/bootstrap")
       .send({ email: "second@example.com", password: "another-pw-123" })
       .expect(409);
     expect(res.body.error.code).toBe("ALREADY_BOOTSTRAPPED");
@@ -64,7 +64,7 @@ describe("first-run bootstrap", () => {
   it("rejects a short password with a 422 envelope", async () => {
     await wipe();
     const res = await request(app)
-      .post("/auth/bootstrap")
+      .post("/api/v1/auth/bootstrap")
       .send({ email: "x@example.com", password: "short" })
       .expect(422);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
