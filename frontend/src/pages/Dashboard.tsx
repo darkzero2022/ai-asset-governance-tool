@@ -1,7 +1,7 @@
 import { FormEvent, type ReactNode, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { BarChart } from "../components/BarChart";
 import { DonutChart } from "../components/DonutChart";
-import { navigate } from "../router";
 import { apiFetch } from "../api/client";
 
 type DashboardProps = {
@@ -52,6 +52,7 @@ const severityColors: Record<string, string> = {
 };
 
 export default function Dashboard({ token }: DashboardProps) {
+  const navigate = useNavigate();
   const [summary, setSummary] = useState<Summary>({});
   const [exposures, setExposures] = useState<Array<Record<string, unknown>>>([]);
   const [query, setQuery] = useState("");

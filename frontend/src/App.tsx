@@ -1,15 +1,7 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import AssetDetail from "./pages/AssetDetail";
-import AssetList from "./pages/AssetList";
-import Dashboard from "./pages/Dashboard";
-import ProjectDetail from "./pages/ProjectDetail";
-import ProjectList from "./pages/ProjectList";
-import RiskDetail from "./pages/RiskDetail";
-import RiskRegister from "./pages/RiskRegister";
-import Users from "./pages/Users";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Bootstrap from "./pages/Bootstrap";
 import { emptyModelCardForm, type ModelCard, type ModelCardCompleteness, type ModelCardFormState, modelCardToForm } from "./components/ModelCardForm";
-import { navigate, useRoute } from "./router";
 import { apiFetch, ApiClientError } from "./api/client";
 import type {
   Asset,
@@ -95,11 +87,11 @@ const nextStatuses: Record<string, string[]> = {
 };
 
 const navItems = [
-  { label: "Dashboard", path: "/dashboard", names: ["dashboard"] },
-  { label: "Assets", path: "/assets", names: ["assets", "assetDetail"] },
-  { label: "Risk Register", path: "/risks", names: ["risks", "riskDetail"] },
-  { label: "Projects", path: "/projects", names: ["projects", "projectDetail"] },
-  { label: "Users", path: "/users", names: ["users"], adminOnly: true },
+  { label: "Dashboard", path: "/dashboard" },
+  { label: "Assets", path: "/assets" },
+  { label: "Risk Register", path: "/risks" },
+  { label: "Projects", path: "/projects" },
+  { label: "Users", path: "/users", adminOnly: true },
 ];
 
 function label(value: string) {
@@ -151,7 +143,8 @@ function App() {
   const [selectedRiskControlStatus, setSelectedRiskControlStatus] = useState("NOT_STARTED");
   const [selectedProjectAssetId, setSelectedProjectAssetId] = useState("");
   const [selectedProjectRiskId, setSelectedProjectRiskId] = useState("");
-  const route = useRoute();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState("");
 
   const filteredCategories = useMemo(
@@ -253,24 +246,6 @@ function App() {
   }, [token]);
 
   useEffect(() => {
-    if (token && route.name === "assetDetail" && route.params.id) {
-      loadAsset(route.params.id).catch((err: Error) => setError(err.message));
-    }
-  }, [token, route.name, route.params.id]);
-
-  useEffect(() => {
-    if (token && route.name === "riskDetail" && route.params.id) {
-      loadRisk(route.params.id).catch((err: Error) => setError(err.message));
-    }
-  }, [token, route.name, route.params.id]);
-
-  useEffect(() => {
-    if (token && route.name === "projectDetail" && route.params.id) {
-      loadProject(route.params.id).catch((err: Error) => setError(err.message));
-    }
-  }, [token, route.name, route.params.id]);
-
-  useEffect(() => {
     const firstCategory = filteredCategories[0];
     if (firstCategory && !filteredCategories.some((category) => category.categoryId === riskForm.sourceCategoryId)) {
       setRiskForm((current) => ({ ...current, sourceCategoryId: firstCategory.categoryId }));
@@ -328,6 +303,17 @@ function App() {
       downstreamConsumers: asset.downstreamConsumers ?? "",
       sourceUrl: asset.sourceUrl ?? "",
     });
+  }
+
+  function onNewAsset() {
+    setEditingAssetId(null);
+    setEditBaseVersion(null);
+    setAssetForm(emptyAsset);
+  }
+
+  function openAsset(id: string) {
+    navigate(`/assets/${id}`);
+    loadAsset(id).catch((err: Error) => setError(err.message));
   }
 
   async function fetchAssetImport(sourceUrl: string) {
@@ -393,6 +379,12 @@ function App() {
     loadProject(id).catch((err: Error) => setError(err.message));
   }
 
+  function onNewProject() {
+    setEditingProjectId(null);
+    setEditBaseVersion(null);
+    setProjectForm(emptyProject);
+  }
+
   async function saveRisk(event: FormEvent) {
     event.preventDefault();
     setError("");
@@ -445,6 +437,16 @@ function App() {
   function openRisk(id: string) {
     navigate(`/risks/${id}`);
     loadRisk(id).catch((err: Error) => setError(err.message));
+  }
+
+  function onNewRisk() {
+    setEditingRiskId(null);
+    setEditBaseVersion(null);
+    setRiskForm(emptyRisk);
+  }
+
+  function onToggleRisk(id: string) {
+    setSelectedRiskIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
 
   async function bulkUpdateRisks(status: string) {
@@ -840,7 +842,7 @@ function App() {
           </button>
           <nav className="flex flex-wrap gap-3 text-sm font-semibold">
             {navItems.filter((item) => !item.adminOnly || currentUser?.role === "ADMIN").map((item) => {
-              const active = item.names.includes(route.name);
+              const active = location.pathname.startsWith(item.path);
               return (
                 <button key={item.path} className={`rounded-lg border px-4 py-2 ${active ? "border-cyan-700 bg-cyan-50 text-cyan-800" : "border-slate-300"}`} onClick={() => navigate(item.path)}>
                   {item.label}
@@ -852,142 +854,206 @@ function App() {
       </header>
 
       {error && <div className="mx-auto max-w-7xl px-6 pt-6"><p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{error}</p></div>}
-      {route.name === "dashboard" ? (
-        <Dashboard token={token} />
-      ) : route.name === "users" ? (
-        currentUser?.role === "ADMIN" ? <Users token={token} /> : <section className="mx-auto max-w-7xl px-6 py-8"><div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">Admin access required.</div></section>
-      ) : route.name === "riskDetail" ? (
-        <RiskDetail
-          risk={selectedRisk}
-          assets={assets}
-          projects={projects}
-          controls={controls}
-          auditLogs={riskAuditLogs}
-          selectedAssetId={selectedRiskAssetId}
-          selectedProjectId={selectedRiskProjectId}
-          selectedControlId={selectedRiskControlId}
-          selectedControlStatus={selectedRiskControlStatus}
-          label={label}
-          onBack={() => navigate("/risks")}
-          onSelectedAssetChange={setSelectedRiskAssetId}
-          onSelectedProjectChange={setSelectedRiskProjectId}
-          onSelectedControlChange={setSelectedRiskControlId}
-          onSelectedControlStatusChange={setSelectedRiskControlStatus}
-          onLinkAsset={linkAssetToSelectedRisk}
-          onUnlinkAsset={unlinkAssetFromSelectedRisk}
-          onLinkProject={linkProjectToSelectedRisk}
-          onUnlinkProject={unlinkProjectFromSelectedRisk}
-          onLinkControl={linkControlToSelectedRisk}
-          onUpdateControl={updateSelectedRiskControl}
-          onUnlinkControl={unlinkControlFromSelectedRisk}
-        />
-      ) : route.name === "risks" ? (
-        <RiskRegister
-          risks={risks}
-          assets={assets}
-          categories={categories}
-          atlasTechniques={atlasTechniques}
-          filters={filters}
-          riskForm={riskForm}
-          editingRiskId={editingRiskId}
-          selectedRiskIds={selectedRiskIds}
-          label={label}
-          onFiltersChange={setFilters}
-          onRiskFormChange={setRiskForm}
-          onSubmitRisk={saveRisk}
-          onNewRisk={() => { setEditingRiskId(null); setEditBaseVersion(null); setRiskForm(emptyRisk); }}
-          onEditRisk={editRisk}
-          onOpenRisk={openRisk}
-          onToggleRisk={(id) => setSelectedRiskIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
-          onBulkUpdate={bulkUpdateRisks}
-        />
-      ) : route.name === "projectDetail" ? (
-        <ProjectDetail
-          project={selectedProject}
-          assets={assets}
-          risks={risks}
-          mergedRisks={projectRisks}
-          selectedAssetId={selectedProjectAssetId}
-          selectedRiskId={selectedProjectRiskId}
-          label={label}
-          onBack={() => navigate("/projects")}
-          onSelectedAssetChange={setSelectedProjectAssetId}
-          onSelectedRiskChange={setSelectedProjectRiskId}
-          onLinkAsset={linkAssetToSelectedProject}
-          onUnlinkAsset={unlinkAssetFromSelectedProject}
-          onLinkRisk={linkRiskToSelectedProject}
-          onUnlinkRisk={unlinkRiskFromSelectedProject}
-          onExportCycloneDx={exportProjectBom}
-        />
-      ) : route.name === "projects" ? (
-        <ProjectList
-          projects={projects}
-          projectForm={projectForm}
-          editingProjectId={editingProjectId}
-          label={label}
-          onFormChange={setProjectForm}
-          onSubmit={saveProject}
-          onNewProject={() => { setEditingProjectId(null); setEditBaseVersion(null); setProjectForm(emptyProject); }}
-          onOpenProject={openProject}
-          onEditProject={editProject}
-        />
-      ) : route.name === "assetDetail" ? (
-        <AssetDetail
-          asset={selectedAsset}
-          assetForm={assetForm}
-          modelCard={assetModelCard}
-          modelCardCompleteness={assetModelCardCompleteness}
-          modelCardForm={modelCardForm}
-          editingAssetId={editingAssetId}
-          risks={risks}
-          projects={projects}
-          linkedProjects={assetProjects}
-          auditLogs={assetAuditLogs}
-          selectedRiskId={selectedAssetRiskId}
-          selectedProjectId={selectedAssetProjectId}
-          workflowComments={workflowComments}
-          label={label}
-          nextStatuses={nextStatuses}
-          onBack={() => navigate("/assets")}
-          onEditAsset={editAsset}
-          onFormChange={setAssetForm}
-          onSaveAsset={saveAsset}
-          onModelCardFormChange={setModelCardForm}
-          modelCardSourceUrl={modelCardSourceUrl}
-          modelCardImportSuggestion={modelCardImportSuggestion}
-          onModelCardSourceUrlChange={setModelCardSourceUrl}
-          onFetchModelCardImport={fetchModelCardImport}
-          onSaveModelCard={saveModelCard}
-          onSelectedRiskChange={setSelectedAssetRiskId}
-          onSelectedProjectChange={setSelectedAssetProjectId}
-          onLinkRisk={linkRiskToSelectedAsset}
-          onUnlinkRisk={unlinkRiskFromSelectedAsset}
-          onLinkProject={linkProjectToSelectedAsset}
-          onUnlinkProject={unlinkProjectFromSelectedAsset}
-          onWorkflowCommentsChange={setWorkflowComments}
-          onTransitionAsset={transitionAsset}
-        />
-      ) : (
-        <AssetList
-          assets={assets}
-          filters={filters}
-          assetForm={assetForm}
-          editingAssetId={editingAssetId}
-          label={label}
-          onFiltersChange={setFilters}
-          onFormChange={setAssetForm}
-          importSuggestion={assetImportSuggestion}
-          onFetchImport={fetchAssetImport}
-          onSubmit={saveAsset}
-          onNewAsset={() => { setEditingAssetId(null); setEditBaseVersion(null); setAssetForm(emptyAsset); }}
-          onSelect={(id) => { navigate(`/assets/${id}`); loadAsset(id).catch((err: Error) => setError(err.message)); }}
-          onEdit={editAsset}
-          onExport={exportBom}
-        />
-      )}
+      <Suspense fallback={<div className="mx-auto max-w-7xl px-6 py-8 text-sm text-slate-500">Loading…</div>}>
+      <Outlet
+        context={{
+          token,
+          currentUser,
+          assets,
+          risks,
+          selectedRisk,
+          riskAuditLogs,
+          assetAuditLogs,
+          projects,
+          selectedProject,
+          projectRisks,
+          projectForm,
+          editingProjectId,
+          controls,
+          assetProjects,
+          assetModelCard,
+          assetModelCardCompleteness,
+          modelCardForm,
+          modelCardSourceUrl,
+          assetImportSuggestion,
+          modelCardImportSuggestion,
+          categories,
+          atlasTechniques,
+          selectedAsset,
+          assetForm,
+          editingAssetId,
+          riskForm,
+          editingRiskId,
+          selectedAssetRiskId,
+          selectedAssetProjectId,
+          workflowComments,
+          filters,
+          selectedRiskIds,
+          selectedRiskAssetId,
+          selectedRiskProjectId,
+          selectedRiskControlId,
+          selectedRiskControlStatus,
+          selectedProjectAssetId,
+          selectedProjectRiskId,
+          label,
+          nextStatuses,
+          setError,
+          setFilters,
+          setAssetForm,
+          setRiskForm,
+          setProjectForm,
+          setModelCardForm,
+          setModelCardSourceUrl,
+          setWorkflowComments,
+          setSelectedAssetRiskId,
+          setSelectedAssetProjectId,
+          setSelectedRiskAssetId,
+          setSelectedRiskProjectId,
+          setSelectedRiskControlId,
+          setSelectedRiskControlStatus,
+          setSelectedProjectAssetId,
+          setSelectedProjectRiskId,
+          loadAsset,
+          loadRisk,
+          loadProject,
+          saveAsset,
+          editAsset,
+          openAsset,
+          onNewAsset,
+          fetchAssetImport,
+          fetchModelCardImport,
+          saveModelCard,
+          transitionAsset,
+          saveProject,
+          editProject,
+          openProject,
+          onNewProject,
+          saveRisk,
+          editRisk,
+          openRisk,
+          onNewRisk,
+          onToggleRisk,
+          bulkUpdateRisks,
+          linkRiskToSelectedAsset,
+          unlinkRiskFromSelectedAsset,
+          linkProjectToSelectedAsset,
+          unlinkProjectFromSelectedAsset,
+          linkAssetToSelectedRisk,
+          unlinkAssetFromSelectedRisk,
+          linkProjectToSelectedRisk,
+          unlinkProjectFromSelectedRisk,
+          linkControlToSelectedRisk,
+          updateSelectedRiskControl,
+          unlinkControlFromSelectedRisk,
+          linkAssetToSelectedProject,
+          unlinkAssetFromSelectedProject,
+          linkRiskToSelectedProject,
+          unlinkRiskFromSelectedProject,
+          exportProjectBom,
+          exportBom,
+        }}
+      />
+      </Suspense>
     </main>
   );
 }
+
+export type AppOutletContext = {
+  token: string;
+  currentUser: CurrentUser | null;
+  assets: Asset[];
+  risks: Risk[];
+  selectedRisk: Risk | null;
+  riskAuditLogs: AuditLog[];
+  assetAuditLogs: AuditLog[];
+  projects: Project[];
+  selectedProject: Project | null;
+  projectRisks: Risk[];
+  projectForm: ProjectForm;
+  editingProjectId: string | null;
+  controls: Control[];
+  assetProjects: Project[];
+  assetModelCard: ModelCard | null;
+  assetModelCardCompleteness: ModelCardCompleteness | undefined;
+  modelCardForm: ModelCardFormState;
+  modelCardSourceUrl: string;
+  assetImportSuggestion: ImportSuggestion | null;
+  modelCardImportSuggestion: ImportSuggestion | null;
+  categories: FrameworkCategory[];
+  atlasTechniques: string[];
+  selectedAsset: AssetDetailData | null;
+  assetForm: typeof emptyAsset;
+  editingAssetId: string | null;
+  riskForm: typeof emptyRisk;
+  editingRiskId: string | null;
+  selectedAssetRiskId: string;
+  selectedAssetProjectId: string;
+  workflowComments: string;
+  filters: typeof emptyFilters;
+  selectedRiskIds: string[];
+  selectedRiskAssetId: string;
+  selectedRiskProjectId: string;
+  selectedRiskControlId: string;
+  selectedRiskControlStatus: string;
+  selectedProjectAssetId: string;
+  selectedProjectRiskId: string;
+  label: (value: string) => string;
+  nextStatuses: Record<string, string[]>;
+  setError: (message: string) => void;
+  setFilters: (value: typeof emptyFilters) => void;
+  setAssetForm: (value: typeof emptyAsset) => void;
+  setRiskForm: (value: typeof emptyRisk) => void;
+  setProjectForm: (value: ProjectForm) => void;
+  setModelCardForm: (value: ModelCardFormState) => void;
+  setModelCardSourceUrl: (value: string) => void;
+  setWorkflowComments: (value: string) => void;
+  setSelectedAssetRiskId: (value: string) => void;
+  setSelectedAssetProjectId: (value: string) => void;
+  setSelectedRiskAssetId: (value: string) => void;
+  setSelectedRiskProjectId: (value: string) => void;
+  setSelectedRiskControlId: (value: string) => void;
+  setSelectedRiskControlStatus: (value: string) => void;
+  setSelectedProjectAssetId: (value: string) => void;
+  setSelectedProjectRiskId: (value: string) => void;
+  loadAsset: (id: string) => Promise<void>;
+  loadRisk: (id: string) => Promise<void>;
+  loadProject: (id: string) => Promise<void>;
+  saveAsset: (event: FormEvent) => Promise<void>;
+  editAsset: (asset: Asset) => void;
+  openAsset: (id: string) => void;
+  onNewAsset: () => void;
+  fetchAssetImport: (sourceUrl: string) => Promise<void>;
+  fetchModelCardImport: (sourceUrl: string) => Promise<void>;
+  saveModelCard: (event: FormEvent) => Promise<void>;
+  transitionAsset: (toStatus: string) => Promise<void>;
+  saveProject: (event: FormEvent) => Promise<void>;
+  editProject: (project: Project) => void;
+  openProject: (id: string) => void;
+  onNewProject: () => void;
+  saveRisk: (event: FormEvent) => Promise<void>;
+  editRisk: (risk: Risk) => void;
+  openRisk: (id: string) => void;
+  onNewRisk: () => void;
+  onToggleRisk: (id: string) => void;
+  bulkUpdateRisks: (status: string) => Promise<void>;
+  linkRiskToSelectedAsset: () => Promise<void>;
+  unlinkRiskFromSelectedAsset: (riskId: string) => Promise<void>;
+  linkProjectToSelectedAsset: () => Promise<void>;
+  unlinkProjectFromSelectedAsset: (projectId: string) => Promise<void>;
+  linkAssetToSelectedRisk: () => Promise<void>;
+  unlinkAssetFromSelectedRisk: (assetId: string) => Promise<void>;
+  linkProjectToSelectedRisk: () => Promise<void>;
+  unlinkProjectFromSelectedRisk: (projectId: string) => Promise<void>;
+  linkControlToSelectedRisk: () => Promise<void>;
+  updateSelectedRiskControl: (controlId: string, implementationStatus: string) => Promise<void>;
+  unlinkControlFromSelectedRisk: (controlId: string) => Promise<void>;
+  linkAssetToSelectedProject: () => Promise<void>;
+  unlinkAssetFromSelectedProject: (assetId: string) => Promise<void>;
+  linkRiskToSelectedProject: () => Promise<void>;
+  unlinkRiskFromSelectedProject: (riskId: string) => Promise<void>;
+  exportProjectBom: () => Promise<void>;
+  exportBom: (assetId: string) => Promise<void>;
+};
 
 function Field(props: { label: string; value: string; type?: string; onChange: (value: string) => void }) {
   return (
