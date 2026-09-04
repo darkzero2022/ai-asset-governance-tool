@@ -10,7 +10,7 @@ import Users from "./pages/Users";
 import Bootstrap from "./pages/Bootstrap";
 import { emptyModelCardForm, type ModelCard, type ModelCardCompleteness, type ModelCardFormState, modelCardToForm } from "./components/ModelCardForm";
 import { navigate, useRoute } from "./router";
-import { apiErrorMessage } from "./lib/apiError";
+import { apiFetch, ApiClientError } from "./api/client";
 import type {
   Asset,
   AssetDetail as AssetDetailData,
@@ -22,11 +22,6 @@ import type {
   WorkflowEntry,
   Project,
 } from "@aibom/shared";
-
-// Empty by default: the SPA and API share an origin (the backend serves the
-// built app, and `vite dev` proxies the API paths). Set VITE_API_BASE_URL only
-// when the API lives on a different origin.
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 
 
 type ProjectForm = {
@@ -165,30 +160,15 @@ function App() {
   );
 
   async function api<T>(path: string, init?: RequestInit): Promise<T> {
-    const response = await fetch(`${apiBaseUrl}${path}`, {
-      ...init,
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...init?.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({ error: response.statusText }));
-      if (response.status === 401) {
+    try {
+      return await apiFetch<T>(path, { ...init, token });
+    } catch (err) {
+      if (err instanceof ApiClientError && err.status === 401) {
         localStorage.removeItem("aibomToken");
         setToken("");
       }
-      if (response.status === 401 || response.status === 403) {
-        throw new Error(apiErrorMessage(body) ?? (response.status === 401 ? "Please sign in again" : "You do not have permission to perform this action"));
-      }
-      throw new Error(apiErrorMessage(body) ?? "Request failed");
+      throw err;
     }
-
-    if (response.status === 204) return undefined as T;
-    return response.json();
   }
 
   async function loadData() {
@@ -267,8 +247,7 @@ function App() {
 
   useEffect(() => {
     if (token) return;
-    fetch(`${apiBaseUrl}/auth/bootstrap-status`, { headers: { Accept: "application/json" } })
-      .then((response) => (response.ok ? response.json() : { needsBootstrap: false }))
+    apiFetch<{ needsBootstrap: boolean }>("/auth/bootstrap-status")
       .then((data) => setNeedsBootstrap(Boolean(data.needsBootstrap)))
       .catch(() => setNeedsBootstrap(false));
   }, [token]);
@@ -303,14 +282,10 @@ function App() {
     setError("");
 
     try {
-      const response = await fetch(`${apiBaseUrl}/auth/login`, {
+      const result = await apiFetch<{ token: string; user: CurrentUser }>("/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const result = await response.json();
-
-      if (!result.token) throw new Error(apiErrorMessage(result) ?? "Login failed");
       localStorage.setItem("aibomToken", result.token);
       setToken(result.token);
       setCurrentUser(result.user);
@@ -824,7 +799,6 @@ function App() {
   if (!token && needsBootstrap === true) {
     return (
       <Bootstrap
-        apiBaseUrl={apiBaseUrl}
         onComplete={(newToken) => {
           localStorage.setItem("aibomToken", newToken);
           setToken(newToken);
@@ -879,9 +853,9 @@ function App() {
 
       {error && <div className="mx-auto max-w-7xl px-6 pt-6"><p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{error}</p></div>}
       {route.name === "dashboard" ? (
-        <Dashboard apiBaseUrl={apiBaseUrl} token={token} />
+        <Dashboard token={token} />
       ) : route.name === "users" ? (
-        currentUser?.role === "ADMIN" ? <Users apiBaseUrl={apiBaseUrl} token={token} /> : <section className="mx-auto max-w-7xl px-6 py-8"><div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">Admin access required.</div></section>
+        currentUser?.role === "ADMIN" ? <Users token={token} /> : <section className="mx-auto max-w-7xl px-6 py-8"><div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">Admin access required.</div></section>
       ) : route.name === "riskDetail" ? (
         <RiskDetail
           risk={selectedRisk}

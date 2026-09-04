@@ -7,7 +7,7 @@ afterEach(() => vi.restoreAllMocks());
 describe("Bootstrap", () => {
   it("rejects a password/confirm mismatch before calling the API", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    render(<Bootstrap apiBaseUrl="" onComplete={vi.fn()} />);
+    render(<Bootstrap onComplete={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@b.com" } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "longenough1" } });
@@ -27,7 +27,7 @@ describe("Bootstrap", () => {
       }),
     );
 
-    render(<Bootstrap apiBaseUrl="" onComplete={onComplete} />);
+    render(<Bootstrap onComplete={onComplete} />);
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "admin@b.com" } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "longenough1" } });
     fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "longenough1" } });
@@ -45,7 +45,7 @@ describe("Bootstrap", () => {
       }),
     );
 
-    render(<Bootstrap apiBaseUrl="" onComplete={vi.fn()} />);
+    render(<Bootstrap onComplete={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@b.com" } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "longenough1" } });
     fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "longenough1" } });

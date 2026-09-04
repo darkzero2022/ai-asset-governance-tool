@@ -2,9 +2,9 @@ import { FormEvent, type ReactNode, useEffect, useState } from "react";
 import { BarChart } from "../components/BarChart";
 import { DonutChart } from "../components/DonutChart";
 import { navigate } from "../router";
+import { apiFetch } from "../api/client";
 
 type DashboardProps = {
-  apiBaseUrl: string;
   token: string;
 };
 
@@ -51,7 +51,7 @@ const severityColors: Record<string, string> = {
   CRITICAL: "#ef4444",
 };
 
-export default function Dashboard({ apiBaseUrl, token }: DashboardProps) {
+export default function Dashboard({ token }: DashboardProps) {
   const [summary, setSummary] = useState<Summary>({});
   const [exposures, setExposures] = useState<Array<Record<string, unknown>>>([]);
   const [query, setQuery] = useState("");
@@ -64,10 +64,8 @@ export default function Dashboard({ apiBaseUrl, token }: DashboardProps) {
   const [modelMetricReport, setModelMetricReport] = useState<ModelMetricReport>({ metrics: [], aggregate: [] });
   const [error, setError] = useState("");
 
-  async function api<T>(path: string): Promise<T> {
-    const response = await fetch(`${apiBaseUrl}${path}`, { headers: { Accept: "application/json", Authorization: `Bearer ${token}` } });
-    if (!response.ok) throw new Error(`Dashboard request failed: ${response.status}`);
-    return response.json();
+  function api<T>(path: string): Promise<T> {
+    return apiFetch<T>(path, { token });
   }
 
   useEffect(() => {
@@ -88,13 +86,13 @@ export default function Dashboard({ apiBaseUrl, token }: DashboardProps) {
         setModelCardCoverage(modelCardCoverageData);
       })
       .catch((err: Error) => setError(err.message));
-  }, [apiBaseUrl, token]);
+  }, [token]);
 
   useEffect(() => {
     api<ModelMetricReport>(`/reports/model-metrics?metricName=${encodeURIComponent(metricName)}`)
       .then(setModelMetricReport)
       .catch((err: Error) => setError(err.message));
-  }, [apiBaseUrl, token, metricName]);
+  }, [token, metricName]);
 
   async function search(event: FormEvent) {
     event.preventDefault();

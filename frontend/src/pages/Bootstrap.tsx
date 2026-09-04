@@ -1,13 +1,7 @@
 import { FormEvent, useState } from "react";
-import { apiErrorMessage } from "../lib/apiError";
+import { apiFetch } from "../api/client";
 
-export default function Bootstrap({
-  apiBaseUrl,
-  onComplete,
-}: {
-  apiBaseUrl: string;
-  onComplete: (token: string) => void;
-}) {
+export default function Bootstrap({ onComplete }: { onComplete: (token: string) => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,15 +22,10 @@ export default function Bootstrap({
     }
     setSubmitting(true);
     try {
-      const response = await fetch(`${apiBaseUrl}/auth/bootstrap`, {
+      const result = await apiFetch<{ token: string }>("/auth/bootstrap", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ name: name || undefined, email, password }),
       });
-      const result = await response.json();
-      if (!response.ok || !result.token) {
-        throw new Error(apiErrorMessage(result) ?? "Could not create the administrator account.");
-      }
       onComplete(result.token);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Setup failed.");

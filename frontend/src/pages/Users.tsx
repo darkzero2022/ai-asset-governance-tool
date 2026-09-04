@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { apiErrorMessage } from "../lib/apiError";
+import { apiFetch } from "../api/client";
 
 type User = {
   id: string;
@@ -12,23 +12,14 @@ type User = {
 const emptyForm = { email: "", name: "", role: "VIEWER", password: "" };
 const roles = ["ADMIN", "RISK_OWNER", "APPROVER", "VIEWER"];
 
-export default function Users({ apiBaseUrl, token }: { apiBaseUrl: string; token: string }) {
+export default function Users({ token }: { token: string }) {
   const [users, setUsers] = useState<User[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [passwords, setPasswords] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
 
-  async function api<T>(path: string, init?: RequestInit): Promise<T> {
-    const response = await fetch(`${apiBaseUrl}${path}`, {
-      ...init,
-      headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Bearer ${token}`, ...init?.headers },
-    });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error(apiErrorMessage(body) ?? "User request failed");
-    }
-    if (response.status === 204) return undefined as T;
-    return response.json();
+  function api<T>(path: string, init?: RequestInit): Promise<T> {
+    return apiFetch<T>(path, { ...init, token });
   }
 
   async function loadUsers() {
@@ -38,7 +29,7 @@ export default function Users({ apiBaseUrl, token }: { apiBaseUrl: string; token
 
   useEffect(() => {
     loadUsers().catch((err: Error) => setError(err.message));
-  }, [apiBaseUrl, token]);
+  }, [token]);
 
   async function createUser(event: FormEvent) {
     event.preventDefault();
