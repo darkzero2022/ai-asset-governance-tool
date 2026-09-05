@@ -66,6 +66,8 @@ type Props = {
   onSelect: (id: string) => void;
   onEdit: (asset: Asset) => void;
   onExport: (assetId: string) => void;
+  /** ADMIN/RISK_OWNER only — VIEWER (and APPROVER, here) get read-only access. */
+  canManage: boolean;
 };
 
 export default function AssetList(props: Props) {
@@ -80,7 +82,7 @@ export default function AssetList(props: Props) {
             <h2 className="text-xl font-semibold">Assets</h2>
             <p className="text-sm text-slate-500">Manage AI assets and filter by lifecycle, type, hosting, and network dependency.</p>
           </div>
-          <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={props.onNewAsset}>New asset</button>
+          {props.canManage && <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={props.onNewAsset}>New asset</button>}
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-4">
@@ -90,33 +92,35 @@ export default function AssetList(props: Props) {
           <Select label="Network" value={props.filters.networkDependency} options={["", "AIR_GAPPED", "HYBRID", "FULLY_CONNECTED"]} onChange={(value) => updateFilter("networkDependency", value)} labelValue={props.label} />
         </div>
 
-        <AssetTable assets={props.assets} label={props.label} onSelect={props.onSelect} onEdit={props.onEdit} onExport={props.onExport} />
+        <AssetTable assets={props.assets} label={props.label} onSelect={props.onSelect} onEdit={props.canManage ? props.onEdit : undefined} onExport={props.onExport} />
       </div>
 
-      <form onSubmit={props.onSubmit} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-        <h2 className="text-xl font-semibold">{props.editingAssetId ? "Edit Asset" : "Create Asset"}</h2>
-        <div className="mt-4 grid gap-4">
-          <Field label="Name" value={props.assetForm.name} onChange={(value) => updateForm("name", value)} />
-          <div className="rounded-xl border border-slate-200 p-3">
-            <div className="flex gap-2">
-              <div className="min-w-0 flex-1"><Field label="Import from URL" value={props.assetForm.sourceUrl} onChange={(value) => updateForm("sourceUrl", value)} /></div>
-              <button type="button" className="self-end rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-40" disabled={!props.assetForm.sourceUrl} onClick={() => props.onFetchImport(props.assetForm.sourceUrl)}>Fetch</button>
+      {props.canManage && (
+        <form onSubmit={props.onSubmit} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-xl font-semibold">{props.editingAssetId ? "Edit Asset" : "Create Asset"}</h2>
+          <div className="mt-4 grid gap-4">
+            <Field label="Name" value={props.assetForm.name} onChange={(value) => updateForm("name", value)} />
+            <div className="rounded-xl border border-slate-200 p-3">
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1"><Field label="Import from URL" value={props.assetForm.sourceUrl} onChange={(value) => updateForm("sourceUrl", value)} /></div>
+                <button type="button" className="self-end rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-40" disabled={!props.assetForm.sourceUrl} onClick={() => props.onFetchImport(props.assetForm.sourceUrl)}>Fetch</button>
+              </div>
+              {props.importSuggestion && <ImportPreview suggestion={props.importSuggestion} />}
             </div>
-            {props.importSuggestion && <ImportPreview suggestion={props.importSuggestion} />}
+            <Field label="Version" value={props.assetForm.version} onChange={(value) => updateForm("version", value)} />
+            <Select label="Type" value={props.assetForm.type} options={["MODEL", "DATASET", "SERVICE", "LIBRARY"]} onChange={(value) => updateForm("type", value)} labelValue={props.label} />
+            <Select label="Hosting Model" value={props.assetForm.hostingModel} options={["SAAS_API", "SELF_HOSTED", "EMBEDDED_IN_APP"]} onChange={(value) => updateForm("hostingModel", value)} labelValue={props.label} />
+            <Select label="Network Dependency" value={props.assetForm.networkDependency} options={["AIR_GAPPED", "HYBRID", "FULLY_CONNECTED"]} onChange={(value) => updateForm("networkDependency", value)} labelValue={props.label} />
+            <Field label="Supplier" value={props.assetForm.supplier} onChange={(value) => updateForm("supplier", value)} />
+            <Field label="Provider" value={props.assetForm.provider ?? ""} onChange={(value) => updateForm("provider", value)} />
+            <Field label="License" value={props.assetForm.license ?? ""} onChange={(value) => updateForm("license", value)} />
+            <Field label="Data Classification" value={props.assetForm.dataClassificationTouched ?? ""} onChange={(value) => updateForm("dataClassificationTouched", value)} />
+            <TextArea label="Training Data Provenance" value={props.assetForm.trainingDataProvenance ?? ""} onChange={(value) => updateForm("trainingDataProvenance", value)} />
+            <TextArea label="Downstream Consumers" value={props.assetForm.downstreamConsumers ?? ""} onChange={(value) => updateForm("downstreamConsumers", value)} />
           </div>
-          <Field label="Version" value={props.assetForm.version} onChange={(value) => updateForm("version", value)} />
-          <Select label="Type" value={props.assetForm.type} options={["MODEL", "DATASET", "SERVICE", "LIBRARY"]} onChange={(value) => updateForm("type", value)} labelValue={props.label} />
-          <Select label="Hosting Model" value={props.assetForm.hostingModel} options={["SAAS_API", "SELF_HOSTED", "EMBEDDED_IN_APP"]} onChange={(value) => updateForm("hostingModel", value)} labelValue={props.label} />
-          <Select label="Network Dependency" value={props.assetForm.networkDependency} options={["AIR_GAPPED", "HYBRID", "FULLY_CONNECTED"]} onChange={(value) => updateForm("networkDependency", value)} labelValue={props.label} />
-          <Field label="Supplier" value={props.assetForm.supplier} onChange={(value) => updateForm("supplier", value)} />
-          <Field label="Provider" value={props.assetForm.provider ?? ""} onChange={(value) => updateForm("provider", value)} />
-          <Field label="License" value={props.assetForm.license ?? ""} onChange={(value) => updateForm("license", value)} />
-          <Field label="Data Classification" value={props.assetForm.dataClassificationTouched ?? ""} onChange={(value) => updateForm("dataClassificationTouched", value)} />
-          <TextArea label="Training Data Provenance" value={props.assetForm.trainingDataProvenance ?? ""} onChange={(value) => updateForm("trainingDataProvenance", value)} />
-          <TextArea label="Downstream Consumers" value={props.assetForm.downstreamConsumers ?? ""} onChange={(value) => updateForm("downstreamConsumers", value)} />
-        </div>
-        <button className="mt-5 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">{props.editingAssetId ? "Save asset" : "Create asset"}</button>
-      </form>
+          <button className="mt-5 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">{props.editingAssetId ? "Save asset" : "Create asset"}</button>
+        </form>
+      )}
     </section>
   );
 }

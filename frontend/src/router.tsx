@@ -2,8 +2,10 @@ import { FormEvent, lazy, useEffect, useState } from "react";
 import { createBrowserRouter, Navigate, useNavigate, useOutletContext, useParams, useRouteError } from "react-router-dom";
 import type { Asset, Project, Risk } from "@aibom/shared";
 import App, { type AppOutletContext } from "./App";
+import { canManage, canTransitionAsset, hasRole } from "./auth";
 import { emptyAsset, emptyFilters, emptyProject, emptyRisk, type ImportSuggestion, label, nextStatuses, type ProjectForm } from "./formDefaults";
 import { emptyModelCardForm, modelCardToForm, type ModelCardFormState } from "./components/ModelCardForm";
+import { Forbidden } from "./components/Forbidden";
 import { useAuditLogsQuery } from "./queries/auditLogs";
 import {
   useAssetProjectLinkMutations,
@@ -75,12 +77,8 @@ function DashboardRoute() {
 
 function UsersRoute() {
   const ctx = useCtx();
-  if (ctx.currentUser?.role !== "ADMIN") {
-    return (
-      <section className="mx-auto max-w-7xl px-6 py-8">
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">Admin access required.</div>
-      </section>
-    );
+  if (!hasRole(ctx.currentUser, "ADMIN")) {
+    return <Forbidden message="Admin access required." />;
   }
   return <Users token={ctx.token} />;
 }
@@ -178,6 +176,7 @@ function AssetListRoute() {
       onSelect={(id) => navigate(`/assets/${id}`)}
       onEdit={onEdit}
       onExport={onExport}
+      canManage={canManage(ctx.currentUser)}
     />
   );
 }
@@ -389,7 +388,8 @@ function AssetDetailRoute() {
       selectedProjectId={selectedProjectId}
       workflowComments={workflowComments}
       label={label}
-      nextStatuses={nextStatuses}
+      availableTransitions={(nextStatuses[asset?.status ?? ""] ?? []).filter((status) => canTransitionAsset(ctx.currentUser, status))}
+      canManage={canManage(ctx.currentUser)}
       onBack={() => navigate("/assets")}
       onEditAsset={onEditAsset}
       onFormChange={setAssetForm}
@@ -527,6 +527,7 @@ function RiskRegisterRoute() {
       onOpenRisk={onOpenRisk}
       onToggleRisk={onToggleRisk}
       onBulkUpdate={onBulkUpdate}
+      canManage={canManage(ctx.currentUser)}
     />
   );
 }
@@ -645,6 +646,7 @@ function RiskDetailRoute() {
       onLinkControl={onLinkControl}
       onUpdateControl={onUpdateControl}
       onUnlinkControl={onUnlinkControl}
+      canManage={canManage(ctx.currentUser)}
     />
   );
 }
@@ -699,6 +701,7 @@ function ProjectListRoute() {
       onNewProject={resetForm}
       onOpenProject={(id) => navigate(`/projects/${id}`)}
       onEditProject={onEditProject}
+      canManage={canManage(ctx.currentUser)}
     />
   );
 }
@@ -788,6 +791,7 @@ function ProjectDetailRoute() {
       onLinkRisk={onLinkRisk}
       onUnlinkRisk={onUnlinkRisk}
       onExportCycloneDx={onExportCycloneDx}
+      canManage={canManage(ctx.currentUser)}
     />
   );
 }

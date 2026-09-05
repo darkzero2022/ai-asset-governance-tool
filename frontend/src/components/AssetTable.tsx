@@ -15,7 +15,7 @@ type AssetTableProps = {
   assets: Asset[];
   label: (value: string) => string;
   onSelect: (id: string) => void;
-  onEdit: (asset: any) => void;
+  onEdit?: (asset: any) => void;
   onExport: (id: string) => void;
 };
 
@@ -35,7 +35,7 @@ export function AssetTable({ assets, label, onSelect, onEdit, onExport }: AssetT
               <td><span className="rounded-full bg-cyan-50 px-2 py-1 text-xs font-semibold text-cyan-700">{label(asset.status)}</span></td>
               <td>{asset._count?.risks ?? 0}</td>
               <td>{asset.projectUsageCount ?? 0}</td>
-              <td className="space-x-3 text-right"><button className="font-semibold text-slate-700" onClick={() => onEdit(asset)}>Edit</button><button className="font-semibold text-cyan-700" onClick={() => onExport(asset.id)}>Export</button></td>
+              <td className="space-x-3 text-right">{onEdit && <button className="font-semibold text-slate-700" onClick={() => onEdit(asset)}>Edit</button>}<button className="font-semibold text-cyan-700" onClick={() => onExport(asset.id)}>Export</button></td>
             </tr>
           ))}
           {assets.length === 0 && <tr><td className="py-8 text-center text-slate-500" colSpan={7}>No assets match the current filters.</td></tr>}

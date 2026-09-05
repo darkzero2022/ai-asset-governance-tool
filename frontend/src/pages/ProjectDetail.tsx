@@ -28,6 +28,7 @@ type Props = {
   onLinkRisk: () => void;
   onUnlinkRisk: (riskId: string) => void;
   onExportCycloneDx: () => void;
+  canManage: boolean;
 };
 
 export default function ProjectDetail(props: Props) {
@@ -61,9 +62,9 @@ export default function ProjectDetail(props: Props) {
         </div>
 
         <Panel title="Linked Assets">
-          <LinkRow value={props.selectedAssetId} options={availableAssets.map((asset) => ({ id: asset.id, label: asset.name }))} placeholder="Select asset" onChange={props.onSelectedAssetChange} onLink={props.onLinkAsset} />
+          {props.canManage && <LinkRow value={props.selectedAssetId} options={availableAssets.map((asset) => ({ id: asset.id, label: asset.name }))} placeholder="Select asset" onChange={props.onSelectedAssetChange} onLink={props.onLinkAsset} />}
           <div className="mt-4 space-y-3">
-            {(props.project.assetLinks ?? []).map((link) => <Item key={link.assetId} title={link.asset.name} subtitle={`${props.label(link.asset.type)} | ${props.label(link.asset.status)}`} onRemove={() => props.onUnlinkAsset(link.assetId)} />)}
+            {(props.project.assetLinks ?? []).map((link) => <Item key={link.assetId} title={link.asset.name} subtitle={`${props.label(link.asset.type)} | ${props.label(link.asset.status)}`} onRemove={props.canManage ? () => props.onUnlinkAsset(link.assetId) : undefined} />)}
             {!(props.project.assetLinks ?? []).length && <p className="text-sm text-slate-500">No linked assets.</p>}
           </div>
         </Panel>
@@ -71,9 +72,9 @@ export default function ProjectDetail(props: Props) {
 
       <aside className="min-w-0 space-y-6">
         <Panel title="Direct Risks">
-          <LinkRow value={props.selectedRiskId} options={availableRisks.map((risk) => ({ id: risk.id, label: risk.description }))} placeholder="Select risk" onChange={props.onSelectedRiskChange} onLink={props.onLinkRisk} />
+          {props.canManage && <LinkRow value={props.selectedRiskId} options={availableRisks.map((risk) => ({ id: risk.id, label: risk.description }))} placeholder="Select risk" onChange={props.onSelectedRiskChange} onLink={props.onLinkRisk} />}
           <div className="mt-4 space-y-3">
-            {(props.project.riskLinks ?? []).map((link) => <Item key={link.riskId} title={link.risk.description} subtitle={`${props.label(link.risk.status)} | Score ${link.risk.inherentRiskScore}`} onRemove={() => props.onUnlinkRisk(link.riskId)} />)}
+            {(props.project.riskLinks ?? []).map((link) => <Item key={link.riskId} title={link.risk.description} subtitle={`${props.label(link.risk.status)} | Score ${link.risk.inherentRiskScore}`} onRemove={props.canManage ? () => props.onUnlinkRisk(link.riskId) : undefined} />)}
             {!(props.project.riskLinks ?? []).length && <p className="text-sm text-slate-500">No direct risks.</p>}
           </div>
         </Panel>
@@ -110,12 +111,12 @@ function LinkRow(props: { value: string; options: Array<{ id: string; label: str
   );
 }
 
-function Item(props: { title: string; subtitle: string; onRemove: () => void }) {
+function Item(props: { title: string; subtitle: string; onRemove?: () => void }) {
   return (
     <div className="rounded-xl border border-slate-200 p-3 text-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><p className="font-medium break-words">{props.title}</p><p className="text-slate-500">{props.subtitle}</p></div>
-        <button className="shrink-0 text-xs font-semibold text-red-600" onClick={props.onRemove}>Unlink</button>
+        {props.onRemove && <button className="shrink-0 text-xs font-semibold text-red-600" onClick={props.onRemove}>Unlink</button>}
       </div>
     </div>
   );

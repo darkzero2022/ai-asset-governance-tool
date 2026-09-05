@@ -26,6 +26,7 @@ type Props = {
   onNewProject: () => void;
   onOpenProject: (id: string) => void;
   onEditProject: (project: Project) => void;
+  canManage: boolean;
 };
 
 export default function ProjectList(props: Props) {
@@ -39,7 +40,7 @@ export default function ProjectList(props: Props) {
             <h2 className="text-xl font-semibold">Projects</h2>
             <p className="text-sm text-slate-500">Manage business AI use cases and their linked assets and risks.</p>
           </div>
-          <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={props.onNewProject}>New project</button>
+          {props.canManage && <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={props.onNewProject}>New project</button>}
         </div>
         <div className="mt-5 overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -54,7 +55,7 @@ export default function ProjectList(props: Props) {
                   <td>{project.businessOwner || "Unassigned"}</td>
                   <td>{project._count?.assetLinks ?? 0}</td>
                   <td>{project._count?.riskLinks ?? 0}</td>
-                  <td className="text-right"><button className="font-semibold text-slate-700" onClick={() => props.onEditProject(project)}>Edit</button></td>
+                  <td className="text-right">{props.canManage && <button className="font-semibold text-slate-700" onClick={() => props.onEditProject(project)}>Edit</button>}</td>
                 </tr>
               ))}
               {!props.projects.length && <tr><td className="py-8 text-center text-slate-500" colSpan={6}>No projects yet.</td></tr>}
@@ -63,6 +64,7 @@ export default function ProjectList(props: Props) {
         </div>
       </div>
 
+      {props.canManage && (
       <form onSubmit={props.onSubmit} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <h2 className="text-xl font-semibold">{props.editingProjectId ? "Edit Project" : "New Project"}</h2>
         <div className="mt-4 grid gap-4">
@@ -85,6 +87,7 @@ export default function ProjectList(props: Props) {
         </div>
         <button className="mt-5 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">{props.editingProjectId ? "Save project" : "Create project"}</button>
       </form>
+      )}
     </section>
   );
 }

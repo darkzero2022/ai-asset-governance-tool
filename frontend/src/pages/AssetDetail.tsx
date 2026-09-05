@@ -104,7 +104,9 @@ type Props = {
   selectedProjectId: string;
   workflowComments: string;
   label: (value: string) => string;
-  nextStatuses: Record<string, string[]>;
+  /** Transition targets the current user may move this asset to, already role-filtered. */
+  availableTransitions: string[];
+  canManage: boolean;
   onBack: () => void;
   onEditAsset: (asset: Asset) => void;
   onFormChange: (form: AssetForm) => void;
@@ -152,7 +154,7 @@ export default function AssetDetail(props: Props) {
               <h2 className="text-2xl font-semibold">{props.asset.name}</h2>
               <p className="text-sm text-slate-500">v{props.asset.version} | {props.label(props.asset.status)} | {props.label(props.asset.type)}</p>
             </div>
-            <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={() => props.onEditAsset(asset)}>Edit asset</button>
+            {props.canManage && <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={() => props.onEditAsset(asset)}>Edit asset</button>}
           </div>
 
           <dl className="mt-5 grid gap-3 text-sm md:grid-cols-2">
@@ -168,7 +170,7 @@ export default function AssetDetail(props: Props) {
           </dl>
         </div>
 
-        {isEditing && (
+        {isEditing && props.canManage && (
           <form onSubmit={props.onSaveAsset} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <h3 className="text-lg font-semibold">Edit Asset Fields</h3>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -190,19 +192,21 @@ export default function AssetDetail(props: Props) {
         )}
 
         <ApprovalBanner risks={props.asset.risks} assetType={props.asset.type} modelCard={props.modelCard} modelCardCompleteness={props.modelCardCompleteness} />
-        {(props.asset.type === "MODEL" || props.asset.type === "SERVICE") && <ModelCardForm modelCard={props.modelCard} completeness={props.modelCardCompleteness} form={props.modelCardForm} sourceUrl={props.modelCardSourceUrl} importSuggestion={props.modelCardImportSuggestion} onFormChange={props.onModelCardFormChange} onSourceUrlChange={props.onModelCardSourceUrlChange} onFetchImport={props.onFetchModelCardImport} onSubmit={props.onSaveModelCard} />}
+        {props.canManage && (props.asset.type === "MODEL" || props.asset.type === "SERVICE") && <ModelCardForm modelCard={props.modelCard} completeness={props.modelCardCompleteness} form={props.modelCardForm} sourceUrl={props.modelCardSourceUrl} importSuggestion={props.modelCardImportSuggestion} onFormChange={props.onModelCardFormChange} onSourceUrlChange={props.onModelCardSourceUrlChange} onFetchImport={props.onFetchModelCardImport} onSubmit={props.onSaveModelCard} />}
         <DependencyGraph asset={props.asset} />
       </div>
 
       <aside className="space-y-6">
         <Panel title="Linked Risks">
-          <div className="flex gap-2">
-            <select className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" value={props.selectedRiskId} onChange={(event) => props.onSelectedRiskChange(event.target.value)}>
-              <option value="">Select risk</option>
-              {availableRisks.map((risk) => <option key={risk.id} value={risk.id}>{risk.description}</option>)}
-            </select>
-            <button className="rounded-lg bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedRiskId} onClick={props.onLinkRisk}>Link</button>
-          </div>
+          {props.canManage && (
+            <div className="flex gap-2">
+              <select className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" value={props.selectedRiskId} onChange={(event) => props.onSelectedRiskChange(event.target.value)}>
+                <option value="">Select risk</option>
+                {availableRisks.map((risk) => <option key={risk.id} value={risk.id}>{risk.description}</option>)}
+              </select>
+              <button className="rounded-lg bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedRiskId} onClick={props.onLinkRisk}>Link</button>
+            </div>
+          )}
           <div className="mt-4 space-y-3">
             {props.asset.risks.map((risk) => (
               <div key={risk.id} className="rounded-xl border border-slate-200 p-3 text-sm">
@@ -211,7 +215,7 @@ export default function AssetDetail(props: Props) {
                     <p className="font-medium break-words">{risk.description}</p>
                     <p className="text-slate-500">{props.label(risk.status)} | Score {risk.inherentRiskScore}</p>
                   </div>
-                  <button className="shrink-0 text-xs font-semibold text-red-600" onClick={() => props.onUnlinkRisk(risk.id)}>Unlink</button>
+                  {props.canManage && <button className="shrink-0 text-xs font-semibold text-red-600" onClick={() => props.onUnlinkRisk(risk.id)}>Unlink</button>}
                 </div>
                 <RiskReferenceTags risk={risk} label={props.label} />
               </div>
@@ -221,13 +225,15 @@ export default function AssetDetail(props: Props) {
         </Panel>
 
         <Panel title="Linked Projects">
-          <div className="flex gap-2">
-            <select className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" value={props.selectedProjectId} onChange={(event) => props.onSelectedProjectChange(event.target.value)}>
-              <option value="">Select project</option>
-              {availableProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
-            </select>
-            <button className="rounded-lg bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedProjectId} onClick={props.onLinkProject}>Link</button>
-          </div>
+          {props.canManage && (
+            <div className="flex gap-2">
+              <select className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" value={props.selectedProjectId} onChange={(event) => props.onSelectedProjectChange(event.target.value)}>
+                <option value="">Select project</option>
+                {availableProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+              </select>
+              <button className="rounded-lg bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedProjectId} onClick={props.onLinkProject}>Link</button>
+            </div>
+          )}
           <div className="mt-4 space-y-3">
             {props.linkedProjects.map((project) => (
               <div key={project.id} className="rounded-xl border border-slate-200 p-3 text-sm">
@@ -236,7 +242,7 @@ export default function AssetDetail(props: Props) {
                     <p className="font-medium">{project.name}</p>
                     <p className="text-slate-500">{props.label(project.status)}{project.businessOwner ? ` | ${project.businessOwner}` : ""}</p>
                   </div>
-                  <button className="text-xs font-semibold text-red-600" onClick={() => props.onUnlinkProject(project.id)}>Unlink</button>
+                  {props.canManage && <button className="text-xs font-semibold text-red-600" onClick={() => props.onUnlinkProject(project.id)}>Unlink</button>}
                 </div>
               </div>
             ))}
@@ -247,12 +253,12 @@ export default function AssetDetail(props: Props) {
         <Panel title="Governance Workflow">
           <textarea className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Approval comments" value={props.workflowComments} onChange={(event) => props.onWorkflowCommentsChange(event.target.value)} />
           <div className="mt-3 flex flex-wrap gap-2">
-            {(props.nextStatuses[props.asset.status] ?? []).map((status) => (
+            {props.availableTransitions.map((status) => (
               <button key={status} className="rounded-lg bg-slate-950 px-3 py-2 text-sm font-semibold text-white" onClick={() => props.onTransitionAsset(status)}>
                 Move to {props.label(status)}
               </button>
             ))}
-            {(props.nextStatuses[props.asset.status] ?? []).length === 0 && <p className="text-sm text-slate-500">No further transitions available.</p>}
+            {props.availableTransitions.length === 0 && <p className="text-sm text-slate-500">No further transitions available.</p>}
           </div>
           <div className="mt-4 space-y-3">
             {props.asset.workflow.map((entry) => (

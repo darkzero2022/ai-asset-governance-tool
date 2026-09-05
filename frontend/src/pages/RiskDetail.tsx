@@ -57,6 +57,7 @@ type Props = {
   onLinkControl: () => void;
   onUpdateControl: (controlId: string, implementationStatus: string) => void;
   onUnlinkControl: (controlId: string) => void;
+  canManage: boolean;
 };
 
 export default function RiskDetail(props: Props) {
@@ -111,29 +112,33 @@ export default function RiskDetail(props: Props) {
         </div>
 
         <Panel title="Linked Assets">
-          <LinkRow value={props.selectedAssetId} options={availableAssets.map((asset) => ({ id: asset.id, label: asset.name }))} placeholder="Select asset" onChange={props.onSelectedAssetChange} onLink={props.onLinkAsset} />
-          <ItemList items={(props.risk.assets ?? []).map((link) => ({ id: link.assetId, title: link.asset.name, subtitle: "Asset link" }))} onRemove={props.onUnlinkAsset} />
+          {props.canManage && <LinkRow value={props.selectedAssetId} options={availableAssets.map((asset) => ({ id: asset.id, label: asset.name }))} placeholder="Select asset" onChange={props.onSelectedAssetChange} onLink={props.onLinkAsset} />}
+          <ItemList items={(props.risk.assets ?? []).map((link) => ({ id: link.assetId, title: link.asset.name, subtitle: "Asset link" }))} onRemove={props.canManage ? props.onUnlinkAsset : undefined} />
         </Panel>
 
         <Panel title="Linked Projects">
-          <LinkRow value={props.selectedProjectId} options={availableProjects.map((project) => ({ id: project.id, label: project.name }))} placeholder="Select project" onChange={props.onSelectedProjectChange} onLink={props.onLinkProject} />
-          <ItemList items={(props.risk.projects ?? []).map((link) => ({ id: link.projectId, title: link.project.name, subtitle: props.label(link.project.status) }))} onRemove={props.onUnlinkProject} />
+          {props.canManage && <LinkRow value={props.selectedProjectId} options={availableProjects.map((project) => ({ id: project.id, label: project.name }))} placeholder="Select project" onChange={props.onSelectedProjectChange} onLink={props.onLinkProject} />}
+          <ItemList items={(props.risk.projects ?? []).map((link) => ({ id: link.projectId, title: link.project.name, subtitle: props.label(link.project.status) }))} onRemove={props.canManage ? props.onUnlinkProject : undefined} />
         </Panel>
       </div>
 
       <aside className="space-y-6">
         <Panel title="Linked Controls">
-          <input className="mb-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Search controls by name or ID" value={controlSearch} onChange={(event) => setControlSearch(event.target.value)} />
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-            <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={props.selectedControlId} onChange={(event) => props.onSelectedControlChange(event.target.value)}>
-              <option value="">Select control</option>
-              {suggestedControls.map((control) => <option key={control.id} value={control.id}>{control.mappedControlId} - {control.name}</option>)}
-            </select>
-            <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={props.selectedControlStatus} onChange={(event) => props.onSelectedControlStatusChange(event.target.value)}>
-              {controlStatuses.map((status) => <option key={status} value={status}>{props.label(status)}</option>)}
-            </select>
-            <button className="rounded-lg bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedControlId} onClick={props.onLinkControl}>Link</button>
-          </div>
+          {props.canManage && (
+            <>
+              <input className="mb-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Search controls by name or ID" value={controlSearch} onChange={(event) => setControlSearch(event.target.value)} />
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+                <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={props.selectedControlId} onChange={(event) => props.onSelectedControlChange(event.target.value)}>
+                  <option value="">Select control</option>
+                  {suggestedControls.map((control) => <option key={control.id} value={control.id}>{control.mappedControlId} - {control.name}</option>)}
+                </select>
+                <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={props.selectedControlStatus} onChange={(event) => props.onSelectedControlStatusChange(event.target.value)}>
+                  {controlStatuses.map((status) => <option key={status} value={status}>{props.label(status)}</option>)}
+                </select>
+                <button className="rounded-lg bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedControlId} onClick={props.onLinkControl}>Link</button>
+              </div>
+            </>
+          )}
           <div className="mt-4 space-y-3">
             {(props.risk.controls ?? []).map((control) => (
               <div key={control.id} className="rounded-xl border border-slate-200 p-3 text-sm">
@@ -142,11 +147,15 @@ export default function RiskDetail(props: Props) {
                     <p className="font-medium">{control.mappedControlId}</p>
                     <p className="text-slate-500">{control.mappedFramework}</p>
                   </div>
-                  <button className="text-xs font-semibold text-red-600" onClick={() => props.onUnlinkControl(control.id)}>Unlink</button>
+                  {props.canManage && <button className="text-xs font-semibold text-red-600" onClick={() => props.onUnlinkControl(control.id)}>Unlink</button>}
                 </div>
-                <select className="mt-3 rounded-lg border border-slate-300 px-3 py-2 text-sm" value={control.implementationStatus ?? "NOT_STARTED"} onChange={(event) => props.onUpdateControl(control.id, event.target.value)}>
-                  {controlStatuses.map((status) => <option key={status} value={status}>{props.label(status)}</option>)}
-                </select>
+                {props.canManage ? (
+                  <select className="mt-3 rounded-lg border border-slate-300 px-3 py-2 text-sm" value={control.implementationStatus ?? "NOT_STARTED"} onChange={(event) => props.onUpdateControl(control.id, event.target.value)}>
+                    {controlStatuses.map((status) => <option key={status} value={status}>{props.label(status)}</option>)}
+                  </select>
+                ) : (
+                  <p className="mt-3 text-xs text-slate-500">{props.label(control.implementationStatus ?? "NOT_STARTED")}</p>
+                )}
               </div>
             ))}
             {!(props.risk.controls ?? []).length && <p className="text-sm text-slate-500">No linked controls.</p>}
@@ -191,14 +200,14 @@ function LinkRow(props: { value: string; options: Array<{ id: string; label: str
   );
 }
 
-function ItemList(props: { items: Array<{ id: string; title: string; subtitle: string }>; onRemove: (id: string) => void }) {
+function ItemList(props: { items: Array<{ id: string; title: string; subtitle: string }>; onRemove?: (id: string) => void }) {
   return (
     <div className="mt-4 space-y-3">
       {props.items.map((item) => (
         <div key={item.id} className="rounded-xl border border-slate-200 p-3 text-sm">
           <div className="flex items-start justify-between gap-3">
             <div><p className="font-medium">{item.title}</p><p className="text-slate-500">{item.subtitle}</p></div>
-            <button className="text-xs font-semibold text-red-600" onClick={() => props.onRemove(item.id)}>Unlink</button>
+            {props.onRemove && <button className="text-xs font-semibold text-red-600" onClick={() => props.onRemove!(item.id)}>Unlink</button>}
           </div>
         </div>
       ))}

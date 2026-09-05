@@ -79,6 +79,7 @@ type Props = {
   onOpenRisk: (id: string) => void;
   onToggleRisk: (id: string) => void;
   onBulkUpdate: (status: string) => void;
+  canManage: boolean;
 };
 
 export default function RiskRegister(props: Props) {
@@ -110,7 +111,7 @@ export default function RiskRegister(props: Props) {
               <h2 className="text-xl font-semibold">Risk Register</h2>
               <p className="mt-1 text-sm text-slate-500">Review, sort, and bulk-update portfolio risks.</p>
             </div>
-            <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={props.onNewRisk}>New risk</button>
+            {props.canManage && <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={props.onNewRisk}>New risk</button>}
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -119,17 +120,20 @@ export default function RiskRegister(props: Props) {
             <Select label="STRIDE-AI" value={strideFilter} options={["", ...STRIDE_AI_CATEGORIES]} onChange={setStrideFilter} labelValue={props.label} />
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button className="rounded-lg bg-cyan-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedRiskIds.length} onClick={() => props.onBulkUpdate("IN_PROGRESS")}>Bulk In Progress</button>
-            <button className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedRiskIds.length} onClick={() => props.onBulkUpdate("MITIGATED")}>Bulk Mitigated</button>
-          </div>
+          {props.canManage && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button className="rounded-lg bg-cyan-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedRiskIds.length} onClick={() => props.onBulkUpdate("IN_PROGRESS")}>Bulk In Progress</button>
+              <button className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedRiskIds.length} onClick={() => props.onBulkUpdate("MITIGATED")}>Bulk Mitigated</button>
+            </div>
+          )}
 
           {(heatmapFilter || strideFilter) && <button className="mt-4 text-sm font-semibold text-cyan-700" onClick={() => { setHeatmapFilter(null); setStrideFilter(""); }}>Clear table filters</button>}
           <RiskHeatmap risks={props.risks} onCellClick={setHeatmapFilter} />
-          <RiskTable risks={displayedRisks} selectedIds={props.selectedRiskIds} label={props.label} onToggle={props.onToggleRisk} onEdit={props.onEditRisk} onOpen={props.onOpenRisk} />
+          <RiskTable risks={displayedRisks} selectedIds={props.selectedRiskIds} label={props.label} onToggle={props.onToggleRisk} onEdit={props.canManage ? props.onEditRisk : undefined} onOpen={props.onOpenRisk} />
         </div>
       </div>
 
+      {props.canManage && (
       <form onSubmit={props.onSubmitRisk} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <h2 className="text-xl font-semibold">{props.editingRiskId ? "Edit Risk" : "Create Risk"}</h2>
         <div className="mt-4 grid gap-4">
@@ -154,6 +158,7 @@ export default function RiskRegister(props: Props) {
         </div>
         <button className="mt-5 rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.riskForm.assetId}>{props.editingRiskId ? "Save risk" : "Create risk"}</button>
       </form>
+      )}
     </section>
   );
 }

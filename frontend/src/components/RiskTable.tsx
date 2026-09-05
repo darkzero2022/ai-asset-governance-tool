@@ -32,7 +32,7 @@ type RiskTableProps = {
   selectedIds: string[];
   label: (value: string) => string;
   onToggle: (id: string) => void;
-  onEdit: (risk: any) => void;
+  onEdit?: (risk: any) => void;
   onOpen?: (id: string) => void;
   pagination?: { skip: number; take: number; total: number };
   onPageChange?: (next: { skip: number; take: number }) => void;
@@ -69,7 +69,7 @@ export function RiskTable({ risks, selectedIds, label, onToggle, onEdit, onOpen,
       <table className="w-full min-w-[1040px] text-left text-sm">
         <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
           <tr>
-            <th className="py-3 pr-3">Select</th>
+            {onEdit && <th className="py-3 pr-3">Select</th>}
             <SortableHeader label="Severity" active={sortKey === "severity"} direction={sortDirection} onClick={() => changeSort("severity")} />
             <SortableHeader label="Framework" active={sortKey === "framework"} direction={sortDirection} onClick={() => changeSort("framework")} />
             <SortableHeader label="STRIDE-AI / ATLAS" active={sortKey === "strideAi"} direction={sortDirection} onClick={() => changeSort("strideAi")} />
@@ -84,7 +84,7 @@ export function RiskTable({ risks, selectedIds, label, onToggle, onEdit, onOpen,
         <tbody className="divide-y divide-slate-100">
           {sortedRisks.map((risk) => (
             <tr key={risk.id} className="align-top">
-              <td className="py-4 pr-3"><input type="checkbox" checked={selectedIds.includes(risk.id)} onChange={() => onToggle(risk.id)} /></td>
+              {onEdit && <td className="py-4 pr-3"><input type="checkbox" checked={selectedIds.includes(risk.id)} onChange={() => onToggle(risk.id)} /></td>}
               <td className="py-4 pr-3"><SeverityBadge severity={risk.severity} /></td>
               <td className="py-4 pr-3"><span className="font-medium text-slate-900">{risk.sourceFramework}</span><span className="block text-xs text-slate-500">{risk.sourceCategoryId}</span></td>
               <td className="py-4 pr-3">
@@ -100,7 +100,7 @@ export function RiskTable({ risks, selectedIds, label, onToggle, onEdit, onOpen,
                 <p className="mb-1 line-clamp-2 text-slate-700">{risk.description}</p>
                 <p className="mb-2 text-xs text-slate-500">{risk.asset?.name ?? "Unlinked risk"}</p>
                 {onOpen && <button className="mr-3 text-sm font-semibold text-cyan-700" onClick={() => onOpen(risk.id)}>View risk</button>}
-                <button className="text-sm font-semibold text-cyan-700" onClick={() => onEdit(risk)}>Edit risk</button>
+                {onEdit && <button className="text-sm font-semibold text-cyan-700" onClick={() => onEdit(risk)}>Edit risk</button>}
               </td>
             </tr>
           ))}
