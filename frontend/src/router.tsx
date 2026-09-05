@@ -1,6 +1,44 @@
-import { lazy, useEffect } from "react";
+import { FormEvent, lazy, useEffect, useState } from "react";
 import { createBrowserRouter, Navigate, useNavigate, useOutletContext, useParams, useRouteError } from "react-router-dom";
+import type { Asset, Project, Risk } from "@aibom/shared";
 import App, { type AppOutletContext } from "./App";
+import { emptyAsset, emptyFilters, emptyProject, emptyRisk, type ImportSuggestion, label, nextStatuses, type ProjectForm } from "./formDefaults";
+import { emptyModelCardForm, modelCardToForm, type ModelCardFormState } from "./components/ModelCardForm";
+import { useAuditLogsQuery } from "./queries/auditLogs";
+import {
+  useAssetProjectLinkMutations,
+  useAssetProjectsQuery,
+  useAssetQuery,
+  useAssetRiskLinkMutations,
+  useAssetsQuery,
+  useExportCycloneDxMutation,
+  useAssetModelCardQuery,
+  useImportUrlMutation,
+  useModelCardMetricMutations,
+  useSaveAssetMutation,
+  useSaveModelCardMutation,
+  useTransitionAssetMutation,
+} from "./queries/assets";
+import { useControlsQuery } from "./queries/controls";
+import {
+  useExportProjectCycloneDxMutation,
+  useProjectAssetLinkMutations,
+  useProjectQuery,
+  useProjectRiskLinkMutations,
+  useProjectRisksQuery,
+  useProjectsQuery,
+  useSaveProjectMutation,
+} from "./queries/projects";
+import { useAtlasTechniquesQuery, useFrameworkCategoriesQuery } from "./queries/reference";
+import {
+  useBulkUpdateRisksMutation,
+  useRiskAssetLinkMutations,
+  useRiskControlLinkMutations,
+  useRiskProjectLinkMutations,
+  useRiskQuery,
+  useRisksQuery,
+  useSaveRiskMutation,
+} from "./queries/risks";
 
 // Route-level code splitting: each page becomes its own chunk, fetched only
 // when its route is visited, instead of all eight shipping in the one
@@ -15,17 +53,19 @@ const RiskRegister = lazy(() => import("./pages/RiskRegister"));
 const Users = lazy(() => import("./pages/Users"));
 
 /**
- * Each route element below is a thin adapter: it reads whatever the root
- * layout (App) put on the outlet context plus its own URL params, and hands
- * them to the existing page component unchanged. The page components and all
- * the data/mutation logic in App stay exactly as they were pre-router — this
- * only replaces how a URL maps to "which page, with which params" (D1).
- * Fetching real per-route loaders is D2's job (TanStack Query). App wraps the
- * <Outlet /> in a <Suspense> boundary, so the lazy imports above just work.
+ * Each route component below owns its page's server data via TanStack Query
+ * (D2) instead of reading it off the outlet context — only the genuinely
+ * cross-cutting bits (token, currentUser, the shared error banner) come from
+ * App's context. Mutations invalidate the query keys they affect; there is
+ * no more central loadData()/loadAsset() to call after a write.
  */
 
 function useCtx() {
   return useOutletContext<AppOutletContext>();
+}
+
+function reportError(setError: (message: string) => void, err: unknown, fallback: string) {
+  setError(err instanceof Error ? err.message : fallback);
 }
 
 function DashboardRoute() {
@@ -47,22 +87,97 @@ function UsersRoute() {
 
 function AssetListRoute() {
   const ctx = useCtx();
+  const navigate = useNavigate();
+  const [filters, setFilters] = useState(emptyFilters);
+  const [assetForm, setAssetForm] = useState(emptyAsset);
+  const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
+  const [editBaseVersion, setEditBaseVersion] = useState<string | null>(null);
+  const [importSuggestion, setImportSuggestion] = useState<ImportSuggestion | null>(null);
+
+  const { data: assets = [] } = useAssetsQuery(ctx.token, filters);
+  const saveAsset = useSaveAssetMutation(ctx.token);
+  const importUrl = useImportUrlMutation(ctx.token);
+  const exportCycloneDx = useExportCycloneDxMutation(ctx.token);
+
+  function resetForm() {
+    setAssetForm(emptyAsset);
+    setEditingAssetId(null);
+    setEditBaseVersion(null);
+  }
+
+  function onEdit(asset: Asset) {
+    setEditingAssetId(asset.id);
+    setEditBaseVersion(asset.updatedAt ?? null);
+    setAssetForm({
+      name: asset.name,
+      version: asset.version,
+      type: asset.type,
+      supplier: asset.supplier,
+      provider: asset.provider ?? "",
+      hostingModel: asset.hostingModel,
+      networkDependency: asset.networkDependency,
+      license: asset.license ?? "",
+      dataClassificationTouched: asset.dataClassificationTouched ?? "",
+      trainingDataProvenance: asset.trainingDataProvenance ?? "",
+      downstreamConsumers: asset.downstreamConsumers ?? "",
+      sourceUrl: asset.sourceUrl ?? "",
+    });
+  }
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    ctx.setError("");
+    try {
+      const payload = editingAssetId && editBaseVersion ? { ...assetForm, expectedUpdatedAt: editBaseVersion } : assetForm;
+      await saveAsset.mutateAsync({ id: editingAssetId ?? undefined, payload });
+      resetForm();
+    } catch (err) {
+      reportError(ctx.setError, err, "Asset save failed");
+    }
+  }
+
+  function onFetchImport(sourceUrl: string) {
+    ctx.setError("");
+    setAssetForm((current) => ({ ...current, sourceUrl }));
+    setImportSuggestion(null);
+    importUrl.mutate(
+      { assetId: editingAssetId ?? undefined, sourceUrl },
+      {
+        onSuccess: (suggestion) => {
+          setAssetForm((current) => ({ ...current, sourceUrl: suggestion.sourceUrl }));
+          setImportSuggestion(suggestion);
+        },
+        onError: (err) => reportError(ctx.setError, err, "URL import failed"),
+      },
+    );
+  }
+
+  async function onExport(assetId: string) {
+    ctx.setError("");
+    try {
+      const bom = await exportCycloneDx.mutateAsync([assetId]);
+      downloadJson(bom, "cyclonedx-aibom.json");
+    } catch (err) {
+      reportError(ctx.setError, err, "Export failed");
+    }
+  }
+
   return (
     <AssetList
-      assets={ctx.assets}
-      filters={ctx.filters}
-      assetForm={ctx.assetForm}
-      editingAssetId={ctx.editingAssetId}
-      label={ctx.label}
-      onFiltersChange={ctx.setFilters}
-      onFormChange={ctx.setAssetForm}
-      importSuggestion={ctx.assetImportSuggestion}
-      onFetchImport={ctx.fetchAssetImport}
-      onSubmit={ctx.saveAsset}
-      onNewAsset={ctx.onNewAsset}
-      onSelect={ctx.openAsset}
-      onEdit={ctx.editAsset}
-      onExport={ctx.exportBom}
+      assets={assets}
+      filters={filters}
+      assetForm={assetForm}
+      editingAssetId={editingAssetId}
+      label={label}
+      onFiltersChange={setFilters}
+      onFormChange={setAssetForm}
+      importSuggestion={importSuggestion}
+      onFetchImport={onFetchImport}
+      onSubmit={onSubmit}
+      onNewAsset={resetForm}
+      onSelect={(id) => navigate(`/assets/${id}`)}
+      onEdit={onEdit}
+      onExport={onExport}
     />
   );
 }
@@ -72,71 +187,346 @@ function AssetDetailRoute() {
   const navigate = useNavigate();
   const { id } = useParams();
 
+  const { data: asset = null } = useAssetQuery(ctx.token, id);
+  const { data: linkedProjects = [] } = useAssetProjectsQuery(ctx.token, id);
+  const { data: modelCardData } = useAssetModelCardQuery(ctx.token, id);
+  const { data: auditLogs = [] } = useAuditLogsQuery(ctx.token, "AIAsset", id);
+  const { data: risks = [] } = useRisksQuery(ctx.token, {});
+  const { data: projects = [] } = useProjectsQuery(ctx.token);
+
+  const [assetForm, setAssetForm] = useState(emptyAsset);
+  const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
+  const [editBaseVersion, setEditBaseVersion] = useState<string | null>(null);
+  const [modelCardForm, setModelCardForm] = useState<ModelCardFormState>(emptyModelCardForm);
+  const [modelCardSourceUrl, setModelCardSourceUrl] = useState("");
+  const [modelCardImportSuggestion, setModelCardImportSuggestion] = useState<ImportSuggestion | null>(null);
+  const [selectedRiskId, setSelectedRiskId] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [workflowComments, setWorkflowComments] = useState("");
+
+  const saveAsset = useSaveAssetMutation(ctx.token);
+  const transitionAsset = useTransitionAssetMutation(ctx.token, id ?? "");
+  const importUrl = useImportUrlMutation(ctx.token);
+  const riskLinks = useAssetRiskLinkMutations(ctx.token, id ?? "");
+  const projectLinks = useAssetProjectLinkMutations(ctx.token, id ?? "");
+  const saveModelCard = useSaveModelCardMutation(ctx.token, id ?? "");
+  const metricMutations = useModelCardMetricMutations(ctx.token, id ?? "");
+
+  // Reset the model-card form whenever a different asset's data lands.
   useEffect(() => {
-    if (ctx.token && id) ctx.loadAsset(id).catch((err: Error) => ctx.setError(err.message));
+    if (!asset) return;
+    setModelCardForm(modelCardToForm(modelCardData?.modelCard ?? null));
+    setModelCardSourceUrl(asset.sourceUrl ?? "");
+    setModelCardImportSuggestion(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctx.token, id]);
+  }, [asset?.id, modelCardData?.modelCard]);
+
+  function onEditAsset(target: Asset) {
+    setEditingAssetId(target.id);
+    setEditBaseVersion(target.updatedAt ?? null);
+    setAssetForm({
+      name: target.name,
+      version: target.version,
+      type: target.type,
+      supplier: target.supplier,
+      provider: target.provider ?? "",
+      hostingModel: target.hostingModel,
+      networkDependency: target.networkDependency,
+      license: target.license ?? "",
+      dataClassificationTouched: target.dataClassificationTouched ?? "",
+      trainingDataProvenance: target.trainingDataProvenance ?? "",
+      downstreamConsumers: target.downstreamConsumers ?? "",
+      sourceUrl: target.sourceUrl ?? "",
+    });
+  }
+
+  async function onSaveAsset(event: FormEvent) {
+    event.preventDefault();
+    ctx.setError("");
+    try {
+      const payload = editingAssetId && editBaseVersion ? { ...assetForm, expectedUpdatedAt: editBaseVersion } : assetForm;
+      await saveAsset.mutateAsync({ id: editingAssetId ?? undefined, payload });
+      setEditingAssetId(null);
+      setEditBaseVersion(null);
+    } catch (err) {
+      reportError(ctx.setError, err, "Asset save failed");
+    }
+  }
+
+  function onFetchModelCardImport(sourceUrl: string) {
+    ctx.setError("");
+    setModelCardSourceUrl(sourceUrl);
+    setModelCardImportSuggestion(null);
+    importUrl.mutate(
+      { assetId: id, sourceUrl },
+      {
+        onSuccess: (suggestion) => {
+          setModelCardSourceUrl(suggestion.sourceUrl);
+          setModelCardImportSuggestion(suggestion);
+        },
+        onError: (err) => reportError(ctx.setError, err, "URL import failed"),
+      },
+    );
+  }
+
+  async function onSaveModelCard(event: FormEvent) {
+    event.preventDefault();
+    if (!asset) return;
+    ctx.setError("");
+    try {
+      const payload = {
+        ...modelCardForm,
+        metrics: undefined,
+        performanceMetrics: modelCardForm.performanceMetrics ? JSON.parse(modelCardForm.performanceMetrics) : null,
+      };
+      await saveModelCard.mutateAsync(payload);
+
+      if (modelCardSourceUrl !== (asset.sourceUrl ?? "")) {
+        await saveAsset.mutateAsync({
+          id: asset.id,
+          payload: {
+            name: asset.name,
+            version: asset.version,
+            type: asset.type,
+            supplier: asset.supplier,
+            provider: asset.provider ?? "",
+            hostingModel: asset.hostingModel,
+            networkDependency: asset.networkDependency,
+            license: asset.license ?? "",
+            dataClassificationTouched: asset.dataClassificationTouched ?? "",
+            trainingDataProvenance: asset.trainingDataProvenance ?? "",
+            downstreamConsumers: asset.downstreamConsumers ?? "",
+            sourceUrl: modelCardSourceUrl,
+          },
+        });
+      }
+
+      for (const metric of modelCardForm.metrics) {
+        if (!metric.metricName.trim() || !metric.metricValue.trim()) continue;
+        const metricValue = Number(metric.metricValue);
+        if (!Number.isFinite(metricValue)) continue;
+        const metricPayload = { metricName: metric.metricName.trim(), metricValue, slice: metric.slice.trim() || null };
+        if (metric.id) {
+          await metricMutations.update.mutateAsync({ metricId: metric.id, payload: metricPayload });
+        } else {
+          await metricMutations.create.mutateAsync(metricPayload);
+        }
+      }
+
+      for (const metric of modelCardData?.modelCard?.metrics ?? []) {
+        if (!modelCardForm.metrics.some((row) => row.id === metric.id)) {
+          await metricMutations.remove.mutateAsync(metric.id);
+        }
+      }
+    } catch (err) {
+      reportError(ctx.setError, err, "Model Card save failed");
+    }
+  }
+
+  async function onTransitionAsset(toStatus: string) {
+    ctx.setError("");
+    try {
+      await transitionAsset.mutateAsync({ toStatus, comments: workflowComments || null });
+      setWorkflowComments("");
+    } catch (err) {
+      reportError(ctx.setError, err, "Transition failed");
+    }
+  }
+
+  async function onLinkRisk() {
+    if (!selectedRiskId) return;
+    ctx.setError("");
+    try {
+      await riskLinks.link.mutateAsync(selectedRiskId);
+      setSelectedRiskId("");
+    } catch (err) {
+      reportError(ctx.setError, err, "Risk link failed");
+    }
+  }
+
+  async function onUnlinkRisk(riskId: string) {
+    ctx.setError("");
+    try {
+      await riskLinks.unlink.mutateAsync(riskId);
+    } catch (err) {
+      reportError(ctx.setError, err, "Risk unlink failed");
+    }
+  }
+
+  async function onLinkProject() {
+    if (!selectedProjectId) return;
+    ctx.setError("");
+    try {
+      await projectLinks.link.mutateAsync(selectedProjectId);
+      setSelectedProjectId("");
+    } catch (err) {
+      reportError(ctx.setError, err, "Project link failed");
+    }
+  }
+
+  async function onUnlinkProject(projectId: string) {
+    ctx.setError("");
+    try {
+      await projectLinks.unlink.mutateAsync(projectId);
+    } catch (err) {
+      reportError(ctx.setError, err, "Project unlink failed");
+    }
+  }
 
   return (
     <AssetDetail
-      asset={ctx.selectedAsset}
-      assetForm={ctx.assetForm}
-      modelCard={ctx.assetModelCard}
-      modelCardCompleteness={ctx.assetModelCardCompleteness}
-      modelCardForm={ctx.modelCardForm}
-      editingAssetId={ctx.editingAssetId}
-      risks={ctx.risks}
-      projects={ctx.projects}
-      linkedProjects={ctx.assetProjects}
-      auditLogs={ctx.assetAuditLogs}
-      selectedRiskId={ctx.selectedAssetRiskId}
-      selectedProjectId={ctx.selectedAssetProjectId}
-      workflowComments={ctx.workflowComments}
-      label={ctx.label}
-      nextStatuses={ctx.nextStatuses}
+      asset={asset}
+      assetForm={assetForm}
+      modelCard={modelCardData?.modelCard ?? null}
+      modelCardCompleteness={modelCardData?.completeness}
+      modelCardForm={modelCardForm}
+      editingAssetId={editingAssetId}
+      risks={risks}
+      projects={projects}
+      linkedProjects={linkedProjects}
+      auditLogs={auditLogs}
+      selectedRiskId={selectedRiskId}
+      selectedProjectId={selectedProjectId}
+      workflowComments={workflowComments}
+      label={label}
+      nextStatuses={nextStatuses}
       onBack={() => navigate("/assets")}
-      onEditAsset={ctx.editAsset}
-      onFormChange={ctx.setAssetForm}
-      onSaveAsset={ctx.saveAsset}
-      onModelCardFormChange={ctx.setModelCardForm}
-      modelCardSourceUrl={ctx.modelCardSourceUrl}
-      modelCardImportSuggestion={ctx.modelCardImportSuggestion}
-      onModelCardSourceUrlChange={ctx.setModelCardSourceUrl}
-      onFetchModelCardImport={ctx.fetchModelCardImport}
-      onSaveModelCard={ctx.saveModelCard}
-      onSelectedRiskChange={ctx.setSelectedAssetRiskId}
-      onSelectedProjectChange={ctx.setSelectedAssetProjectId}
-      onLinkRisk={ctx.linkRiskToSelectedAsset}
-      onUnlinkRisk={ctx.unlinkRiskFromSelectedAsset}
-      onLinkProject={ctx.linkProjectToSelectedAsset}
-      onUnlinkProject={ctx.unlinkProjectFromSelectedAsset}
-      onWorkflowCommentsChange={ctx.setWorkflowComments}
-      onTransitionAsset={ctx.transitionAsset}
+      onEditAsset={onEditAsset}
+      onFormChange={setAssetForm}
+      onSaveAsset={onSaveAsset}
+      onModelCardFormChange={setModelCardForm}
+      modelCardSourceUrl={modelCardSourceUrl}
+      modelCardImportSuggestion={modelCardImportSuggestion}
+      onModelCardSourceUrlChange={setModelCardSourceUrl}
+      onFetchModelCardImport={onFetchModelCardImport}
+      onSaveModelCard={onSaveModelCard}
+      onSelectedRiskChange={setSelectedRiskId}
+      onSelectedProjectChange={setSelectedProjectId}
+      onLinkRisk={onLinkRisk}
+      onUnlinkRisk={onUnlinkRisk}
+      onLinkProject={onLinkProject}
+      onUnlinkProject={onUnlinkProject}
+      onWorkflowCommentsChange={setWorkflowComments}
+      onTransitionAsset={onTransitionAsset}
     />
   );
 }
 
 function RiskRegisterRoute() {
   const ctx = useCtx();
+  const navigate = useNavigate();
+  const [filters, setFilters] = useState(emptyFilters);
+  const [riskForm, setRiskForm] = useState(emptyRisk);
+  const [editingRiskId, setEditingRiskId] = useState<string | null>(null);
+  const [editBaseVersion, setEditBaseVersion] = useState<string | null>(null);
+  const [selectedRiskIds, setSelectedRiskIds] = useState<string[]>([]);
+
+  const { data: risks = [] } = useRisksQuery(ctx.token, filters);
+  const { data: assets = [] } = useAssetsQuery(ctx.token, {});
+  const { data: categories = [] } = useFrameworkCategoriesQuery(ctx.token);
+  const { data: atlasTechniques = [] } = useAtlasTechniquesQuery(ctx.token);
+  const saveRisk = useSaveRiskMutation(ctx.token);
+  const bulkUpdateRisks = useBulkUpdateRisksMutation(ctx.token);
+
+  // sourceCategoryId is a real (framework, categoryId) foreign key — if the
+  // framework changes (or reference data loads) and the current category no
+  // longer belongs to it, snap to the first valid one so the select's real
+  // value always matches what it's showing, not just the first <option>.
+  useEffect(() => {
+    const filteredCategories = categories.filter((category) => category.framework === riskForm.sourceFramework);
+    const firstCategory = filteredCategories[0];
+    if (firstCategory && !filteredCategories.some((category) => category.categoryId === riskForm.sourceCategoryId)) {
+      setRiskForm((current) => ({ ...current, sourceCategoryId: firstCategory.categoryId }));
+    }
+  }, [categories, riskForm.sourceFramework, riskForm.sourceCategoryId]);
+
+  function resetForm() {
+    setRiskForm(emptyRisk);
+    setEditingRiskId(null);
+    setEditBaseVersion(null);
+  }
+
+  function onEditRisk(risk: Risk) {
+    setEditingRiskId(risk.id);
+    setEditBaseVersion(risk.updatedAt ?? null);
+    setRiskForm({
+      assetId: risk.assetId,
+      sourceFramework: risk.sourceFramework,
+      sourceCategoryId: risk.sourceCategoryId,
+      euAiActRiskTier: risk.euAiActRiskTier ?? "",
+      strideAiCategory: risk.strideAiCategory ?? "",
+      atlasTechnique: risk.atlasTechnique ?? "",
+      description: risk.description,
+      likelihood: risk.likelihood,
+      impact: risk.impact,
+      residualRiskScore: risk.residualRiskScore ? String(risk.residualRiskScore) : "",
+      treatmentPlan: risk.treatmentPlan ?? "",
+      owner: risk.owner ?? "",
+      dueDate: risk.dueDate ? risk.dueDate.slice(0, 10) : "",
+      status: risk.status,
+    });
+  }
+
+  async function onSubmitRisk(event: FormEvent) {
+    event.preventDefault();
+    ctx.setError("");
+    try {
+      const payload = {
+        ...riskForm,
+        likelihood: Number(riskForm.likelihood),
+        impact: Number(riskForm.impact),
+        residualRiskScore: riskForm.residualRiskScore ? Number(riskForm.residualRiskScore) : null,
+        euAiActRiskTier: riskForm.euAiActRiskTier || null,
+        strideAiCategory: riskForm.strideAiCategory || null,
+        atlasTechnique: riskForm.atlasTechnique || null,
+        dueDate: riskForm.dueDate ? new Date(riskForm.dueDate).toISOString() : null,
+        ...(editingRiskId && editBaseVersion ? { expectedUpdatedAt: editBaseVersion } : {}),
+      };
+      await saveRisk.mutateAsync({ id: editingRiskId ?? undefined, payload });
+      resetForm();
+    } catch (err) {
+      reportError(ctx.setError, err, "Risk save failed");
+    }
+  }
+
+  function onOpenRisk(id: string) {
+    navigate(`/risks/${id}`);
+  }
+
+  function onToggleRisk(id: string) {
+    setSelectedRiskIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  }
+
+  async function onBulkUpdate(status: string) {
+    ctx.setError("");
+    try {
+      const targeted = risks.filter((risk) => selectedRiskIds.includes(risk.id));
+      await bulkUpdateRisks.mutateAsync({ risks: targeted, status });
+      setSelectedRiskIds([]);
+    } catch (err) {
+      reportError(ctx.setError, err, "Bulk update failed");
+    }
+  }
+
   return (
     <RiskRegister
-      risks={ctx.risks}
-      assets={ctx.assets}
-      categories={ctx.categories}
-      atlasTechniques={ctx.atlasTechniques}
-      filters={ctx.filters}
-      riskForm={ctx.riskForm}
-      editingRiskId={ctx.editingRiskId}
-      selectedRiskIds={ctx.selectedRiskIds}
-      label={ctx.label}
-      onFiltersChange={ctx.setFilters}
-      onRiskFormChange={ctx.setRiskForm}
-      onSubmitRisk={ctx.saveRisk}
-      onNewRisk={ctx.onNewRisk}
-      onEditRisk={ctx.editRisk}
-      onOpenRisk={ctx.openRisk}
-      onToggleRisk={ctx.onToggleRisk}
-      onBulkUpdate={ctx.bulkUpdateRisks}
+      risks={risks}
+      assets={assets}
+      categories={categories}
+      atlasTechniques={atlasTechniques}
+      filters={filters}
+      riskForm={riskForm}
+      editingRiskId={editingRiskId}
+      selectedRiskIds={selectedRiskIds}
+      label={label}
+      onFiltersChange={setFilters}
+      onRiskFormChange={setRiskForm}
+      onSubmitRisk={onSubmitRisk}
+      onNewRisk={resetForm}
+      onEditRisk={onEditRisk}
+      onOpenRisk={onOpenRisk}
+      onToggleRisk={onToggleRisk}
+      onBulkUpdate={onBulkUpdate}
     />
   );
 }
@@ -146,52 +536,169 @@ function RiskDetailRoute() {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  useEffect(() => {
-    if (ctx.token && id) ctx.loadRisk(id).catch((err: Error) => ctx.setError(err.message));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctx.token, id]);
+  const { data: risk = null } = useRiskQuery(ctx.token, id);
+  const { data: assets = [] } = useAssetsQuery(ctx.token, {});
+  const { data: projects = [] } = useProjectsQuery(ctx.token);
+  const { data: controls = [] } = useControlsQuery(ctx.token);
+  const { data: auditLogs = [] } = useAuditLogsQuery(ctx.token, "Risk", id);
+
+  const [selectedAssetId, setSelectedAssetId] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [selectedControlId, setSelectedControlId] = useState("");
+  const [selectedControlStatus, setSelectedControlStatus] = useState("NOT_STARTED");
+
+  const assetLinks = useRiskAssetLinkMutations(ctx.token, id ?? "");
+  const projectLinks = useRiskProjectLinkMutations(ctx.token, id ?? "");
+  const controlLinks = useRiskControlLinkMutations(ctx.token, id ?? "");
+
+  async function onLinkAsset() {
+    if (!selectedAssetId) return;
+    ctx.setError("");
+    try {
+      await assetLinks.link.mutateAsync(selectedAssetId);
+      setSelectedAssetId("");
+    } catch (err) {
+      reportError(ctx.setError, err, "Asset link failed");
+    }
+  }
+
+  async function onUnlinkAsset(assetId: string) {
+    ctx.setError("");
+    try {
+      await assetLinks.unlink.mutateAsync(assetId);
+    } catch (err) {
+      reportError(ctx.setError, err, "Asset unlink failed");
+    }
+  }
+
+  async function onLinkProject() {
+    if (!selectedProjectId) return;
+    ctx.setError("");
+    try {
+      await projectLinks.link.mutateAsync(selectedProjectId);
+      setSelectedProjectId("");
+    } catch (err) {
+      reportError(ctx.setError, err, "Project link failed");
+    }
+  }
+
+  async function onUnlinkProject(projectId: string) {
+    ctx.setError("");
+    try {
+      await projectLinks.unlink.mutateAsync(projectId);
+    } catch (err) {
+      reportError(ctx.setError, err, "Project unlink failed");
+    }
+  }
+
+  async function onLinkControl() {
+    if (!selectedControlId) return;
+    ctx.setError("");
+    try {
+      await controlLinks.link.mutateAsync({ controlId: selectedControlId, implementationStatus: selectedControlStatus });
+      setSelectedControlId("");
+      setSelectedControlStatus("NOT_STARTED");
+    } catch (err) {
+      reportError(ctx.setError, err, "Control link failed");
+    }
+  }
+
+  async function onUpdateControl(controlId: string, implementationStatus: string) {
+    ctx.setError("");
+    try {
+      await controlLinks.update.mutateAsync({ controlId, implementationStatus });
+    } catch (err) {
+      reportError(ctx.setError, err, "Control update failed");
+    }
+  }
+
+  async function onUnlinkControl(controlId: string) {
+    ctx.setError("");
+    try {
+      await controlLinks.unlink.mutateAsync(controlId);
+    } catch (err) {
+      reportError(ctx.setError, err, "Control unlink failed");
+    }
+  }
 
   return (
     <RiskDetail
-      risk={ctx.selectedRisk}
-      assets={ctx.assets}
-      projects={ctx.projects}
-      controls={ctx.controls}
-      auditLogs={ctx.riskAuditLogs}
-      selectedAssetId={ctx.selectedRiskAssetId}
-      selectedProjectId={ctx.selectedRiskProjectId}
-      selectedControlId={ctx.selectedRiskControlId}
-      selectedControlStatus={ctx.selectedRiskControlStatus}
-      label={ctx.label}
+      risk={risk}
+      assets={assets}
+      projects={projects}
+      controls={controls}
+      auditLogs={auditLogs}
+      selectedAssetId={selectedAssetId}
+      selectedProjectId={selectedProjectId}
+      selectedControlId={selectedControlId}
+      selectedControlStatus={selectedControlStatus}
+      label={label}
       onBack={() => navigate("/risks")}
-      onSelectedAssetChange={ctx.setSelectedRiskAssetId}
-      onSelectedProjectChange={ctx.setSelectedRiskProjectId}
-      onSelectedControlChange={ctx.setSelectedRiskControlId}
-      onSelectedControlStatusChange={ctx.setSelectedRiskControlStatus}
-      onLinkAsset={ctx.linkAssetToSelectedRisk}
-      onUnlinkAsset={ctx.unlinkAssetFromSelectedRisk}
-      onLinkProject={ctx.linkProjectToSelectedRisk}
-      onUnlinkProject={ctx.unlinkProjectFromSelectedRisk}
-      onLinkControl={ctx.linkControlToSelectedRisk}
-      onUpdateControl={ctx.updateSelectedRiskControl}
-      onUnlinkControl={ctx.unlinkControlFromSelectedRisk}
+      onSelectedAssetChange={setSelectedAssetId}
+      onSelectedProjectChange={setSelectedProjectId}
+      onSelectedControlChange={setSelectedControlId}
+      onSelectedControlStatusChange={setSelectedControlStatus}
+      onLinkAsset={onLinkAsset}
+      onUnlinkAsset={onUnlinkAsset}
+      onLinkProject={onLinkProject}
+      onUnlinkProject={onUnlinkProject}
+      onLinkControl={onLinkControl}
+      onUpdateControl={onUpdateControl}
+      onUnlinkControl={onUnlinkControl}
     />
   );
 }
 
 function ProjectListRoute() {
   const ctx = useCtx();
+  const navigate = useNavigate();
+  const [projectForm, setProjectForm] = useState<ProjectForm>(emptyProject);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editBaseVersion, setEditBaseVersion] = useState<string | null>(null);
+
+  const { data: projects = [] } = useProjectsQuery(ctx.token);
+  const saveProject = useSaveProjectMutation(ctx.token);
+
+  function resetForm() {
+    setProjectForm(emptyProject);
+    setEditingProjectId(null);
+    setEditBaseVersion(null);
+  }
+
+  function onEditProject(project: Project) {
+    setEditingProjectId(project.id);
+    setEditBaseVersion(project.updatedAt ?? null);
+    setProjectForm({
+      name: project.name,
+      description: project.description ?? "",
+      businessOwner: project.businessOwner ?? "",
+      status: project.status,
+    });
+  }
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    ctx.setError("");
+    try {
+      const payload = editingProjectId && editBaseVersion ? { ...projectForm, expectedUpdatedAt: editBaseVersion } : projectForm;
+      await saveProject.mutateAsync({ id: editingProjectId ?? undefined, payload });
+      resetForm();
+    } catch (err) {
+      reportError(ctx.setError, err, "Project save failed");
+    }
+  }
+
   return (
     <ProjectList
-      projects={ctx.projects}
-      projectForm={ctx.projectForm}
-      editingProjectId={ctx.editingProjectId}
-      label={ctx.label}
-      onFormChange={ctx.setProjectForm}
-      onSubmit={ctx.saveProject}
-      onNewProject={ctx.onNewProject}
-      onOpenProject={ctx.openProject}
-      onEditProject={ctx.editProject}
+      projects={projects}
+      projectForm={projectForm}
+      editingProjectId={editingProjectId}
+      label={label}
+      onFormChange={setProjectForm}
+      onSubmit={onSubmit}
+      onNewProject={resetForm}
+      onOpenProject={(id) => navigate(`/projects/${id}`)}
+      onEditProject={onEditProject}
     />
   );
 }
@@ -201,30 +708,98 @@ function ProjectDetailRoute() {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  useEffect(() => {
-    if (ctx.token && id) ctx.loadProject(id).catch((err: Error) => ctx.setError(err.message));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctx.token, id]);
+  const { data: project = null } = useProjectQuery(ctx.token, id);
+  const { data: assets = [] } = useAssetsQuery(ctx.token, {});
+  const { data: risks = [] } = useRisksQuery(ctx.token, {});
+  const { data: mergedRisks = [] } = useProjectRisksQuery(ctx.token, id);
+
+  const [selectedAssetId, setSelectedAssetId] = useState("");
+  const [selectedRiskId, setSelectedRiskId] = useState("");
+
+  const assetLinks = useProjectAssetLinkMutations(ctx.token, id ?? "");
+  const riskLinks = useProjectRiskLinkMutations(ctx.token, id ?? "");
+  const exportCycloneDx = useExportProjectCycloneDxMutation(ctx.token);
+
+  async function onLinkAsset() {
+    if (!selectedAssetId) return;
+    ctx.setError("");
+    try {
+      await assetLinks.link.mutateAsync(selectedAssetId);
+      setSelectedAssetId("");
+    } catch (err) {
+      reportError(ctx.setError, err, "Project asset link failed");
+    }
+  }
+
+  async function onUnlinkAsset(assetId: string) {
+    ctx.setError("");
+    try {
+      await assetLinks.unlink.mutateAsync(assetId);
+    } catch (err) {
+      reportError(ctx.setError, err, "Project asset unlink failed");
+    }
+  }
+
+  async function onLinkRisk() {
+    if (!selectedRiskId) return;
+    ctx.setError("");
+    try {
+      await riskLinks.link.mutateAsync(selectedRiskId);
+      setSelectedRiskId("");
+    } catch (err) {
+      reportError(ctx.setError, err, "Project risk link failed");
+    }
+  }
+
+  async function onUnlinkRisk(riskId: string) {
+    ctx.setError("");
+    try {
+      await riskLinks.unlink.mutateAsync(riskId);
+    } catch (err) {
+      reportError(ctx.setError, err, "Project risk unlink failed");
+    }
+  }
+
+  async function onExportCycloneDx() {
+    if (!id) return;
+    ctx.setError("");
+    try {
+      const bom = await exportCycloneDx.mutateAsync(id);
+      downloadJson(bom, `cyclonedx-project-${id}.json`);
+    } catch (err) {
+      reportError(ctx.setError, err, "Project export failed");
+    }
+  }
 
   return (
     <ProjectDetail
-      project={ctx.selectedProject}
-      assets={ctx.assets}
-      risks={ctx.risks}
-      mergedRisks={ctx.projectRisks}
-      selectedAssetId={ctx.selectedProjectAssetId}
-      selectedRiskId={ctx.selectedProjectRiskId}
-      label={ctx.label}
+      project={project}
+      assets={assets}
+      risks={risks}
+      mergedRisks={mergedRisks}
+      selectedAssetId={selectedAssetId}
+      selectedRiskId={selectedRiskId}
+      label={label}
       onBack={() => navigate("/projects")}
-      onSelectedAssetChange={ctx.setSelectedProjectAssetId}
-      onSelectedRiskChange={ctx.setSelectedProjectRiskId}
-      onLinkAsset={ctx.linkAssetToSelectedProject}
-      onUnlinkAsset={ctx.unlinkAssetFromSelectedProject}
-      onLinkRisk={ctx.linkRiskToSelectedProject}
-      onUnlinkRisk={ctx.unlinkRiskFromSelectedProject}
-      onExportCycloneDx={ctx.exportProjectBom}
+      onSelectedAssetChange={setSelectedAssetId}
+      onSelectedRiskChange={setSelectedRiskId}
+      onLinkAsset={onLinkAsset}
+      onUnlinkAsset={onUnlinkAsset}
+      onLinkRisk={onLinkRisk}
+      onUnlinkRisk={onUnlinkRisk}
+      onExportCycloneDx={onExportCycloneDx}
     />
   );
+}
+
+function downloadJson(data: unknown, filename: string) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function NotFoundRoute() {

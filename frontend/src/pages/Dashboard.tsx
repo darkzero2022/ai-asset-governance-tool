@@ -1,47 +1,21 @@
-import { FormEvent, type ReactNode, useEffect, useState } from "react";
+import { FormEvent, type ReactNode, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart } from "../components/BarChart";
 import { DonutChart } from "../components/DonutChart";
-import { apiFetch } from "../api/client";
+import {
+  useDashboardExposureQuery,
+  useDashboardSummaryQuery,
+  useFrameworkCoverageQuery,
+  useModelCardCoverageQuery,
+  useModelMetricsQuery,
+  useRecertificationQuery,
+  useRiskSummaryQuery,
+  useSearchMutation,
+  type SearchResults,
+} from "../queries/dashboard";
 
 type DashboardProps = {
   token: string;
-};
-
-type Summary = {
-  assetStatus?: Array<Record<string, unknown>>;
-  assetType?: Array<Record<string, unknown>>;
-  hostingModel?: Array<Record<string, unknown>>;
-  networkDependency?: Array<Record<string, unknown>>;
-  projectCount?: number;
-  riskSeverityBuckets?: Record<string, number>;
-  topAssets?: Array<{ id: string; name: string; projectUsageCount: number }>;
-};
-
-type SearchResults = {
-  assets: Array<{ id: string; name: string }>;
-  projects: Array<{ id: string; name: string }>;
-  risks: Array<{ id: string; description: string }>;
-};
-
-type RecertificationItem = {
-  id: string;
-  nextDueDate: string;
-  dueStatus: "OVERDUE" | "DUE_SOON";
-  asset: { id: string; name: string; type: string };
-};
-
-type ModelCardCoverage = {
-  total: number;
-  withCard: number;
-  withoutCard: number;
-  averageCompleteness: number;
-  missingAssets: Array<{ id: string; name: string; type: string; status: string }>;
-};
-
-type ModelMetricReport = {
-  metrics: Array<{ id: string; metricName: string; metricValue: number; slice?: string | null; asset: { id: string; name: string }; task?: string | null; architectureFamily?: string | null }>;
-  aggregate: Array<{ group: string; avg: number; min: number; max: number; count: number }>;
 };
 
 const severityColors: Record<string, string> = {
@@ -51,55 +25,29 @@ const severityColors: Record<string, string> = {
   CRITICAL: "#ef4444",
 };
 
+const emptySearchResults: SearchResults = { assets: [], projects: [], risks: [] };
+
 export default function Dashboard({ token }: DashboardProps) {
   const navigate = useNavigate();
-  const [summary, setSummary] = useState<Summary>({});
-  const [exposures, setExposures] = useState<Array<Record<string, unknown>>>([]);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResults>({ assets: [], projects: [], risks: [] });
-  const [coverage, setCoverage] = useState<Array<{ id: string; framework: string; categoryId: string; name: string; riskCount: number }>>([]);
-  const [riskSummary, setRiskSummary] = useState<{ total?: number; byFramework?: Record<string, number>; bySeverity?: Record<string, number> }>({});
-  const [recertifications, setRecertifications] = useState<RecertificationItem[]>([]);
-  const [modelCardCoverage, setModelCardCoverage] = useState<ModelCardCoverage>({ total: 0, withCard: 0, withoutCard: 0, averageCompleteness: 0, missingAssets: [] });
   const [metricName, setMetricName] = useState("accuracy");
-  const [modelMetricReport, setModelMetricReport] = useState<ModelMetricReport>({ metrics: [], aggregate: [] });
   const [error, setError] = useState("");
 
-  function api<T>(path: string): Promise<T> {
-    return apiFetch<T>(path, { token });
-  }
-
-  useEffect(() => {
-    Promise.all([
-      api<Summary>("/dashboard/summary"),
-      api<{ exposures: Array<Record<string, unknown>> }>("/dashboard/exposure"),
-      api<{ coverage: Array<{ id: string; framework: string; categoryId: string; name: string; riskCount: number }> }>("/reports/framework-coverage"),
-      api<{ total: number; byFramework: Record<string, number>; bySeverity: Record<string, number> }>("/reports/risk-summary"),
-      api<{ recertifications: RecertificationItem[] }>("/dashboard/recertification"),
-      api<ModelCardCoverage>("/dashboard/model-card-coverage"),
-    ])
-      .then(([summaryData, exposureData, coverageData, riskSummaryData, recertificationData, modelCardCoverageData]) => {
-        setSummary(summaryData);
-        setExposures(exposureData.exposures);
-        setCoverage(coverageData.coverage);
-        setRiskSummary(riskSummaryData);
-        setRecertifications(recertificationData.recertifications);
-        setModelCardCoverage(modelCardCoverageData);
-      })
-      .catch((err: Error) => setError(err.message));
-  }, [token]);
-
-  useEffect(() => {
-    api<ModelMetricReport>(`/reports/model-metrics?metricName=${encodeURIComponent(metricName)}`)
-      .then(setModelMetricReport)
-      .catch((err: Error) => setError(err.message));
-  }, [token, metricName]);
+  const { data: summary = {} } = useDashboardSummaryQuery(token);
+  const { data: exposures = [] } = useDashboardExposureQuery(token);
+  const { data: coverage = [] } = useFrameworkCoverageQuery(token);
+  const { data: riskSummary = { total: 0, byFramework: {}, bySeverity: {} } } = useRiskSummaryQuery(token);
+  const { data: recertifications = [] } = useRecertificationQuery(token);
+  const { data: modelCardCoverage = { total: 0, withCard: 0, withoutCard: 0, averageCompleteness: 0, missingAssets: [] } } = useModelCardCoverageQuery(token);
+  const { data: modelMetricReport = { metrics: [], aggregate: [] } } = useModelMetricsQuery(token, metricName);
+  const searchMutation = useSearchMutation(token);
+  const results = searchMutation.data ?? emptySearchResults;
 
   async function search(event: FormEvent) {
     event.preventDefault();
     setError("");
     try {
-      setResults(await api<SearchResults>(`/search?q=${encodeURIComponent(query)}`));
+      await searchMutation.mutateAsync(query);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
     }

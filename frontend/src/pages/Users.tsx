@@ -1,53 +1,32 @@
-import { FormEvent, useEffect, useState } from "react";
-import { apiFetch } from "../api/client";
-
-type User = {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  active: boolean;
-};
+import { FormEvent, useState } from "react";
+import { useCreateUserMutation, useUpdateUserMutation, useUsersQuery } from "../queries/users";
 
 const emptyForm = { email: "", name: "", role: "VIEWER", password: "" };
 const roles = ["ADMIN", "RISK_OWNER", "APPROVER", "VIEWER"];
 
 export default function Users({ token }: { token: string }) {
-  const [users, setUsers] = useState<User[]>([]);
+  const { data: users = [] } = useUsersQuery(token);
+  const createUser = useCreateUserMutation(token);
+  const updateUser = useUpdateUserMutation(token);
   const [form, setForm] = useState(emptyForm);
   const [passwords, setPasswords] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
 
-  function api<T>(path: string, init?: RequestInit): Promise<T> {
-    return apiFetch<T>(path, { ...init, token });
-  }
-
-  async function loadUsers() {
-    const data = await api<{ users: User[] }>("/users");
-    setUsers(data.users);
-  }
-
-  useEffect(() => {
-    loadUsers().catch((err: Error) => setError(err.message));
-  }, [token]);
-
-  async function createUser(event: FormEvent) {
+  async function submitCreate(event: FormEvent) {
     event.preventDefault();
     setError("");
     try {
-      await api("/users", { method: "POST", body: JSON.stringify(form) });
+      await createUser.mutateAsync(form);
       setForm(emptyForm);
-      await loadUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : "User create failed");
     }
   }
 
-  async function updateUser(id: string, payload: Record<string, unknown>) {
+  async function submitUpdate(id: string, payload: Record<string, unknown>) {
     setError("");
     try {
-      await api(`/users/${id}`, { method: "PUT", body: JSON.stringify(payload) });
-      await loadUsers();
+      await updateUser.mutateAsync({ id, payload });
     } catch (err) {
       setError(err instanceof Error ? err.message : "User update failed");
     }
@@ -70,15 +49,15 @@ export default function Users({ token }: { token: string }) {
                   <td className="py-3 font-medium">{user.name}</td>
                   <td>{user.email}</td>
                   <td>
-                    <select className="rounded-lg border border-slate-300 px-2 py-1" value={user.role} onChange={(event) => updateUser(user.id, { role: event.target.value })}>
+                    <select className="rounded-lg border border-slate-300 px-2 py-1" value={user.role} onChange={(event) => submitUpdate(user.id, { role: event.target.value })}>
                       {roles.map((role) => <option key={role} value={role}>{role}</option>)}
                     </select>
                   </td>
                   <td>{user.active ? "Active" : "Inactive"}</td>
                   <td><input className="w-40 rounded-lg border border-slate-300 px-2 py-1" type="password" placeholder="Temporary password" value={passwords[user.id] ?? ""} onChange={(event) => setPasswords({ ...passwords, [user.id]: event.target.value })} /></td>
                   <td className="space-x-2 text-right">
-                    <button className="font-semibold text-cyan-700 disabled:opacity-40" disabled={!passwords[user.id]} onClick={() => updateUser(user.id, { password: passwords[user.id] })}>Reset</button>
-                    <button className="font-semibold text-slate-700" onClick={() => updateUser(user.id, { active: !user.active })}>{user.active ? "Deactivate" : "Reactivate"}</button>
+                    <button className="font-semibold text-cyan-700 disabled:opacity-40" disabled={!passwords[user.id]} onClick={() => submitUpdate(user.id, { password: passwords[user.id] })}>Reset</button>
+                    <button className="font-semibold text-slate-700" onClick={() => submitUpdate(user.id, { active: !user.active })}>{user.active ? "Deactivate" : "Reactivate"}</button>
                   </td>
                 </tr>
               ))}
@@ -88,7 +67,7 @@ export default function Users({ token }: { token: string }) {
         </div>
       </div>
 
-      <form onSubmit={createUser} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+      <form onSubmit={submitCreate} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <h2 className="text-xl font-semibold">Create User</h2>
         <div className="mt-4 grid gap-4">
           <Field label="Name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
