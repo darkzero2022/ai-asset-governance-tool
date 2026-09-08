@@ -2,6 +2,12 @@ import { FormEvent, type ReactNode, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart } from "../components/BarChart";
 import { DonutChart } from "../components/DonutChart";
+import { PageHeader } from "../components/shell/PageHeader";
+import { Card, CardBody, CardHeader } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Input, Select } from "../components/ui/Field";
+import { EmptyState } from "../components/ui/EmptyState";
+import { SkeletonRows } from "../components/ui/Skeleton";
 import {
   useDashboardExposureQuery,
   useDashboardSummaryQuery,
@@ -18,137 +24,295 @@ type DashboardProps = {
   token: string;
 };
 
-const severityColors: Record<string, string> = {
-  LOW: "#10b981",
-  MEDIUM: "#f59e0b",
-  HIGH: "#f97316",
-  CRITICAL: "#ef4444",
+const SEVERITY_COLORS: Record<string, string> = {
+  LOW: "rgb(var(--wz-severity-low))",
+  MEDIUM: "rgb(var(--wz-severity-medium))",
+  HIGH: "rgb(var(--wz-severity-high))",
+  CRITICAL: "rgb(var(--wz-severity-critical))",
 };
+const CHART_1 = "rgb(var(--wz-chart-1))";
 
 const emptySearchResults: SearchResults = { assets: [], projects: [], risks: [] };
+
+function sumCounts(rows?: Array<Record<string, unknown>>): number {
+  return (rows ?? []).reduce((total, row) => total + (typeof row._count === "number" ? row._count : 0), 0);
+}
 
 export default function Dashboard({ token }: DashboardProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [metricName, setMetricName] = useState("accuracy");
-  const [error, setError] = useState("");
 
-  const { data: summary = {} } = useDashboardSummaryQuery(token);
-  const { data: exposures = [] } = useDashboardExposureQuery(token);
+  const summaryQuery = useDashboardSummaryQuery(token);
+  const summary = summaryQuery.data ?? {};
+  const { data: exposures = [], isPending: exposureLoading } = useDashboardExposureQuery(token);
   const { data: coverage = [] } = useFrameworkCoverageQuery(token);
   const { data: riskSummary = { total: 0, byFramework: {}, bySeverity: {} } } = useRiskSummaryQuery(token);
-  const { data: recertifications = [] } = useRecertificationQuery(token);
-  const { data: modelCardCoverage = { total: 0, withCard: 0, withoutCard: 0, averageCompleteness: 0, missingAssets: [] } } = useModelCardCoverageQuery(token);
+  const { data: recertifications = [], isPending: recertLoading } = useRecertificationQuery(token);
+  const { data: modelCardCoverage = { total: 0, withCard: 0, withoutCard: 0, averageCompleteness: 0, missingAssets: [] } } =
+    useModelCardCoverageQuery(token);
   const { data: modelMetricReport = { metrics: [], aggregate: [] } } = useModelMetricsQuery(token, metricName);
   const searchMutation = useSearchMutation(token);
   const results = searchMutation.data ?? emptySearchResults;
 
+  const severityBuckets = summary.riskSeverityBuckets ?? {};
+  const totalAiSystems = sumCounts(summary.assetStatus);
+
   async function search(event: FormEvent) {
     event.preventDefault();
-    setError("");
-    try {
-      await searchMutation.mutateAsync(query);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Search failed");
-    }
+    searchMutation.mutate(query);
   }
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-8">
-      <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-700">Dashboard</p>
-        <h2 className="mt-2 text-3xl font-semibold">Governance overview</h2>
-        <form onSubmit={search} className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <input className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-slate-950" placeholder="Search assets, projects, risks" value={query} onChange={(event) => setQuery(event.target.value)} />
-          <button className="rounded-lg bg-cyan-700 px-4 py-2 font-semibold text-white">Search</button>
-        </form>
-        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+    <section className="mx-auto max-w-7xl px-6 py-6">
+      <PageHeader title="Dashboard" description="Portfolio governance overview." />
+
+      <form onSubmit={search} className="mb-6 flex flex-col gap-2 sm:flex-row">
+        <Input
+          className="flex-1"
+          aria-label="Search assets, projects, and risks"
+          placeholder="Search AI systems, projects, risks…"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <Button type="submit" variant="primary" disabled={searchMutation.isPending}>
+          {searchMutation.isPending ? "Searching…" : "Search"}
+        </Button>
+      </form>
+
+      {searchMutation.data !== undefined && (
+        <Card className="mb-6">
+          <CardHeader title="Search results" />
+          <CardBody className="space-y-1">
+            {[
+              ...results.assets.map((item) => ({ key: `a-${item.id}`, name: item.name, kind: "AI System", path: `/ai-systems/${item.id}` })),
+              ...results.projects.map((item) => ({ key: `p-${item.id}`, name: item.name, kind: "Project", path: `/projects/${item.id}` })),
+              ...results.risks.map((item) => ({ key: `r-${item.id}`, name: item.description, kind: "Risk", path: `/risks/${item.id}` })),
+            ].map((row) => (
+              <button
+                key={row.key}
+                className="flex w-full items-center justify-between gap-4 rounded-md px-2 py-1.5 text-left text-sm hover:bg-surface-alt"
+                onClick={() => navigate(row.path)}
+              >
+                <span className="truncate text-text">{row.name}</span>
+                <span className="shrink-0 text-xs text-subtle">{row.kind}</span>
+              </button>
+            ))}
+            {!results.assets.length && !results.projects.length && !results.risks.length && (
+              <p className="text-sm text-subtle">No matches.</p>
+            )}
+          </CardBody>
+        </Card>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="AI systems" value={totalAiSystems} onClick={() => navigate("/ai-systems")} />
+        <Stat label="Projects" value={summary.projectCount ?? 0} onClick={() => navigate("/projects")} />
+        <Stat
+          label="Open high risks"
+          value={severityBuckets.HIGH ?? 0}
+          tone="high"
+          onClick={() => navigate("/risks")}
+        />
+        <Stat
+          label="Open critical risks"
+          value={severityBuckets.CRITICAL ?? 0}
+          tone="critical"
+          onClick={() => navigate("/risks")}
+        />
       </div>
 
-      <SectionTitle eyebrow="Governance Overview" title="Portfolio health at a glance" />
-      <div className="mt-4 grid gap-6 lg:grid-cols-3">
-        <Metric title="Projects" value={summary.projectCount ?? 0} />
-        <Metric title="High Risks" value={summary.riskSeverityBuckets?.HIGH ?? 0} />
-        <Metric title="Critical Risks" value={summary.riskSeverityBuckets?.CRITICAL ?? 0} />
-      </div>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Panel title="Severity Distribution">
-          <DonutChart data={Object.entries(summary.riskSeverityBuckets ?? {}).map(([label, value]) => ({ label, value, color: severityColors[label] ?? "#64748b" }))} />
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Panel title="Risk severity">
+          <DonutChart
+            data={["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+              .filter((key) => (severityBuckets[key] ?? 0) > 0)
+              .map((key) => ({ label: key, value: severityBuckets[key] ?? 0, color: SEVERITY_COLORS[key] }))}
+          />
         </Panel>
-        <Panel title="Risk By Framework">
+        <Panel title="Risk by framework">
           <BarChart data={Object.entries(riskSummary.byFramework ?? {}).map(([label, value]) => ({ label, value }))} />
         </Panel>
       </div>
 
-      <SectionTitle eyebrow="Exposure" title="Open high and critical risk" />
-      <div className="mt-4 grid gap-6 lg:grid-cols-2">
-        <Panel title="Open High/Critical Exposure">
-          {exposures.slice(0, 8).map((risk) => <button key={String(risk.id)} className="flex w-full items-center justify-between gap-4 border-b border-slate-100 pb-2 text-left" onClick={() => navigate(`/risks/${String(risk.id)}`)}><span className="truncate text-slate-700">{String(risk.description)}</span><span className="font-semibold text-slate-950">{String(risk.severity)}</span></button>)}
-          {!exposures.length && <p className="text-sm text-slate-500">No high or critical exposure.</p>}
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Panel title="Open high / critical exposure" onViewAll={() => navigate("/risks")}>
+          {exposureLoading ? (
+            <SkeletonRows rows={4} />
+          ) : exposures.length ? (
+            <LinkList
+              items={exposures.slice(0, 8).map((risk) => ({
+                id: String(risk.id),
+                title: String(risk.description),
+                meta: String(risk.severity),
+                onClick: () => navigate(`/risks/${String(risk.id)}`),
+              }))}
+            />
+          ) : (
+            <EmptyState title="No high or critical exposure." />
+          )}
         </Panel>
-        <Panel title="Recertification">
-          {recertifications.slice(0, 8).map((item) => <button key={item.id} className="flex w-full items-center justify-between gap-4 border-b border-slate-100 pb-2 text-left" onClick={() => navigate(`/assets/${item.asset.id}`)}><span className="truncate text-slate-700">{item.asset.name}</span><span className="font-semibold text-slate-950">{item.dueStatus} {new Date(item.nextDueDate).toLocaleDateString()}</span></button>)}
-          {!recertifications.length && <p className="text-sm text-slate-500">No model or service recertifications due in the next 30 days.</p>}
+        <Panel title="Recertifications due (30d)">
+          {recertLoading ? (
+            <SkeletonRows rows={4} />
+          ) : recertifications.length ? (
+            <LinkList
+              items={recertifications.slice(0, 8).map((item) => ({
+                id: item.id,
+                title: item.asset.name,
+                meta: `${item.dueStatus} · ${new Date(item.nextDueDate).toLocaleDateString()}`,
+                onClick: () => navigate(`/ai-systems/${item.asset.id}`),
+              }))}
+            />
+          ) : (
+            <EmptyState title="Nothing due in the next 30 days." />
+          )}
         </Panel>
       </div>
 
-      <SectionTitle eyebrow="Reuse" title="Most reused AI assets" />
-      <div className="mt-4 grid gap-6 lg:grid-cols-2">
-        <Panel title="Top Assets By Reuse">
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Panel title="Most reused AI systems">
           <BarChart data={(summary.topAssets ?? []).map((asset) => ({ label: asset.name, value: asset.projectUsageCount }))} />
         </Panel>
-        <Panel title="Framework Coverage">
-          <BarChart data={coverage.map((item) => ({ label: `${item.framework} ${item.categoryId}`, value: item.riskCount, color: item.riskCount === 0 ? "#f59e0b" : undefined }))} />
+        <Panel title="Framework coverage">
+          <BarChart
+            data={coverage.map((item) => ({
+              label: `${item.framework} ${item.categoryId}`,
+              value: item.riskCount,
+              color: item.riskCount === 0 ? "rgb(var(--wz-warning))" : CHART_1,
+            }))}
+          />
         </Panel>
       </div>
 
-      <SectionTitle eyebrow="Model Cards" title="Coverage and completeness" />
-      <div className="mt-4 grid gap-6 lg:grid-cols-2">
-        <Panel title="Model Card Coverage">
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Panel title="Model Card coverage">
           <div className="grid gap-3 sm:grid-cols-3">
-            <Metric title="Required" value={modelCardCoverage.total} />
-            <Metric title="With Card" value={modelCardCoverage.withCard} />
-            <Metric title="Avg Complete" value={modelCardCoverage.averageCompleteness} />
+            <MiniStat label="Required" value={modelCardCoverage.total} />
+            <MiniStat label="With card" value={modelCardCoverage.withCard} />
+            <MiniStat label="Avg complete" value={`${modelCardCoverage.averageCompleteness}%`} />
           </div>
-          <BarChart data={[{ label: "With card", value: modelCardCoverage.withCard }, { label: "Missing", value: modelCardCoverage.withoutCard }]} />
+          <div className="mt-4">
+            <BarChart
+              data={[
+                { label: "With card", value: modelCardCoverage.withCard, color: "rgb(var(--wz-success))" },
+                { label: "Missing", value: modelCardCoverage.withoutCard, color: "rgb(var(--wz-warning))" },
+              ]}
+            />
+          </div>
         </Panel>
-        <Panel title="Missing Model Cards">
-          {modelCardCoverage.missingAssets.slice(0, 8).map((asset) => <button key={asset.id} className="flex w-full items-center justify-between gap-4 border-b border-slate-100 pb-2 text-left" onClick={() => navigate(`/assets/${asset.id}`)}><span className="truncate text-slate-700">{asset.name}</span><span className="font-semibold text-slate-950">{asset.type}</span></button>)}
-          {!modelCardCoverage.missingAssets.length && <p className="text-sm text-slate-500">All required assets have Model Cards.</p>}
-        </Panel>
-        <Panel title="Model Performance Metrics">
-          <label className="block text-sm font-medium text-slate-700">
-            Metric Name
-            <select className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-950" value={metricName} onChange={(event) => setMetricName(event.target.value)}>
-              {["accuracy", "f1", "auc", metricName].filter((value, index, values) => values.indexOf(value) === index).map((value) => <option key={value} value={value}>{value}</option>)}
-            </select>
-          </label>
-          <BarChart data={modelMetricReport.metrics.map((metric) => ({ label: metric.slice ? `${metric.asset.name} (${metric.slice})` : metric.asset.name, value: metric.metricValue }))} />
-          {modelMetricReport.aggregate.length ? <p className="text-xs text-slate-500">Groups: {modelMetricReport.aggregate.map((item) => `${item.group} avg ${item.avg.toFixed(2)}`).join("; ")}</p> : null}
+        <Panel title="Missing Model Cards" onViewAll={() => navigate("/ai-systems")}>
+          {modelCardCoverage.missingAssets.length ? (
+            <LinkList
+              items={modelCardCoverage.missingAssets.slice(0, 8).map((asset) => ({
+                id: asset.id,
+                title: asset.name,
+                meta: asset.type,
+                onClick: () => navigate(`/ai-systems/${asset.id}`),
+              }))}
+            />
+          ) : (
+            <EmptyState title="All required AI systems have a Model Card." />
+          )}
         </Panel>
       </div>
 
-      <SectionTitle eyebrow="Search" title="Find assets, projects, and risks" />
-      <div className="mt-4 grid gap-6 lg:grid-cols-2">
-        <Panel title="Search Results">
-          {[...results.assets.map((item) => ({ ...item, type: "Asset", path: `/assets/${item.id}` })), ...results.projects.map((item) => ({ ...item, type: "Project", path: `/projects/${item.id}` }))].map((item) => <button key={`${item.type}-${item.id}`} className="flex w-full items-center justify-between gap-4 border-b border-slate-100 pb-2 text-left" onClick={() => navigate(item.path)}><span className="truncate text-slate-700">{item.name}</span><span className="font-semibold text-slate-950">{item.type}</span></button>)}
-          {results.risks.map((risk) => <button key={`Risk-${risk.id}`} className="flex w-full items-center justify-between gap-4 border-b border-slate-100 pb-2 text-left" onClick={() => navigate(`/risks/${risk.id}`)}><span className="truncate text-slate-700">{risk.description}</span><span className="font-semibold text-slate-950">Risk</span></button>)}
-          {!results.assets.length && !results.projects.length && !results.risks.length && <p className="text-sm text-slate-500">Run a search to see results.</p>}
+      <div className="mt-4">
+        <Panel title="Model performance metrics">
+          <div className="max-w-xs">
+            <Select label="Metric" value={metricName} onChange={(event) => setMetricName(event.target.value)}>
+              {["accuracy", "f1", "auc", metricName]
+                .filter((value, index, values) => values.indexOf(value) === index)
+                .map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+            </Select>
+          </div>
+          <div className="mt-4">
+            <BarChart
+              data={modelMetricReport.metrics.map((metric) => ({
+                label: metric.slice ? `${metric.asset.name} (${metric.slice})` : metric.asset.name,
+                value: metric.metricValue,
+              }))}
+            />
+          </div>
+          {modelMetricReport.aggregate.length ? (
+            <p className="mt-3 text-xs text-subtle">
+              {modelMetricReport.aggregate.map((item) => `${item.group}: avg ${item.avg.toFixed(2)}`).join(" · ")}
+            </p>
+          ) : null}
         </Panel>
       </div>
     </section>
   );
 }
 
-function Metric({ title, value }: { title: string; value: number }) {
-  return <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><p className="text-sm text-slate-500">{title}</p><p className="mt-2 text-3xl font-semibold">{value}</p></div>;
+function Stat({
+  label,
+  value,
+  tone,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  tone?: "high" | "critical";
+  onClick?: () => void;
+}) {
+  const toneClass =
+    tone === "critical" ? "text-severity-critical" : tone === "high" ? "text-severity-high" : "text-text";
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-lg border border-border bg-surface p-4 text-left shadow-card transition-colors hover:border-primary/60"
+    >
+      <p className="text-sm text-subtle">{label}</p>
+      <p className={`mt-1 text-3xl font-semibold tabular-nums ${toneClass}`}>{value}</p>
+    </button>
+  );
 }
 
-function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
-  return <div className="mt-8"><p className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan-700">{eyebrow}</p><h3 className="mt-1 text-2xl font-semibold tracking-tight">{title}</h3></div>;
+function MiniStat({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="rounded-md border border-border bg-surface-alt px-3 py-2">
+      <p className="text-xs text-subtle">{label}</p>
+      <p className="mt-0.5 text-lg font-semibold text-text tabular-nums">{value}</p>
+    </div>
+  );
 }
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
-  return <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><h3 className="font-semibold">{title}</h3><div className="mt-4 space-y-3 text-sm">{children}</div></div>;
+function Panel({ title, children, onViewAll }: { title: string; children: ReactNode; onViewAll?: () => void }) {
+  return (
+    <Card>
+      <CardHeader
+        title={title}
+        action={
+          onViewAll ? (
+            <Button variant="ghost" size="sm" onClick={onViewAll}>
+              View all
+            </Button>
+          ) : undefined
+        }
+      />
+      <CardBody>{children}</CardBody>
+    </Card>
+  );
+}
+
+function LinkList({ items }: { items: Array<{ id: string; title: string; meta: string; onClick: () => void }> }) {
+  return (
+    <div className="space-y-1">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          onClick={item.onClick}
+          className="flex w-full items-center justify-between gap-4 rounded-md px-2 py-1.5 text-left text-sm hover:bg-surface-alt"
+        >
+          <span className="truncate text-text">{item.title}</span>
+          <span className="shrink-0 text-xs font-medium text-subtle">{item.meta}</span>
+        </button>
+      ))}
+    </div>
+  );
 }

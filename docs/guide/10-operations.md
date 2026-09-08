@@ -25,7 +25,7 @@ preflight checks (ports, Node version) and refuses to change anything if they fa
 
 ## API reference
 
-Every endpoint lives under `/api/v1` (e.g. `/api/v1/assets`); `/health` is the
+Every endpoint lives under `/api/v1` (e.g. `/api/v1/ai-systems`); `/health` is the
 one unprefixed exception, kept for infra probes. A generated OpenAPI 3.0
 document plus a browsable Swagger UI are served at `/api/docs` — on by default
 outside production, and opt-in in production via `ENABLE_API_DOCS=true` (set

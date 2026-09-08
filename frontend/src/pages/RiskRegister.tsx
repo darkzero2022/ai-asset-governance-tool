@@ -1,6 +1,11 @@
 import { FormEvent, useEffect, useState } from "react";
 import { RiskHeatmap } from "../components/RiskHeatmap";
 import { RiskTable } from "../components/RiskTable";
+import { PageHeader } from "../components/shell/PageHeader";
+import { Button } from "../components/ui/Button";
+import { Input, Select, TextArea } from "../components/ui/Field";
+import { Combobox } from "../components/ui/Combobox";
+import { Dialog, DialogFooter, DialogHeader, RadixDialog } from "../components/ui/Dialog";
 
 type Asset = { id: string; name: string; dataClassificationTouched?: string | null };
 type FrameworkCategory = { framework: string; categoryId: string; name: string };
@@ -23,6 +28,7 @@ type Risk = {
   euAiActRiskTier?: string | null;
   strideAiCategory?: string | null;
   atlasTechnique?: string | null;
+  atlasMitigations?: string[];
   likelihood: number;
   impact: number;
   inherentRiskScore: number;
@@ -42,6 +48,7 @@ type RiskForm = {
   euAiActRiskTier: string;
   strideAiCategory: string;
   atlasTechnique: string;
+  atlasMitigations: string[];
   description: string;
   likelihood: number;
   impact: number;
@@ -66,21 +73,29 @@ type Props = {
   assets: Asset[];
   categories: FrameworkCategory[];
   atlasTechniques: string[];
+  atlasMitigations: string[];
   filters: Filters;
   riskForm: RiskForm;
   editingRiskId: string | null;
+  dialogOpen: boolean;
   selectedRiskIds: string[];
   label: (value: string) => string;
   onFiltersChange: (filters: Filters) => void;
   onRiskFormChange: (form: RiskForm) => void;
   onSubmitRisk: (event: FormEvent) => void;
   onNewRisk: () => void;
+  onDialogOpenChange: (open: boolean) => void;
   onEditRisk: (risk: Risk) => void;
   onOpenRisk: (id: string) => void;
   onToggleRisk: (id: string) => void;
   onBulkUpdate: (status: string) => void;
   canManage: boolean;
+  isLoading?: boolean;
 };
+
+function SectionLabel({ children }: { children: string }) {
+  return <p className="text-xs font-semibold uppercase tracking-wide text-subtle">{children}</p>;
+}
 
 export default function RiskRegister(props: Props) {
   const [heatmapFilter, setHeatmapFilter] = useState<{ likelihood: number; impact: number } | null>(null);
@@ -94,70 +109,161 @@ export default function RiskRegister(props: Props) {
   const selectedAsset = props.assets.find((asset) => asset.id === props.riskForm.assetId);
   const suggestedEuTier = suggestEuAiActTier(selectedAsset, props.riskForm.sourceCategoryId);
   const updateFilter = (key: keyof Filters, value: string) => props.onFiltersChange({ ...props.filters, [key]: value });
-  const updateForm = (key: keyof RiskForm, value: string | number) => props.onRiskFormChange({ ...props.riskForm, [key]: value });
+  const updateForm = (key: keyof RiskForm, value: string | number | string[]) => props.onRiskFormChange({ ...props.riskForm, [key]: value });
+
+  function toggleMitigation(name: string) {
+    const current = props.riskForm.atlasMitigations;
+    updateForm("atlasMitigations", current.includes(name) ? current.filter((item) => item !== name) : [...current, name]);
+  }
 
   useEffect(() => {
     if (!props.riskForm.euAiActRiskTier && suggestedEuTier) {
       props.onRiskFormChange({ ...props.riskForm, euAiActRiskTier: suggestedEuTier });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suggestedEuTier, props.riskForm.assetId, props.riskForm.sourceCategoryId]);
 
   return (
-    <section className="mx-auto grid max-w-7xl gap-6 px-6 py-8 xl:grid-cols-[1.2fr_0.8fr]">
-      <div className="space-y-6">
-        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Risk Register</h2>
-              <p className="mt-1 text-sm text-slate-500">Review, sort, and bulk-update portfolio risks.</p>
-            </div>
-            {props.canManage && <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={props.onNewRisk}>New risk</button>}
+    <section className="mx-auto max-w-7xl px-6 py-6">
+      <PageHeader
+        title="Risk Register"
+        description="Threats mapped to NIST AI RMF / OWASP, STRIDE-AI, and MITRE ATLAS — with ATLAS-mapped remediation."
+        action={props.canManage && <Button variant="primary" onClick={props.onNewRisk}>New risk</Button>}
+        filters={
+          <div className="grid gap-3 md:grid-cols-3">
+            <Select label="Risk Status" value={props.filters.riskStatus} onChange={(event) => updateFilter("riskStatus", event.target.value)}>
+              <option value="">All</option>
+              {["OPEN", "IN_PROGRESS", "MITIGATED", "ACCEPTED"].map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
+            </Select>
+            <Select label="Framework" value={props.filters.sourceFramework} onChange={(event) => updateFilter("sourceFramework", event.target.value)}>
+              <option value="">All</option>
+              {["NIST_AI_RMF", "EU_AI_ACT", "OWASP_LLM_TOP10"].map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
+            </Select>
+            <Select label="STRIDE-AI" value={strideFilter} onChange={(event) => setStrideFilter(event.target.value)}>
+              <option value="">All</option>
+              {STRIDE_AI_CATEGORIES.map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
+            </Select>
           </div>
+        }
+      />
 
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <Select label="Risk Status" value={props.filters.riskStatus} options={["", "OPEN", "IN_PROGRESS", "MITIGATED", "ACCEPTED"]} onChange={(value) => updateFilter("riskStatus", value)} labelValue={props.label} />
-            <Select label="Framework" value={props.filters.sourceFramework} options={["", "NIST_AI_RMF", "EU_AI_ACT", "OWASP_LLM_TOP10"]} onChange={(value) => updateFilter("sourceFramework", value)} labelValue={props.label} />
-            <Select label="STRIDE-AI" value={strideFilter} options={["", ...STRIDE_AI_CATEGORIES]} onChange={setStrideFilter} labelValue={props.label} />
-          </div>
-
-          {props.canManage && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button className="rounded-lg bg-cyan-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedRiskIds.length} onClick={() => props.onBulkUpdate("IN_PROGRESS")}>Bulk In Progress</button>
-              <button className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedRiskIds.length} onClick={() => props.onBulkUpdate("MITIGATED")}>Bulk Mitigated</button>
-            </div>
-          )}
-
-          {(heatmapFilter || strideFilter) && <button className="mt-4 text-sm font-semibold text-cyan-700" onClick={() => { setHeatmapFilter(null); setStrideFilter(""); }}>Clear table filters</button>}
-          <RiskHeatmap risks={props.risks} onCellClick={setHeatmapFilter} />
-          <RiskTable risks={displayedRisks} selectedIds={props.selectedRiskIds} label={props.label} onToggle={props.onToggleRisk} onEdit={props.canManage ? props.onEditRisk : undefined} onOpen={props.onOpenRisk} />
-        </div>
+      <div className="space-y-4">
+        {(heatmapFilter || strideFilter) && (
+          <Button variant="ghost" size="sm" onClick={() => { setHeatmapFilter(null); setStrideFilter(""); }}>
+            Clear table filters
+          </Button>
+        )}
+        <RiskHeatmap risks={props.risks} onCellClick={setHeatmapFilter} />
+        <RiskTable
+          risks={displayedRisks}
+          selectedIds={props.selectedRiskIds}
+          label={props.label}
+          onToggle={props.onToggleRisk}
+          onEdit={props.canManage ? props.onEditRisk : undefined}
+          onOpen={props.onOpenRisk}
+          bulkActions={
+            <>
+              <Button variant="secondary" size="sm" onClick={() => props.onBulkUpdate("IN_PROGRESS")}>Mark In Progress</Button>
+              <Button variant="primary" size="sm" onClick={() => props.onBulkUpdate("MITIGATED")}>Mark Mitigated</Button>
+            </>
+          }
+        />
       </div>
 
       {props.canManage && (
-      <form onSubmit={props.onSubmitRisk} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-        <h2 className="text-xl font-semibold">{props.editingRiskId ? "Edit Risk" : "Create Risk"}</h2>
-        <div className="mt-4 grid gap-4">
-          <Select label="Asset" value={props.riskForm.assetId} options={props.assets.map((asset) => asset.id)} optionLabels={Object.fromEntries(props.assets.map((asset) => [asset.id, asset.name]))} onChange={(value) => updateForm("assetId", value)} labelValue={props.label} />
-          <Select label="Framework" value={props.riskForm.sourceFramework} options={["NIST_AI_RMF", "EU_AI_ACT", "OWASP_LLM_TOP10"]} onChange={(value) => updateForm("sourceFramework", value)} labelValue={props.label} />
-          <Select label="Category" value={props.riskForm.sourceCategoryId} options={filteredCategories.map((category) => category.categoryId)} optionLabels={Object.fromEntries(filteredCategories.map((category) => [category.categoryId, `${category.categoryId} - ${category.name}`]))} onChange={(value) => updateForm("sourceCategoryId", value)} labelValue={props.label} />
-          <Select label="EU AI Act Tier" value={props.riskForm.euAiActRiskTier} options={["", "UNACCEPTABLE", "HIGH", "LIMITED", "MINIMAL"]} optionLabels={{ "": "Not applicable" }} onChange={(value) => updateForm("euAiActRiskTier", value)} labelValue={props.label} />
-          {suggestedEuTier && <p className="-mt-2 text-xs text-slate-500">Suggested tier: {props.label(suggestedEuTier)}. Confirm or override before saving.</p>}
-          <Select label="STRIDE-AI Category" value={props.riskForm.strideAiCategory} options={["", ...STRIDE_AI_CATEGORIES]} optionLabels={{ "": "Auto from OWASP category" }} onChange={(value) => updateForm("strideAiCategory", value)} labelValue={props.label} />
-          <Select label="MITRE ATLAS Technique" value={props.riskForm.atlasTechnique} options={["", ...props.atlasTechniques]} optionLabels={Object.fromEntries([["", "Auto from OWASP category"], ...props.atlasTechniques.map((technique) => [technique, technique])])} onChange={(value) => updateForm("atlasTechnique", value)} labelValue={props.label} />
-          {props.riskForm.sourceFramework === "OWASP_LLM_TOP10" && !props.riskForm.strideAiCategory && !props.riskForm.atlasTechnique && (
-            <p className="-mt-2 text-xs text-slate-500">STRIDE-AI and ATLAS will be auto-filled from {props.riskForm.sourceCategoryId} on save. Pick a value to override.</p>
-          )}
-          <Select label="Likelihood" value={String(props.riskForm.likelihood)} options={["1", "2", "3", "4", "5"]} onChange={(value) => updateForm("likelihood", Number(value))} labelValue={props.label} />
-          <Select label="Impact" value={String(props.riskForm.impact)} options={["1", "2", "3", "4", "5"]} onChange={(value) => updateForm("impact", Number(value))} labelValue={props.label} />
-          <Field label="Residual Risk Score" value={props.riskForm.residualRiskScore} onChange={(value) => updateForm("residualRiskScore", value)} />
-          <Select label="Status" value={props.riskForm.status} options={["OPEN", "IN_PROGRESS", "MITIGATED", "ACCEPTED"]} onChange={(value) => updateForm("status", value)} labelValue={props.label} />
-          <TextArea label="Description" value={props.riskForm.description} onChange={(value) => updateForm("description", value)} />
-          <TextArea label="Treatment Plan" value={props.riskForm.treatmentPlan} onChange={(value) => updateForm("treatmentPlan", value)} />
-          <Field label="Owner" value={props.riskForm.owner} onChange={(value) => updateForm("owner", value)} />
-          <Field label="Due Date" type="date" value={props.riskForm.dueDate} onChange={(value) => updateForm("dueDate", value)} />
-        </div>
-        <button className="mt-5 rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.riskForm.assetId}>{props.editingRiskId ? "Save risk" : "Create risk"}</button>
-      </form>
+        <Dialog open={props.dialogOpen} onOpenChange={props.onDialogOpenChange} size="lg">
+          <DialogHeader
+            title={props.editingRiskId ? "Edit risk" : "New risk"}
+            description="Classify the threat against NIST / OWASP, STRIDE-AI, and MITRE ATLAS, then map the remediation to ATLAS mitigations."
+          />
+          <form onSubmit={props.onSubmitRisk}>
+            <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1">
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-text">AI System</label>
+                  <Combobox value={props.riskForm.assetId} onChange={(value) => updateForm("assetId", value)} options={props.assets.map((asset) => ({ value: asset.id, label: asset.name }))} placeholder="Select AI system" />
+                </div>
+                <TextArea label="Description" value={props.riskForm.description} onChange={(event) => updateForm("description", event.target.value)} />
+              </div>
+
+              <div className="space-y-3 rounded-md border border-border p-3">
+                <SectionLabel>Threat classification</SectionLabel>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Select label="Framework (NIST AI RMF / OWASP / EU AI Act)" value={props.riskForm.sourceFramework} onChange={(event) => updateForm("sourceFramework", event.target.value)}>
+                    {["NIST_AI_RMF", "EU_AI_ACT", "OWASP_LLM_TOP10"].map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
+                  </Select>
+                  <Select label="Category" value={props.riskForm.sourceCategoryId} onChange={(event) => updateForm("sourceCategoryId", event.target.value)}>
+                    {filteredCategories.map((category) => <option key={category.categoryId} value={category.categoryId}>{category.categoryId} - {category.name}</option>)}
+                  </Select>
+                  <Select label="EU AI Act Tier" value={props.riskForm.euAiActRiskTier} onChange={(event) => updateForm("euAiActRiskTier", event.target.value)}>
+                    <option value="">Not applicable</option>
+                    {["UNACCEPTABLE", "HIGH", "LIMITED", "MINIMAL"].map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
+                  </Select>
+                  <Select label="STRIDE-AI Category" value={props.riskForm.strideAiCategory} onChange={(event) => updateForm("strideAiCategory", event.target.value)}>
+                    <option value="">Auto from OWASP category</option>
+                    {STRIDE_AI_CATEGORIES.map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
+                  </Select>
+                  <Select label="MITRE ATLAS Technique" value={props.riskForm.atlasTechnique} onChange={(event) => updateForm("atlasTechnique", event.target.value)} className="sm:col-span-2">
+                    <option value="">Auto from OWASP category</option>
+                    {props.atlasTechniques.map((technique) => <option key={technique} value={technique}>{technique}</option>)}
+                  </Select>
+                </div>
+                {suggestedEuTier && <p className="text-xs text-subtle">Suggested EU AI Act tier: {props.label(suggestedEuTier)}. Confirm or override before saving.</p>}
+                {props.riskForm.sourceFramework === "OWASP_LLM_TOP10" && !props.riskForm.strideAiCategory && !props.riskForm.atlasTechnique && (
+                  <p className="text-xs text-subtle">STRIDE-AI and ATLAS technique will be auto-filled from {props.riskForm.sourceCategoryId} on save. Pick a value to override.</p>
+                )}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Select label="Likelihood" value={String(props.riskForm.likelihood)} onChange={(event) => updateForm("likelihood", Number(event.target.value))}>
+                  {["1", "2", "3", "4", "5"].map((option) => <option key={option} value={option}>{option}</option>)}
+                </Select>
+                <Select label="Impact" value={String(props.riskForm.impact)} onChange={(event) => updateForm("impact", Number(event.target.value))}>
+                  {["1", "2", "3", "4", "5"].map((option) => <option key={option} value={option}>{option}</option>)}
+                </Select>
+                <Select label="Status" value={props.riskForm.status} onChange={(event) => updateForm("status", event.target.value)}>
+                  {["OPEN", "IN_PROGRESS", "MITIGATED", "ACCEPTED"].map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
+                </Select>
+              </div>
+
+              <div className="space-y-3 rounded-md border border-border p-3">
+                <SectionLabel>Remediation action plan</SectionLabel>
+                <TextArea label="Treatment plan" value={props.riskForm.treatmentPlan} onChange={(event) => updateForm("treatmentPlan", event.target.value)} />
+                <div>
+                  <p className="mb-1.5 text-sm font-medium text-text">MITRE ATLAS mitigations</p>
+                  <div className="max-h-44 space-y-1 overflow-y-auto rounded-md border border-border bg-surface-alt p-2">
+                    {props.atlasMitigations.map((name) => (
+                      <label key={name} className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 text-sm text-text hover:bg-surface">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={props.riskForm.atlasMitigations.includes(name)}
+                          onChange={() => toggleMitigation(name)}
+                        />
+                        <span>{name}</span>
+                      </label>
+                    ))}
+                    {!props.atlasMitigations.length && <p className="px-1 text-sm text-subtle">Mitigation catalogue unavailable.</p>}
+                  </div>
+                  {props.riskForm.atlasMitigations.length > 0 && (
+                    <p className="mt-1 text-xs text-subtle">{props.riskForm.atlasMitigations.length} selected</p>
+                  )}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Input label="Residual risk score" value={props.riskForm.residualRiskScore} onChange={(event) => updateForm("residualRiskScore", event.target.value)} />
+                  <Input label="Owner" value={props.riskForm.owner} onChange={(event) => updateForm("owner", event.target.value)} />
+                  <Input label="Due date" type="date" value={props.riskForm.dueDate} onChange={(event) => updateForm("dueDate", event.target.value)} />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <RadixDialog.Close asChild>
+                <Button type="button" variant="secondary" size="sm">Cancel</Button>
+              </RadixDialog.Close>
+              <Button type="submit" variant="primary" size="sm" disabled={!props.riskForm.assetId}>{props.editingRiskId ? "Save risk" : "Create risk"}</Button>
+            </DialogFooter>
+          </form>
+        </Dialog>
       )}
     </section>
   );
@@ -173,33 +279,4 @@ function suggestEuAiActTier(asset: Asset | undefined, categoryId: string) {
   if (/(biometric|health|medical|criminal|employment|education|credit|sensitive|protected)/.test(data)) return "HIGH";
   if (/(personal|customer|pii|identifier)/.test(data)) return "LIMITED";
   return "";
-}
-
-function Field(props: { label: string; value: string; type?: string; onChange: (value: string) => void }) {
-  return (
-    <label className="block text-sm font-medium text-slate-700">
-      {props.label}
-      <input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-950" type={props.type ?? "text"} value={props.value} onChange={(event) => props.onChange(event.target.value)} />
-    </label>
-  );
-}
-
-function TextArea(props: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <label className="block text-sm font-medium text-slate-700">
-      {props.label}
-      <textarea className="mt-1 min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-950" value={props.value} onChange={(event) => props.onChange(event.target.value)} />
-    </label>
-  );
-}
-
-function Select(props: { label: string; value: string; options: string[]; optionLabels?: Record<string, string>; onChange: (value: string) => void; labelValue: (value: string) => string }) {
-  return (
-    <label className="block text-sm font-medium text-slate-700">
-      {props.label}
-      <select className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-950" value={props.value} onChange={(event) => props.onChange(event.target.value)}>
-        {props.options.map((option) => <option key={option} value={option}>{props.optionLabels?.[option] ?? (option ? props.labelValue(option) : "All")}</option>)}
-      </select>
-    </label>
-  );
 }

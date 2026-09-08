@@ -43,6 +43,16 @@ router.get("/reference/atlas-techniques", requireAuth, async (_req, res, next) =
   }
 });
 
+router.get("/reference/atlas-mitigations", requireAuth, async (_req, res, next) => {
+  try {
+    // Fixed reference set (MITRE ATLAS mitigations, for Risk.atlasMitigations).
+    const mitigations = await prisma.atlasMitigationReference.findMany({ orderBy: { name: "asc" } });
+    res.json({ mitigations });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/reference/stride-atlas-map", requireAuth, async (_req, res, next) => {
   try {
     // Fixed reference set (OWASP LLM Top 10 -> STRIDE-AI/ATLAS).

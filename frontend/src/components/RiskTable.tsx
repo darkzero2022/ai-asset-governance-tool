@@ -1,6 +1,9 @@
-import { useMemo, useState } from "react";
-import { Pagination } from "./Pagination";
-import { SeverityBadge } from "./SeverityBadge";
+import type { ReactNode } from "react";
+import { Eye, Pencil } from "lucide-react";
+import type { Column } from "./DataGrid";
+import { DataGrid } from "./DataGrid";
+import { SeverityBadge } from "./ui/Badge";
+import { DropdownMenuItem } from "./ui/DropdownMenu";
 
 type Risk = {
   id: string;
@@ -23,115 +26,18 @@ type Risk = {
   controlLinks?: Array<unknown>;
 };
 
-type SortKey = "severity" | "framework" | "strideAi" | "status" | "dueDate" | "assets" | "controls" | "score";
-
-const severityOrder: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
-
 type RiskTableProps = {
   risks: Risk[];
   selectedIds: string[];
   label: (value: string) => string;
   onToggle: (id: string) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- callers pass their own, slightly different local Risk shape
   onEdit?: (risk: any) => void;
   onOpen?: (id: string) => void;
+  bulkActions?: ReactNode;
   pagination?: { skip: number; take: number; total: number };
   onPageChange?: (next: { skip: number; take: number }) => void;
 };
-
-export function RiskTable({ risks, selectedIds, label, onToggle, onEdit, onOpen, pagination, onPageChange }: RiskTableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>("score");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-
-  const sortedRisks = useMemo(() => {
-    return [...risks].sort((left, right) => {
-      const leftValue = sortValue(left, sortKey);
-      const rightValue = sortValue(right, sortKey);
-      const direction = sortDirection === "asc" ? 1 : -1;
-
-      if (leftValue < rightValue) return -1 * direction;
-      if (leftValue > rightValue) return 1 * direction;
-      return 0;
-    });
-  }, [risks, sortDirection, sortKey]);
-
-  function changeSort(nextKey: SortKey) {
-    if (nextKey === sortKey) {
-      setSortDirection((current) => current === "asc" ? "desc" : "asc");
-      return;
-    }
-
-    setSortKey(nextKey);
-    setSortDirection("desc");
-  }
-
-  return (
-    <div className="mt-5 overflow-x-auto">
-      <table className="w-full min-w-[1040px] text-left text-sm">
-        <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-          <tr>
-            {onEdit && <th className="py-3 pr-3">Select</th>}
-            <SortableHeader label="Severity" active={sortKey === "severity"} direction={sortDirection} onClick={() => changeSort("severity")} />
-            <SortableHeader label="Framework" active={sortKey === "framework"} direction={sortDirection} onClick={() => changeSort("framework")} />
-            <SortableHeader label="STRIDE-AI / ATLAS" active={sortKey === "strideAi"} direction={sortDirection} onClick={() => changeSort("strideAi")} />
-            <SortableHeader label="Status" active={sortKey === "status"} direction={sortDirection} onClick={() => changeSort("status")} />
-            <SortableHeader label="Due Date" active={sortKey === "dueDate"} direction={sortDirection} onClick={() => changeSort("dueDate")} />
-            <SortableHeader label="Assets" active={sortKey === "assets"} direction={sortDirection} onClick={() => changeSort("assets")} />
-            <SortableHeader label="Controls" active={sortKey === "controls"} direction={sortDirection} onClick={() => changeSort("controls")} />
-            <SortableHeader label="Score" active={sortKey === "score"} direction={sortDirection} onClick={() => changeSort("score")} />
-            <th className="py-3">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {sortedRisks.map((risk) => (
-            <tr key={risk.id} className="align-top">
-              {onEdit && <td className="py-4 pr-3"><input type="checkbox" checked={selectedIds.includes(risk.id)} onChange={() => onToggle(risk.id)} /></td>}
-              <td className="py-4 pr-3"><SeverityBadge severity={risk.severity} /></td>
-              <td className="py-4 pr-3"><span className="font-medium text-slate-900">{risk.sourceFramework}</span><span className="block text-xs text-slate-500">{risk.sourceCategoryId}</span></td>
-              <td className="py-4 pr-3">
-                {risk.strideAiCategory ? <span className="font-medium text-slate-900">{label(risk.strideAiCategory)}</span> : <span className="text-slate-400">Not mapped</span>}
-                <span className="block text-xs text-slate-500">{risk.atlasTechnique ?? "No ATLAS technique"}</span>
-              </td>
-              <td className="py-4 pr-3 text-slate-700">{label(risk.status)}</td>
-              <td className="py-4 pr-3 text-slate-700">{risk.dueDate ? new Date(risk.dueDate).toLocaleDateString() : "Not set"}</td>
-              <td className="py-4 pr-3 text-slate-700">{linkedAssetCount(risk)}</td>
-              <td className="py-4 pr-3 text-slate-700">{linkedControlCount(risk)}</td>
-              <td className="py-4 pr-3"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-900">{risk.inherentRiskScore}</span></td>
-              <td className="max-w-sm py-4">
-                <p className="mb-1 line-clamp-2 text-slate-700">{risk.description}</p>
-                <p className="mb-2 text-xs text-slate-500">{risk.asset?.name ?? "Unlinked risk"}</p>
-                {onOpen && <button className="mr-3 text-sm font-semibold text-cyan-700" onClick={() => onOpen(risk.id)}>View risk</button>}
-                {onEdit && <button className="text-sm font-semibold text-cyan-700" onClick={() => onEdit(risk)}>Edit risk</button>}
-              </td>
-            </tr>
-          ))}
-          {sortedRisks.length === 0 && <tr><td className="py-8 text-center text-slate-500" colSpan={10}>No risks match the current filters.</td></tr>}
-        </tbody>
-      </table>
-      {pagination && onPageChange && <Pagination pagination={pagination} onChange={onPageChange} />}
-    </div>
-  );
-}
-
-function SortableHeader(props: { label: string; active: boolean; direction: "asc" | "desc"; onClick: () => void }) {
-  return (
-    <th className="py-3 pr-3">
-      <button className="font-semibold hover:text-slate-900" onClick={props.onClick}>
-        {props.label}{props.active ? ` ${props.direction === "asc" ? "up" : "down"}` : ""}
-      </button>
-    </th>
-  );
-}
-
-function sortValue(risk: Risk, sortKey: SortKey) {
-  if (sortKey === "severity") return severityOrder[risk.severity ?? ""] ?? 0;
-  if (sortKey === "framework") return `${risk.sourceFramework}:${risk.sourceCategoryId}`;
-  if (sortKey === "strideAi") return `${risk.strideAiCategory ?? "~"}:${risk.atlasTechnique ?? "~"}`;
-  if (sortKey === "status") return risk.status;
-  if (sortKey === "dueDate") return risk.dueDate ? new Date(risk.dueDate).getTime() : 0;
-  if (sortKey === "assets") return linkedAssetCount(risk);
-  if (sortKey === "controls") return linkedControlCount(risk);
-  return risk.inherentRiskScore;
-}
 
 function linkedAssetCount(risk: Risk) {
   return risk.assets?.length ?? (risk.asset ? 1 : 0);
@@ -139,4 +45,88 @@ function linkedAssetCount(risk: Risk) {
 
 function linkedControlCount(risk: Risk) {
   return risk.controls?.length ?? risk.controlLinks?.length ?? 0;
+}
+
+export function RiskTable({ risks, selectedIds, label, onToggle, onEdit, onOpen, bulkActions, pagination, onPageChange }: RiskTableProps) {
+  const columns: Column<Risk>[] = [
+    { key: "severity", header: "Severity", sortValue: (risk) => risk.severity ?? "", render: (risk) => <SeverityBadge severity={risk.severity} /> },
+    {
+      key: "framework",
+      header: "Framework",
+      sortValue: (risk) => `${risk.sourceFramework}:${risk.sourceCategoryId}`,
+      render: (risk) => (
+        <div>
+          <span className="font-medium text-text">{risk.sourceFramework}</span>
+          <span className="block text-xs text-subtle">{risk.sourceCategoryId}</span>
+        </div>
+      ),
+    },
+    {
+      key: "strideAi",
+      header: "STRIDE-AI / ATLAS",
+      sortValue: (risk) => `${risk.strideAiCategory ?? "~"}:${risk.atlasTechnique ?? "~"}`,
+      render: (risk) => (
+        <div>
+          {risk.strideAiCategory ? <span className="font-medium text-text">{label(risk.strideAiCategory)}</span> : <span className="text-disabled">Not mapped</span>}
+          <span className="block text-xs text-subtle">{risk.atlasTechnique ?? "No ATLAS technique"}</span>
+        </div>
+      ),
+    },
+    { key: "status", header: "Status", sortValue: (risk) => risk.status, render: (risk) => label(risk.status) },
+    {
+      key: "dueDate",
+      header: "Due Date",
+      sortValue: (risk) => (risk.dueDate ? new Date(risk.dueDate).getTime() : 0),
+      render: (risk) => (risk.dueDate ? new Date(risk.dueDate).toLocaleDateString() : "Not set"),
+    },
+    { key: "assets", header: "Assets", align: "right", sortValue: linkedAssetCount, render: linkedAssetCount },
+    { key: "controls", header: "Controls", align: "right", sortValue: linkedControlCount, render: linkedControlCount },
+    {
+      key: "score",
+      header: "Score",
+      align: "right",
+      sortValue: (risk) => risk.inherentRiskScore,
+      render: (risk) => <span className="rounded-full bg-surface-alt px-2 py-0.5 text-xs font-bold text-text">{risk.inherentRiskScore}</span>,
+    },
+    {
+      key: "description",
+      header: "Description",
+      render: (risk) => (
+        <div className="max-w-sm">
+          <p className="line-clamp-2 text-text">{risk.description}</p>
+          <p className="text-xs text-subtle">{risk.asset?.name ?? "Unlinked risk"}</p>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <DataGrid
+      columns={columns}
+      rows={risks}
+      rowKey={(risk) => risk.id}
+      defaultSortKey="score"
+      emptyTitle="No risks match the current filters."
+      onRowClick={onOpen ? (risk) => onOpen(risk.id) : undefined}
+      selectedIds={onEdit ? selectedIds : undefined}
+      onToggleSelect={onEdit ? onToggle : undefined}
+      bulkActions={bulkActions}
+      pagination={pagination}
+      onPageChange={onPageChange}
+      rowActions={(risk) => (
+        <>
+          {onOpen && (
+            <DropdownMenuItem onSelect={() => onOpen(risk.id)}>
+              <Eye className="h-3.5 w-3.5" /> View risk
+            </DropdownMenuItem>
+          )}
+          {onEdit && (
+            <DropdownMenuItem onSelect={() => onEdit(risk)}>
+              <Pencil className="h-3.5 w-3.5" /> Edit risk
+            </DropdownMenuItem>
+          )}
+        </>
+      )}
+    />
+  );
 }

@@ -9,7 +9,7 @@ import { buildSpdxDocument } from "../spdx.js";
 
 const router = express.Router();
 
-router.get("/assets/:id/export/cyclonedx", requireAuth, async (req, res, next) => {
+router.get("/ai-systems/:id/export/cyclonedx", requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id);
     const asset = await prisma.aIAsset.findUnique({ where: { id }, include: { modelCard: { include: { metrics: true } }, riskLinks: { include: { risk: { include: { controlLinks: { include: { control: true } } } } } } } });
@@ -31,7 +31,7 @@ router.get("/assets/:id/export/cyclonedx", requireAuth, async (req, res, next) =
   }
 });
 
-router.get("/assets/:id/export/spdx", requireAuth, async (req, res, next) => {
+router.get("/ai-systems/:id/export/spdx", requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id);
     const asset = await prisma.aIAsset.findUnique({ where: { id } });

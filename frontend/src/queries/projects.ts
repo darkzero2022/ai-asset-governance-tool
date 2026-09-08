@@ -57,11 +57,11 @@ export function useProjectAssetLinkMutations(token: string, projectId: string) {
     queryClient.invalidateQueries({ queryKey: ["assets"] });
   };
   const link = useMutation({
-    mutationFn: (assetId: string) => apiFetch(`/projects/${projectId}/assets/${assetId}`, { method: "POST", token }),
+    mutationFn: (assetId: string) => apiFetch(`/projects/${projectId}/ai-systems/${assetId}`, { method: "POST", token }),
     onSuccess: invalidate,
   });
   const unlink = useMutation({
-    mutationFn: (assetId: string) => apiFetch(`/projects/${projectId}/assets/${assetId}`, { method: "DELETE", token }),
+    mutationFn: (assetId: string) => apiFetch(`/projects/${projectId}/ai-systems/${assetId}`, { method: "DELETE", token }),
     onSuccess: invalidate,
   });
   return { link, unlink };

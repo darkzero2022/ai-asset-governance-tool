@@ -17,7 +17,7 @@ import { HIGH_SEVERITY_MIN_SCORE } from "../riskScoring.js";
 
 const router = express.Router();
 
-router.get("/assets", requireAuth, async (req, res, next) => {
+router.get("/ai-systems", requireAuth, async (req, res, next) => {
   try {
     const { status, type, hostingModel, networkDependency } = req.query;
     const page = pagination(req.query);
@@ -41,7 +41,7 @@ router.get("/assets", requireAuth, async (req, res, next) => {
   }
 });
 
-router.post("/assets", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.post("/ai-systems", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const body = assetSchema.parse(req.body);
     const asset = await prisma.aIAsset.create({ data: { ...body, createdById: req.user!.id } });
@@ -52,7 +52,7 @@ router.post("/assets", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (r
   }
 });
 
-router.post("/assets/import-url", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.post("/ai-systems/import-url", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const body = importUrlSchema.parse(req.body);
     const { finalUrl, html } = await fetchImportHtml(body.sourceUrl);
@@ -66,7 +66,7 @@ router.post("/assets/import-url", requireAuth, requireRole("ADMIN", "RISK_OWNER"
   }
 });
 
-router.get("/assets/export/csv", requireAuth, async (req, res, next) => {
+router.get("/ai-systems/export/csv", requireAuth, async (req, res, next) => {
   try {
     const { status, type, hostingModel, networkDependency } = req.query;
     const assets = await prisma.aIAsset.findMany({
@@ -92,7 +92,7 @@ router.get("/assets/export/csv", requireAuth, async (req, res, next) => {
   }
 });
 
-router.get("/assets/:id", requireAuth, async (req, res, next) => {
+router.get("/ai-systems/:id", requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id);
     const asset = await prisma.aIAsset.findUnique({
@@ -118,7 +118,7 @@ router.get("/assets/:id", requireAuth, async (req, res, next) => {
   }
 });
 
-router.get("/assets/:id/model-card", requireAuth, async (req, res, next) => {
+router.get("/ai-systems/:id/model-card", requireAuth, async (req, res, next) => {
   try {
     const assetId = String(req.params.id);
     const asset = await prisma.aIAsset.findUnique({ where: { id: assetId }, select: { id: true } });
@@ -134,7 +134,7 @@ router.get("/assets/:id/model-card", requireAuth, async (req, res, next) => {
   }
 });
 
-router.put("/assets/:id/model-card", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.put("/ai-systems/:id/model-card", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const assetId = String(req.params.id);
     const { expectedUpdatedAt, ...body } = modelCardUpdateSchema.parse(req.body);
@@ -161,7 +161,7 @@ router.put("/assets/:id/model-card", requireAuth, requireRole("ADMIN", "RISK_OWN
   }
 });
 
-router.post("/assets/:id/model-card/metrics", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.post("/ai-systems/:id/model-card/metrics", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const assetId = String(req.params.id);
     const body = modelCardMetricSchema.parse(req.body);
@@ -188,7 +188,7 @@ router.post("/assets/:id/model-card/metrics", requireAuth, requireRole("ADMIN", 
   }
 });
 
-router.put("/assets/:id/model-card/metrics/:metricId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.put("/ai-systems/:id/model-card/metrics/:metricId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const assetId = String(req.params.id);
     const metricId = String(req.params.metricId);
@@ -210,7 +210,7 @@ router.put("/assets/:id/model-card/metrics/:metricId", requireAuth, requireRole(
   }
 });
 
-router.delete("/assets/:id/model-card/metrics/:metricId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.delete("/ai-systems/:id/model-card/metrics/:metricId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const assetId = String(req.params.id);
     const metricId = String(req.params.metricId);
@@ -223,7 +223,7 @@ router.delete("/assets/:id/model-card/metrics/:metricId", requireAuth, requireRo
   }
 });
 
-router.put("/assets/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.put("/ai-systems/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const id = String(req.params.id);
     const { expectedUpdatedAt, ...body } = assetUpdateSchema.parse(req.body);
@@ -243,7 +243,7 @@ router.put("/assets/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async
   }
 });
 
-router.post("/assets/:id/import-url", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.post("/ai-systems/:id/import-url", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const id = String(req.params.id);
     const body = importUrlSchema.parse(req.body);
@@ -268,7 +268,7 @@ router.post("/assets/:id/import-url", requireAuth, requireRole("ADMIN", "RISK_OW
   }
 });
 
-router.delete("/assets/:id", requireAuth, requireRole("ADMIN"), async (req, res, next) => {
+router.delete("/ai-systems/:id", requireAuth, requireRole("ADMIN"), async (req, res, next) => {
   try {
     const id = String(req.params.id);
     const before = await prisma.aIAsset.findUniqueOrThrow({ where: { id } });
@@ -280,7 +280,7 @@ router.delete("/assets/:id", requireAuth, requireRole("ADMIN"), async (req, res,
   }
 });
 
-router.post("/assets/:id/transition", requireAuth, async (req, res, next) => {
+router.post("/ai-systems/:id/transition", requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id);
     const body = z.object({ toStatus: z.nativeEnum(AssetStatus), comments: z.string().optional().nullable() }).parse(req.body);
@@ -348,7 +348,7 @@ router.post("/assets/:id/transition", requireAuth, async (req, res, next) => {
   }
 });
 
-router.get("/assets/:id/projects", requireAuth, async (req, res, next) => {
+router.get("/ai-systems/:id/projects", requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id);
     // Bounded: the projects a single asset is linked to.
@@ -359,7 +359,7 @@ router.get("/assets/:id/projects", requireAuth, async (req, res, next) => {
   }
 });
 
-router.post("/assets/:assetId/risks/:riskId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.post("/ai-systems/:assetId/risks/:riskId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const assetId = String(req.params.assetId);
     const riskId = String(req.params.riskId);
@@ -370,7 +370,7 @@ router.post("/assets/:assetId/risks/:riskId", requireAuth, requireRole("ADMIN", 
   }
 });
 
-router.delete("/assets/:assetId/risks/:riskId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.delete("/ai-systems/:assetId/risks/:riskId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const assetId = String(req.params.assetId);
     const riskId = String(req.params.riskId);
@@ -382,7 +382,7 @@ router.delete("/assets/:assetId/risks/:riskId", requireAuth, requireRole("ADMIN"
   }
 });
 
-router.post("/assets/:parentAssetId/dependencies/:childAssetId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.post("/ai-systems/:parentAssetId/dependencies/:childAssetId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const parentAssetId = String(req.params.parentAssetId);
     const childAssetId = String(req.params.childAssetId);
@@ -393,7 +393,7 @@ router.post("/assets/:parentAssetId/dependencies/:childAssetId", requireAuth, re
   }
 });
 
-router.delete("/assets/:parentAssetId/dependencies/:childAssetId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.delete("/ai-systems/:parentAssetId/dependencies/:childAssetId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const parentAssetId = String(req.params.parentAssetId);
     const childAssetId = String(req.params.childAssetId);
@@ -405,7 +405,7 @@ router.delete("/assets/:parentAssetId/dependencies/:childAssetId", requireAuth, 
   }
 });
 
-router.get("/assets/:id/recertification", requireAuth, async (req, res, next) => {
+router.get("/ai-systems/:id/recertification", requireAuth, async (req, res, next) => {
   try {
     const assetId = String(req.params.id);
     const recertification = await prisma.recertificationSchedule.findUnique({ where: { assetId } });
@@ -415,7 +415,7 @@ router.get("/assets/:id/recertification", requireAuth, async (req, res, next) =>
   }
 });
 
-router.post("/assets/:id/recertification", requireAuth, requireRole("ADMIN", "APPROVER"), async (req, res, next) => {
+router.post("/ai-systems/:id/recertification", requireAuth, requireRole("ADMIN", "APPROVER"), async (req, res, next) => {
   try {
     const assetId = String(req.params.id);
     const body = z.object({ cadenceDays: z.number().int().min(1), nextDueDate: z.string().datetime() }).parse(req.body);

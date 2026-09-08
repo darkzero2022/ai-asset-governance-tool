@@ -12,7 +12,7 @@ export const emptyProject: ProjectForm = {
   status: "ACTIVE",
 };
 
-export const emptyAsset = {
+export const emptyAiSystem = {
   name: "",
   version: "1.0",
   type: "SERVICE",
@@ -41,6 +41,7 @@ export const emptyRisk = {
   euAiActRiskTier: "",
   strideAiCategory: "",
   atlasTechnique: "",
+  atlasMitigations: [] as string[],
   description: "",
   likelihood: 3,
   impact: 3,

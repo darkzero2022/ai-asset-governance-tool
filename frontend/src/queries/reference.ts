@@ -29,3 +29,15 @@ export function useAtlasTechniquesQuery(token: string) {
     staleTime: REFERENCE_STALE_TIME,
   });
 }
+
+export function useAtlasMitigationsQuery(token: string) {
+  return useQuery({
+    queryKey: queryKeys.atlasMitigations(),
+    queryFn: async () => {
+      const data = await apiFetch<{ mitigations: Array<{ name: string }> }>("/reference/atlas-mitigations", { token });
+      return data.mitigations.map((mitigation) => mitigation.name);
+    },
+    enabled: Boolean(token),
+    staleTime: REFERENCE_STALE_TIME,
+  });
+}

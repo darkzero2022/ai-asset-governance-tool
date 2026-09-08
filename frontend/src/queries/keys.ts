@@ -19,5 +19,6 @@ export const queryKeys = {
   users: () => ["users"] as const,
   frameworkCategories: () => ["reference", "framework-categories"] as const,
   atlasTechniques: () => ["reference", "atlas-techniques"] as const,
+  atlasMitigations: () => ["reference", "atlas-mitigations"] as const,
   auditLogs: (entityType: string, entityId: string) => ["auditLogs", entityType, entityId] as const,
 };

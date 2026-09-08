@@ -121,6 +121,39 @@ export async function seedReferenceData() {
     await prisma.atlasTechniqueReference.upsert({ where: { name }, update: {}, create: { name } });
   }
 
+  // Canonical MITRE ATLAS mitigations offered for Risk.atlasMitigations — the
+  // remediation-plan counterpart of the techniques above. Source: MITRE ATLAS
+  // mitigations catalogue (AML.M0000–AML.M0022).
+  const atlasMitigations = [
+    "AML.M0000 — Limit Public Release of Information",
+    "AML.M0001 — Limit Model Artifact Release",
+    "AML.M0002 — Passive ML Output Obfuscation",
+    "AML.M0003 — Model Hardening",
+    "AML.M0004 — Restrict Number of ML Model Queries",
+    "AML.M0005 — Control Access to ML Models and Data at Rest",
+    "AML.M0006 — Use Ensemble Methods",
+    "AML.M0007 — Sanitize Training Data",
+    "AML.M0008 — Validate ML Model",
+    "AML.M0009 — Use Multi-Modal Sensors",
+    "AML.M0010 — Input Restoration",
+    "AML.M0011 — Restrict Library Loading",
+    "AML.M0012 — Encrypt Sensitive Information",
+    "AML.M0013 — Code Signing",
+    "AML.M0014 — Verify ML Artifacts",
+    "AML.M0015 — Adversarial Input Detection",
+    "AML.M0016 — Vulnerability Scanning",
+    "AML.M0017 — Model Distribution Methods",
+    "AML.M0018 — User Training",
+    "AML.M0019 — Control Access to ML Models and Data in Production",
+    "AML.M0020 — Generative AI Guardrails",
+    "AML.M0021 — Generative AI Guidelines",
+    "AML.M0022 — Generative AI Model Alignment",
+  ] as const;
+
+  for (const name of atlasMitigations) {
+    await prisma.atlasMitigationReference.upsert({ where: { name }, update: {}, create: { name } });
+  }
+
   // OWASP LLM Top 10 -> STRIDE-AI category + ATLAS technique lookup. Auto-populates
   // an OWASP-linked risk's STRIDE-AI / ATLAS fields; both stay editable afterwards.
   const strideAtlasMappings = [

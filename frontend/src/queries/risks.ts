@@ -88,11 +88,11 @@ export function useRiskAssetLinkMutations(token: string, riskId: string) {
   const queryClient = useQueryClient();
   const invalidate = () => invalidateRisk(queryClient, riskId);
   const link = useMutation({
-    mutationFn: (assetId: string) => apiFetch(`/assets/${assetId}/risks/${riskId}`, { method: "POST", token }),
+    mutationFn: (assetId: string) => apiFetch(`/ai-systems/${assetId}/risks/${riskId}`, { method: "POST", token }),
     onSuccess: invalidate,
   });
   const unlink = useMutation({
-    mutationFn: (assetId: string) => apiFetch(`/assets/${assetId}/risks/${riskId}`, { method: "DELETE", token }),
+    mutationFn: (assetId: string) => apiFetch(`/ai-systems/${assetId}/risks/${riskId}`, { method: "DELETE", token }),
     onSuccess: invalidate,
   });
   return { link, unlink };

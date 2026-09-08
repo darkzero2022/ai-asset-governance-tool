@@ -151,48 +151,48 @@ afterAll(async () => {
 
 describe("RBAC permission matrix", () => {
   it("enforces asset mutation roles", async () => {
-    await expectMatrix("POST /assets", ["ADMIN", "RISK_OWNER"], (role) => request(app).post("/api/v1/assets").set(auth(role)).send(assetBody(`${runId}-post-asset-${role}`)));
+    await expectMatrix("POST /ai-systems", ["ADMIN", "RISK_OWNER"], (role) => request(app).post("/api/v1/ai-systems").set(auth(role)).send(assetBody(`${runId}-post-asset-${role}`)));
 
-    await expectMatrix("PUT /assets/:id", ["ADMIN", "RISK_OWNER"], async (role) => {
+    await expectMatrix("PUT /ai-systems/:id", ["ADMIN", "RISK_OWNER"], async (role) => {
       const asset = await createAsset({ createdById: role === "RISK_OWNER" ? userIds.get("RISK_OWNER")! : userIds.get("ADMIN")! });
-      return request(app).put(`/api/v1/assets/${asset.id}`).set(auth(role)).send(assetBody(`${runId}-put-asset-${role}`));
+      return request(app).put(`/api/v1/ai-systems/${asset.id}`).set(auth(role)).send(assetBody(`${runId}-put-asset-${role}`));
     });
 
-    await expectMatrix("DELETE /assets/:id", ["ADMIN"], async (role) => {
+    await expectMatrix("DELETE /ai-systems/:id", ["ADMIN"], async (role) => {
       const asset = await createAsset();
-      return request(app).delete(`/api/v1/assets/${asset.id}`).set(auth(role));
+      return request(app).delete(`/api/v1/ai-systems/${asset.id}`).set(auth(role));
     });
   });
 
   it("enforces relationship and recertification mutation roles", async () => {
-    await expectMatrix("POST /assets/:assetId/risks/:riskId", ["ADMIN", "RISK_OWNER"], async (role) => {
+    await expectMatrix("POST /ai-systems/:assetId/risks/:riskId", ["ADMIN", "RISK_OWNER"], async (role) => {
       const asset = await createAsset();
       const risk = await createRisk();
-      return request(app).post(`/api/v1/assets/${asset.id}/risks/${risk.id}`).set(auth(role));
+      return request(app).post(`/api/v1/ai-systems/${asset.id}/risks/${risk.id}`).set(auth(role));
     });
 
-    await expectMatrix("DELETE /assets/:assetId/risks/:riskId", ["ADMIN", "RISK_OWNER"], async (role) => {
+    await expectMatrix("DELETE /ai-systems/:assetId/risks/:riskId", ["ADMIN", "RISK_OWNER"], async (role) => {
       const asset = await createAsset();
       const risk = await createRisk(asset.id);
-      return request(app).delete(`/api/v1/assets/${asset.id}/risks/${risk.id}`).set(auth(role));
+      return request(app).delete(`/api/v1/ai-systems/${asset.id}/risks/${risk.id}`).set(auth(role));
     });
 
-    await expectMatrix("POST /assets/:parentAssetId/dependencies/:childAssetId", ["ADMIN", "RISK_OWNER"], async (role) => {
+    await expectMatrix("POST /ai-systems/:parentAssetId/dependencies/:childAssetId", ["ADMIN", "RISK_OWNER"], async (role) => {
       const parent = await createAsset({ type: "SERVICE" });
       const child = await createAsset({ type: "MODEL" });
-      return request(app).post(`/api/v1/assets/${parent.id}/dependencies/${child.id}`).set(auth(role));
+      return request(app).post(`/api/v1/ai-systems/${parent.id}/dependencies/${child.id}`).set(auth(role));
     });
 
-    await expectMatrix("DELETE /assets/:parentAssetId/dependencies/:childAssetId", ["ADMIN", "RISK_OWNER"], async (role) => {
+    await expectMatrix("DELETE /ai-systems/:parentAssetId/dependencies/:childAssetId", ["ADMIN", "RISK_OWNER"], async (role) => {
       const parent = await createAsset({ type: "SERVICE" });
       const child = await createAsset({ type: "MODEL" });
       await prisma.assetDependency.create({ data: { parentAssetId: parent.id, childAssetId: child.id } });
-      return request(app).delete(`/api/v1/assets/${parent.id}/dependencies/${child.id}`).set(auth(role));
+      return request(app).delete(`/api/v1/ai-systems/${parent.id}/dependencies/${child.id}`).set(auth(role));
     });
 
-    await expectMatrix("POST /assets/:id/recertification", ["ADMIN", "APPROVER"], async (role) => {
+    await expectMatrix("POST /ai-systems/:id/recertification", ["ADMIN", "APPROVER"], async (role) => {
       const asset = await createAsset({ type: "MODEL" });
-      return request(app).post(`/api/v1/assets/${asset.id}/recertification`).set(auth(role)).send({ cadenceDays: 30, nextDueDate: new Date().toISOString() });
+      return request(app).post(`/api/v1/ai-systems/${asset.id}/recertification`).set(auth(role)).send({ cadenceDays: 30, nextDueDate: new Date().toISOString() });
     });
   });
 
@@ -209,17 +209,17 @@ describe("RBAC permission matrix", () => {
       return request(app).delete(`/api/v1/projects/${project.id}`).set(auth(role));
     });
 
-    await expectMatrix("POST /projects/:projectId/assets/:assetId", ["ADMIN", "RISK_OWNER"], async (role) => {
+    await expectMatrix("POST /projects/:projectId/ai-systems/:assetId", ["ADMIN", "RISK_OWNER"], async (role) => {
       const project = await createProject();
       const asset = await createAsset();
-      return request(app).post(`/api/v1/projects/${project.id}/assets/${asset.id}`).set(auth(role));
+      return request(app).post(`/api/v1/projects/${project.id}/ai-systems/${asset.id}`).set(auth(role));
     });
 
-    await expectMatrix("DELETE /projects/:projectId/assets/:assetId", ["ADMIN", "RISK_OWNER"], async (role) => {
+    await expectMatrix("DELETE /projects/:projectId/ai-systems/:assetId", ["ADMIN", "RISK_OWNER"], async (role) => {
       const project = await createProject();
       const asset = await createAsset();
       await prisma.projectAsset.create({ data: { projectId: project.id, assetId: asset.id } });
-      return request(app).delete(`/api/v1/projects/${project.id}/assets/${asset.id}`).set(auth(role));
+      return request(app).delete(`/api/v1/projects/${project.id}/ai-systems/${asset.id}`).set(auth(role));
     });
 
     await expectMatrix("POST /projects/:projectId/risks/:riskId", ["ADMIN", "RISK_OWNER"], async (role) => {
@@ -288,9 +288,9 @@ describe("RBAC permission matrix", () => {
       return request(app).delete(`/api/v1/controls/${control.id}`).set(auth(role));
     });
 
-    await expectMatrix("PUT /assets/:id/model-card", ["ADMIN", "RISK_OWNER"], async (role) => {
+    await expectMatrix("PUT /ai-systems/:id/model-card", ["ADMIN", "RISK_OWNER"], async (role) => {
       const asset = await createAsset({ type: "MODEL" });
-      return request(app).put(`/api/v1/assets/${asset.id}/model-card`).set(auth(role)).send(modelCardBody);
+      return request(app).put(`/api/v1/ai-systems/${asset.id}/model-card`).set(auth(role)).send(modelCardBody);
     });
   });
 
@@ -300,8 +300,8 @@ describe("RBAC permission matrix", () => {
     const otherRisk = await createRisk(ownedAsset.id, { createdById: userIds.get("ADMIN")! });
     const ownedRisk = await createRisk(ownedAsset.id, { createdById: userIds.get("RISK_OWNER")! });
 
-    await request(app).put(`/api/v1/assets/${otherAsset.id}`).set(auth("RISK_OWNER")).send(assetBody(`${runId}-not-owned-asset`)).expect(403);
-    await request(app).put(`/api/v1/assets/${ownedAsset.id}`).set(auth("RISK_OWNER")).send(assetBody(`${runId}-owned-asset`)).expect(200);
+    await request(app).put(`/api/v1/ai-systems/${otherAsset.id}`).set(auth("RISK_OWNER")).send(assetBody(`${runId}-not-owned-asset`)).expect(403);
+    await request(app).put(`/api/v1/ai-systems/${ownedAsset.id}`).set(auth("RISK_OWNER")).send(assetBody(`${runId}-owned-asset`)).expect(200);
     await request(app).put(`/api/v1/risks/${otherRisk.id}`).set(auth("RISK_OWNER")).send({ assetId: ownedAsset.id, sourceFramework: "NIST_AI_RMF", sourceCategoryId: "GOVERN", description: `${runId}-not-owned-risk`, likelihood: 2, impact: 3 }).expect(403);
     await request(app).put(`/api/v1/risks/${ownedRisk.id}`).set(auth("RISK_OWNER")).send({ assetId: ownedAsset.id, sourceFramework: "NIST_AI_RMF", sourceCategoryId: "GOVERN", description: `${runId}-owned-risk`, likelihood: 2, impact: 3 }).expect(200);
   });
@@ -345,7 +345,7 @@ describe("error envelope", () => {
   });
 
   it("returns the envelope with a 401 code when unauthenticated", async () => {
-    const res = await request(app).get("/api/v1/assets").expect(401);
+    const res = await request(app).get("/api/v1/ai-systems").expect(401);
     expect(res.body.error).toMatchObject({ code: "UNAUTHENTICATED" });
     expect(res.body.requestId).toEqual(expect.any(String));
   });
@@ -369,25 +369,25 @@ describe("asset transition policy gates", () => {
     const risk = await createRisk(asset.id, { likelihood: 3, impact: 4, inherentRiskScore: 12, status: "OPEN" });
     await prisma.modelCard.create({ data: { assetId: asset.id, ...modelCardBody } });
 
-    await request(app).post(`/api/v1/assets/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(400).expect((response) => {
+    await request(app).post(`/api/v1/ai-systems/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(400).expect((response) => {
       expect(response.body.error.message).toBe("Asset has open high or critical risks");
     });
 
     await prisma.risk.update({ where: { id: risk.id }, data: { status: "MITIGATED" } });
-    await request(app).post(`/api/v1/assets/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(200);
+    await request(app).post(`/api/v1/ai-systems/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(200);
   });
 
   it("blocks approval for missing model card fields, then allows approval once completed", async () => {
     const asset = await createAsset({ type: "SERVICE", status: "UNDER_REVIEW" });
     await prisma.modelCard.create({ data: { assetId: asset.id, task: "generation" } });
 
-    await request(app).post(`/api/v1/assets/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(400).expect((response) => {
+    await request(app).post(`/api/v1/ai-systems/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(400).expect((response) => {
       expect(response.body.error.message).toBe("Model card incomplete");
       expect(response.body.error.details.missingFields).toContain("architecture");
     });
 
     await prisma.modelCard.update({ where: { assetId: asset.id }, data: modelCardBody });
-    await request(app).post(`/api/v1/assets/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(200);
+    await request(app).post(`/api/v1/ai-systems/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(200);
   });
 });
 
@@ -439,6 +439,26 @@ describe("STRIDE-AI and MITRE ATLAS mapping", () => {
     expect(response.body.risk.atlasTechnique).toBeNull();
   });
 
+  it("attaches validated MITRE ATLAS mitigations to the remediation plan", async () => {
+    const mitigations = await request(app).get("/api/v1/reference/atlas-mitigations").set(auth("VIEWER")).expect(200);
+    expect(mitigations.body.mitigations.length).toBeGreaterThan(10);
+    const picks = mitigations.body.mitigations.slice(0, 2).map((row: { name: string }) => row.name);
+
+    const asset = await createAsset();
+    const created = await request(app)
+      .post("/api/v1/risks")
+      .set(auth("ADMIN"))
+      .send({ ...owaspRiskBody(`${runId}-atlas-mitig`), assetId: asset.id, atlasMitigations: [...picks, picks[0]] })
+      .expect(201);
+    expect(created.body.risk.atlasMitigations.sort()).toEqual([...picks].sort());
+
+    await request(app)
+      .post("/api/v1/risks")
+      .set(auth("ADMIN"))
+      .send({ ...owaspRiskBody(`${runId}-atlas-mitig-bad`), assetId: asset.id, atlasMitigations: ["AML.M9999 — Not A Real Mitigation"] })
+      .expect(422);
+  });
+
   it("re-defaults on edit when the fields are cleared, and exposes them on the asset detail + CycloneDX export", async () => {
     const asset = await createAsset({ type: "MODEL" });
     const created = await request(app)
@@ -457,11 +477,11 @@ describe("STRIDE-AI and MITRE ATLAS mapping", () => {
         expect(response.body.risk).toMatchObject({ strideAiCategory: "MODEL_IMPERSONATION", atlasTechnique: "ML Supply Chain Compromise" });
       });
 
-    await request(app).get(`/api/v1/assets/${asset.id}`).set(auth("VIEWER")).expect(200).expect((response) => {
+    await request(app).get(`/api/v1/ai-systems/${asset.id}`).set(auth("VIEWER")).expect(200).expect((response) => {
       expect(response.body.asset.risks[0]).toMatchObject({ strideAiCategory: "MODEL_IMPERSONATION", atlasTechnique: "ML Supply Chain Compromise" });
     });
 
-    const bom = await request(app).get(`/api/v1/assets/${asset.id}/export/cyclonedx`).set(auth("VIEWER")).expect(200);
+    const bom = await request(app).get(`/api/v1/ai-systems/${asset.id}/export/cyclonedx`).set(auth("VIEWER")).expect(200);
     const props = bom.body.components[0].properties as Array<{ name: string; value: string }>;
     expect(props).toContainEqual({ name: "aibom:risk:strideAiCategory", value: "MODEL_IMPERSONATION" });
     expect(props).toContainEqual({ name: "aibom:risk:atlasTechnique", value: "ML Supply Chain Compromise" });
@@ -473,7 +493,7 @@ describe("asset detail response", () => {
     const asset = await createAsset({ type: "MODEL" });
     await createRisk(asset.id, { likelihood: 5, impact: 5, inherentRiskScore: 25, status: "OPEN" });
 
-    await request(app).get(`/api/v1/assets/${asset.id}`).set(auth("VIEWER")).expect(200).expect((response) => {
+    await request(app).get(`/api/v1/ai-systems/${asset.id}`).set(auth("VIEWER")).expect(200).expect((response) => {
       expect(response.body.asset.risks[0]).toMatchObject({ severity: "CRITICAL", status: "OPEN" });
     });
   });
@@ -484,11 +504,11 @@ describe("segregation of duties", () => {
     const asset = await createAsset({ type: "MODEL", status: "DRAFT" });
     await prisma.modelCard.create({ data: { assetId: asset.id, ...modelCardBody } });
 
-    await request(app).post(`/api/v1/assets/${asset.id}/transition`).set(auth("ADMIN")).send({ toStatus: "UNDER_REVIEW" }).expect(200);
-    await request(app).post(`/api/v1/assets/${asset.id}/transition`).set(auth("ADMIN")).send({ toStatus: "APPROVED" }).expect(403).expect((response) => {
+    await request(app).post(`/api/v1/ai-systems/${asset.id}/transition`).set(auth("ADMIN")).send({ toStatus: "UNDER_REVIEW" }).expect(200);
+    await request(app).post(`/api/v1/ai-systems/${asset.id}/transition`).set(auth("ADMIN")).send({ toStatus: "APPROVED" }).expect(403).expect((response) => {
       expect(response.body.error.message).toMatch(/Segregation of duties/);
     });
-    await request(app).post(`/api/v1/assets/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(200);
+    await request(app).post(`/api/v1/ai-systems/${asset.id}/transition`).set(auth("APPROVER")).send({ toStatus: "APPROVED" }).expect(200);
   });
 
   it("blocks accepting a risk created by the same user", async () => {
@@ -509,18 +529,18 @@ describe("Model Card metric CRUD", () => {
     await prisma.modelCard.create({ data: { assetId: asset.id, ...modelCardBody } });
 
     const createResponse = await request(app)
-      .post(`/api/v1/assets/${asset.id}/model-card/metrics`)
+      .post(`/api/v1/ai-systems/${asset.id}/model-card/metrics`)
       .set(auth("RISK_OWNER"))
       .send({ metricName: "accuracy", metricValue: 0.91, slice: "overall" })
       .expect(201);
     const metricId = createResponse.body.metric.id;
 
-    await request(app).get(`/api/v1/assets/${asset.id}/model-card`).set(auth("VIEWER")).expect(200).expect((response) => {
+    await request(app).get(`/api/v1/ai-systems/${asset.id}/model-card`).set(auth("VIEWER")).expect(200).expect((response) => {
       expect(response.body.modelCard.metrics).toEqual(expect.arrayContaining([expect.objectContaining({ id: metricId, metricName: "accuracy", metricValue: 0.91 })]));
     });
 
     await request(app)
-      .put(`/api/v1/assets/${asset.id}/model-card/metrics/${metricId}`)
+      .put(`/api/v1/ai-systems/${asset.id}/model-card/metrics/${metricId}`)
       .set(auth("ADMIN"))
       .send({ metricName: "accuracy", metricValue: 0.94, slice: "overall" })
       .expect(200)
@@ -528,7 +548,7 @@ describe("Model Card metric CRUD", () => {
         expect(response.body.metric).toMatchObject({ id: metricId, metricName: "accuracy", metricValue: 0.94 });
       });
 
-    await request(app).delete(`/api/v1/assets/${asset.id}/model-card/metrics/${metricId}`).set(auth("ADMIN")).expect(204);
+    await request(app).delete(`/api/v1/ai-systems/${asset.id}/model-card/metrics/${metricId}`).set(auth("ADMIN")).expect(204);
     expect(await prisma.modelCardMetric.findUnique({ where: { id: metricId } })).toBeNull();
     await expect(prisma.auditLog.findMany({ where: { entityType: "ModelCardMetric", entityId: metricId } })).resolves.toHaveLength(3);
   });
@@ -540,14 +560,14 @@ describe("optimistic concurrency", () => {
     const staleVersion = asset.updatedAt.toISOString();
 
     const first = await request(app)
-      .put(`/api/v1/assets/${asset.id}`)
+      .put(`/api/v1/ai-systems/${asset.id}`)
       .set(auth("ADMIN"))
       .send({ ...assetBody(`${asset.name}`), supplier: "Supplier A", expectedUpdatedAt: staleVersion })
       .expect(200);
     expect(first.body.asset.supplier).toBe("Supplier A");
 
     const stale = await request(app)
-      .put(`/api/v1/assets/${asset.id}`)
+      .put(`/api/v1/ai-systems/${asset.id}`)
       .set(auth("ADMIN"))
       .send({ ...assetBody(`${asset.name}`), supplier: "Supplier B", expectedUpdatedAt: staleVersion })
       .expect(409);
@@ -560,7 +580,7 @@ describe("optimistic concurrency", () => {
   it("still allows an update with no expectedUpdatedAt (backwards compatible)", async () => {
     const asset = await createAsset();
     await request(app)
-      .put(`/api/v1/assets/${asset.id}`)
+      .put(`/api/v1/ai-systems/${asset.id}`)
       .set(auth("ADMIN"))
       .send({ ...assetBody(asset.name), supplier: "No-lock update" })
       .expect(200);
@@ -572,8 +592,8 @@ describe("audit trail extension", () => {
     const asset = await createAsset();
     const project = await createProject();
 
-    await request(app).post(`/api/v1/projects/${project.id}/assets/${asset.id}`).set(auth("ADMIN")).expect(201);
-    await request(app).delete(`/api/v1/projects/${project.id}/assets/${asset.id}`).set(auth("ADMIN")).expect(204);
+    await request(app).post(`/api/v1/projects/${project.id}/ai-systems/${asset.id}`).set(auth("ADMIN")).expect(201);
+    await request(app).delete(`/api/v1/projects/${project.id}/ai-systems/${asset.id}`).set(auth("ADMIN")).expect(204);
 
     const rows = await prisma.auditLog.findMany({
       where: { entityType: "ProjectAsset" },
@@ -592,7 +612,7 @@ describe("audit trail extension", () => {
 
   it("does not double-audit a route that still calls audit() explicitly", async () => {
     const created = await request(app)
-      .post("/api/v1/assets")
+      .post("/api/v1/ai-systems")
       .set(auth("ADMIN"))
       .send({ name: `${runId}-audit-once`, version: "1.0.0", type: "DATASET", supplier: "S", hostingModel: "SELF_HOSTED" })
       .expect(201);
@@ -607,7 +627,7 @@ describe("audit trail extension", () => {
 describe("URL import", () => {
   it("rejects loopback and cloud metadata URLs before fetching", async () => {
     await request(app)
-      .post("/api/v1/assets/import-url")
+      .post("/api/v1/ai-systems/import-url")
       .set(auth("ADMIN"))
       .send({ sourceUrl: "http://127.0.0.1/internal" })
       .expect(400)
@@ -616,7 +636,7 @@ describe("URL import", () => {
       });
 
     await request(app)
-      .post("/api/v1/assets/import-url")
+      .post("/api/v1/ai-systems/import-url")
       .set(auth("ADMIN"))
       .send({ sourceUrl: "http://169.254.169.254/latest/meta-data" })
       .expect(400)
@@ -625,7 +645,7 @@ describe("URL import", () => {
       });
 
     await request(app)
-      .post("/api/v1/assets/import-url")
+      .post("/api/v1/ai-systems/import-url")
       .set(auth("ADMIN"))
       .send({ sourceUrl: "http://100.64.1.1/internal" })
       .expect(400)
@@ -634,7 +654,7 @@ describe("URL import", () => {
       });
 
     await request(app)
-      .post("/api/v1/assets/import-url")
+      .post("/api/v1/ai-systems/import-url")
       .set(auth("ADMIN"))
       .send({ sourceUrl: "http://[::ffff:127.0.0.1]/internal" })
       .expect(400);
@@ -673,7 +693,7 @@ describe("CSV exports", () => {
     const asset = await createAsset({ status: "DEPLOYED", type: "MODEL" });
     await createRisk(asset.id, { status: "OPEN", sourceFramework: "NIST_AI_RMF", description: "=HYPERLINK(\"https://example.com\")" });
 
-    await request(app).get("/api/v1/assets/export/csv?status=DEPLOYED&type=MODEL").set(auth("VIEWER")).expect(200).expect((response) => {
+    await request(app).get("/api/v1/ai-systems/export/csv?status=DEPLOYED&type=MODEL").set(auth("VIEWER")).expect(200).expect((response) => {
       expect(response.header["content-type"]).toContain("text/csv");
       expect(response.text).toContain("id,name,version,type");
       expect(response.text).toContain(asset.id);

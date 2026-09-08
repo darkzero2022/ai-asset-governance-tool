@@ -14,8 +14,8 @@ describe("OpenAPI document", () => {
     // route should show up, and none of it should be prefixed by /api/v1
     // again (the document's `servers` entry already carries that prefix).
     expect(Object.keys(document.paths ?? {}).length).toBeGreaterThan(40);
-    expect(document.paths?.["/assets"]?.get).toBeTruthy();
-    expect(document.paths?.["/assets"]?.post?.requestBody).toBeTruthy();
+    expect(document.paths?.["/ai-systems"]?.get).toBeTruthy();
+    expect(document.paths?.["/ai-systems"]?.post?.requestBody).toBeTruthy();
     expect(Object.keys(document.paths ?? {}).some((p) => p.startsWith("/api/v1"))).toBe(false);
   });
 

@@ -1,4 +1,8 @@
 import type { FormEvent } from "react";
+import { Trash2 } from "lucide-react";
+import { Badge } from "./ui/Badge";
+import { Button } from "./ui/Button";
+import { Input, TextArea } from "./ui/Field";
 
 export type ModelCardFormState = {
   approach: string;
@@ -113,79 +117,73 @@ export function ModelCardForm({ modelCard, completeness, form, sourceUrl, import
   const displayCompleteness = completeness ?? modelCard?.completeness;
 
   return (
-    <form onSubmit={onSubmit} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <form onSubmit={onSubmit} className="rounded-lg border border-border bg-surface p-5 shadow-card">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Model Card</h3>
-          <p className="text-sm text-slate-500">Required before approving or deploying MODEL and SERVICE assets.</p>
+          <h3 className="text-base font-semibold text-text">Model Card</h3>
+          <p className="text-sm text-subtle">Required before approving or deploying MODEL and SERVICE AI systems.</p>
         </div>
-        {displayCompleteness && <span className="rounded-full bg-cyan-50 px-3 py-1 text-sm font-semibold text-cyan-700 ring-1 ring-cyan-100">{displayCompleteness.percent}% complete</span>}
+        {displayCompleteness && <Badge variant="primary">{displayCompleteness.percent}% complete</Badge>}
       </div>
-      {displayCompleteness?.missingFields?.length ? <p className="mt-3 text-sm text-amber-700">Missing: {displayCompleteness.missingFields.join(", ")}</p> : null}
-      <div className="mt-4 rounded-xl border border-slate-200 p-4">
+      {displayCompleteness?.missingFields?.length ? <p className="mt-3 text-sm text-warning">Missing: {displayCompleteness.missingFields.join(", ")}</p> : null}
+      <div className="mt-4 rounded-md border border-border p-4">
         <div className="flex gap-2">
-          <div className="min-w-0 flex-1"><Field label="Import from URL" value={sourceUrl} onChange={onSourceUrlChange} /></div>
-          <button type="button" className="self-end rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-40" disabled={!sourceUrl} onClick={() => onFetchImport(sourceUrl)}>Fetch</button>
+          <div className="min-w-0 flex-1"><Input label="Import from URL" value={sourceUrl} onChange={(event) => onSourceUrlChange(event.target.value)} /></div>
+          <Button type="button" variant="secondary" className="self-end" disabled={!sourceUrl} onClick={() => onFetchImport(sourceUrl)}>Fetch</Button>
         </div>
         {importSuggestion && <ImportPreview suggestion={importSuggestion} />}
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <Field label="Task" value={form.task} onChange={(value) => update("task", value)} />
-        <Field label="Approach" value={form.approach} onChange={(value) => update("approach", value)} />
-        <Field label="Architecture Family" value={form.architectureFamily} onChange={(value) => update("architectureFamily", value)} />
-        <Field label="Model Architecture" value={form.modelArchitecture} onChange={(value) => update("modelArchitecture", value)} />
-        <TextArea label="Datasets" value={form.datasetsDescription} onChange={(value) => update("datasetsDescription", value)} />
-        <TextArea label="Inputs" value={form.inputsDescription} onChange={(value) => update("inputsDescription", value)} />
-        <TextArea label="Outputs" value={form.outputsDescription} onChange={(value) => update("outputsDescription", value)} />
-        <TextArea label="Intended Users" value={form.intendedUsers} onChange={(value) => update("intendedUsers", value)} />
-        <TextArea label="Use Cases" value={form.useCases} onChange={(value) => update("useCases", value)} />
-        <TextArea label="Technical Limitations" value={form.technicalLimitations} onChange={(value) => update("technicalLimitations", value)} />
-        <TextArea label="Performance Tradeoffs" value={form.performanceTradeoffs} onChange={(value) => update("performanceTradeoffs", value)} />
-        <TextArea label="Ethical Considerations" value={form.ethicalConsiderations} onChange={(value) => update("ethicalConsiderations", value)} />
-        <TextArea label="Fairness Assessments" value={form.fairnessAssessments} onChange={(value) => update("fairnessAssessments", value)} />
-        <TextArea label="Environmental Considerations" value={form.environmentalConsiderations} onChange={(value) => update("environmentalConsiderations", value)} />
-        <TextArea label="Performance Metrics JSON" value={form.performanceMetrics} onChange={(value) => update("performanceMetrics", value)} />
+        <Input label="Task" value={form.task} onChange={(event) => update("task", event.target.value)} />
+        <Input label="Approach" value={form.approach} onChange={(event) => update("approach", event.target.value)} />
+        <Input label="Architecture Family" value={form.architectureFamily} onChange={(event) => update("architectureFamily", event.target.value)} />
+        <Input label="Model Architecture" value={form.modelArchitecture} onChange={(event) => update("modelArchitecture", event.target.value)} />
+        <TextArea label="Datasets" value={form.datasetsDescription} onChange={(event) => update("datasetsDescription", event.target.value)} />
+        <TextArea label="Inputs" value={form.inputsDescription} onChange={(event) => update("inputsDescription", event.target.value)} />
+        <TextArea label="Outputs" value={form.outputsDescription} onChange={(event) => update("outputsDescription", event.target.value)} />
+        <TextArea label="Intended Users" value={form.intendedUsers} onChange={(event) => update("intendedUsers", event.target.value)} />
+        <TextArea label="Use Cases" value={form.useCases} onChange={(event) => update("useCases", event.target.value)} />
+        <TextArea label="Technical Limitations" value={form.technicalLimitations} onChange={(event) => update("technicalLimitations", event.target.value)} />
+        <TextArea label="Performance Tradeoffs" value={form.performanceTradeoffs} onChange={(event) => update("performanceTradeoffs", event.target.value)} />
+        <TextArea label="Ethical Considerations" value={form.ethicalConsiderations} onChange={(event) => update("ethicalConsiderations", event.target.value)} />
+        <TextArea label="Fairness Assessments" value={form.fairnessAssessments} onChange={(event) => update("fairnessAssessments", event.target.value)} />
+        <TextArea label="Environmental Considerations" value={form.environmentalConsiderations} onChange={(event) => update("environmentalConsiderations", event.target.value)} />
+        <TextArea label="Performance Metrics JSON" value={form.performanceMetrics} onChange={(event) => update("performanceMetrics", event.target.value)} className="font-mono text-xs" />
       </div>
-      <div className="mt-5 rounded-xl border border-slate-200 p-4">
+      <div className="mt-5 rounded-md border border-border p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h4 className="font-semibold">Structured Metrics</h4>
-            <p className="text-sm text-slate-500">Use normalized rows for cross-model dashboard comparisons.</p>
+            <h4 className="text-sm font-semibold text-text">Structured Metrics</h4>
+            <p className="text-sm text-subtle">Use normalized rows for cross-model dashboard comparisons.</p>
           </div>
-          <button type="button" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold" onClick={addMetric}>Add metric</button>
+          <Button type="button" variant="secondary" size="sm" onClick={addMetric}>Add metric</Button>
         </div>
         <div className="mt-3 space-y-3">
           {form.metrics.map((metric, index) => (
             <div key={metric.id ?? index} className="grid gap-2 md:grid-cols-[1fr_0.6fr_1fr_auto]">
-              <Field label="Metric Name" value={metric.metricName} onChange={(value) => updateMetric(index, "metricName", value)} />
-              <Field label="Value" value={metric.metricValue} onChange={(value) => updateMetric(index, "metricValue", value)} />
-              <Field label="Slice" value={metric.slice} onChange={(value) => updateMetric(index, "slice", value)} />
-              <button type="button" className="self-end rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700" onClick={() => removeMetric(index)}>Remove</button>
+              <Input label="Metric Name" value={metric.metricName} onChange={(event) => updateMetric(index, "metricName", event.target.value)} />
+              <Input label="Value" value={metric.metricValue} onChange={(event) => updateMetric(index, "metricValue", event.target.value)} />
+              <Input label="Slice" value={metric.slice} onChange={(event) => updateMetric(index, "slice", event.target.value)} />
+              <Button type="button" variant="danger" size="sm" className="self-end" onClick={() => removeMetric(index)} aria-label="Remove metric">
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           ))}
-          {!form.metrics.length && <p className="text-sm text-slate-500">No structured metrics yet.</p>}
+          {!form.metrics.length && <p className="text-sm text-subtle">No structured metrics yet.</p>}
         </div>
       </div>
-      <button className="mt-5 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Save Model Card</button>
+      <Button type="submit" variant="primary" className="mt-5">Save Model Card</Button>
     </form>
   );
 }
 
 function ImportPreview(props: { suggestion: ImportSuggestion }) {
   return (
-    <div className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 ring-1 ring-slate-200">
-      <p className="font-semibold text-slate-800">Fetched suggestion</p>
-      <p className="mt-1"><span className="font-medium">Title:</span> {props.suggestion.suggestedTitle || "Not found"}</p>
-      <p className="mt-1"><span className="font-medium">Description:</span> {props.suggestion.suggestedDescription || "Not found"}</p>
-      <p className="mt-1"><span className="font-medium">Excerpt:</span> {props.suggestion.excerpt || "Not found"}</p>
+    <div className="mt-3 rounded-md bg-surface-alt p-3 text-xs text-subtle ring-1 ring-border">
+      <p className="font-semibold text-text">Fetched suggestion</p>
+      <p className="mt-1"><span className="font-medium text-text">Title:</span> {props.suggestion.suggestedTitle || "Not found"}</p>
+      <p className="mt-1"><span className="font-medium text-text">Description:</span> {props.suggestion.suggestedDescription || "Not found"}</p>
+      <p className="mt-1"><span className="font-medium text-text">Excerpt:</span> {props.suggestion.excerpt || "Not found"}</p>
     </div>
   );
-}
-
-function Field(props: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="block text-sm font-medium text-slate-700">{props.label}<input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-950" value={props.value} onChange={(event) => props.onChange(event.target.value)} /></label>;
-}
-
-function TextArea(props: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="block text-sm font-medium text-slate-700">{props.label}<textarea className="mt-1 min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-950" value={props.value} onChange={(event) => props.onChange(event.target.value)} /></label>;
 }

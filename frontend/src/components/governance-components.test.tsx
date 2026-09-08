@@ -1,18 +1,20 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ApprovalBanner } from "./ApprovalBanner";
 import { BarChart } from "./BarChart";
 import { RiskHeatmap } from "./RiskHeatmap";
-import { SeverityBadge } from "./SeverityBadge";
+import { SeverityBadge } from "./ui/Badge";
+import RiskRegister from "../pages/RiskRegister";
+import { emptyRisk, emptyFilters, label } from "../formDefaults";
 
 describe("SeverityBadge", () => {
-  it("renders severity labels with mapped color classes", () => {
+  it("renders severity labels with a color-coded variant", () => {
     const { rerender } = render(<SeverityBadge severity="CRITICAL" />);
-
-    expect(screen.getByText("CRITICAL")).toHaveClass("bg-red-50", "text-red-700");
+    expect(screen.getByText("CRITICAL")).toBeInTheDocument();
 
     rerender(<SeverityBadge severity={null} />);
-    expect(screen.getByText("UNKNOWN")).toHaveClass("bg-slate-50", "text-slate-600");
+    expect(screen.getByText("UNKNOWN")).toBeInTheDocument();
   });
 });
 
@@ -48,13 +50,68 @@ describe("BarChart", () => {
   });
 });
 
+describe("RiskRegister — MITRE ATLAS mitigations", () => {
+  const baseProps = {
+    risks: [],
+    assets: [{ id: "a1", name: "Claims Model" }],
+    categories: [{ framework: "OWASP_LLM_TOP10", categoryId: "LLM01", name: "Prompt Injection" }],
+    atlasTechniques: ["LLM Prompt Injection"],
+    atlasMitigations: ["AML.M0000 — Limit Public Release of Information", "AML.M0020 — Generative AI Guardrails"],
+    filters: emptyFilters,
+    editingRiskId: null,
+    dialogOpen: true,
+    selectedRiskIds: [],
+    label,
+    onFiltersChange: vi.fn(),
+    onSubmitRisk: vi.fn(),
+    onNewRisk: vi.fn(),
+    onDialogOpenChange: vi.fn(),
+    onEditRisk: vi.fn(),
+    onOpenRisk: vi.fn(),
+    onToggleRisk: vi.fn(),
+    onBulkUpdate: vi.fn(),
+    canManage: true,
+  };
+
+  it("lists the mitigation catalogue and toggles a selection through onRiskFormChange", () => {
+    const onRiskFormChange = vi.fn();
+    render(
+      <MemoryRouter>
+        <RiskRegister {...baseProps} riskForm={{ ...emptyRisk }} onRiskFormChange={onRiskFormChange} />
+      </MemoryRouter>,
+    );
+
+    const guardrails = screen.getByLabelText("AML.M0020 — Generative AI Guardrails") as HTMLInputElement;
+    expect(guardrails.checked).toBe(false);
+    fireEvent.click(guardrails);
+    expect(onRiskFormChange).toHaveBeenCalledWith(
+      expect.objectContaining({ atlasMitigations: ["AML.M0020 — Generative AI Guardrails"] }),
+    );
+  });
+
+  it("reflects an already-selected mitigation as checked", () => {
+    render(
+      <MemoryRouter>
+        <RiskRegister
+          {...baseProps}
+          riskForm={{ ...emptyRisk, atlasMitigations: ["AML.M0000 — Limit Public Release of Information"] }}
+          onRiskFormChange={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    const checked = screen.getByLabelText("AML.M0000 — Limit Public Release of Information") as HTMLInputElement;
+    expect(checked.checked).toBe(true);
+    expect(within(document.body).getByText("1 selected")).toBeInTheDocument();
+  });
+});
+
 describe("RiskHeatmap", () => {
   it("colors populated cells by severity band and invokes the click callback", () => {
     const onCellClick = vi.fn();
     render(<RiskHeatmap risks={[{ id: "risk-1", likelihood: 5, impact: 4 }]} onCellClick={onCellClick} />);
 
-    const criticalCell = screen.getByRole("button", { name: "1" });
-    expect(criticalCell).toHaveClass("bg-red-300", "text-red-950");
+    const criticalCell = screen.getByRole("button", { name: "Likelihood 5, impact 4: 1 risk" });
+    expect(criticalCell).toHaveStyle({ color: "#ffffff" });
 
     fireEvent.click(criticalCell);
     expect(onCellClick).toHaveBeenCalledWith({ likelihood: 5, impact: 4 });

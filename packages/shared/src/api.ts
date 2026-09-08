@@ -65,6 +65,7 @@ export interface Risk {
   euAiActRiskTier?: EuAiActTier | string | null;
   strideAiCategory?: StrideAiCategory | string | null;
   atlasTechnique?: string | null;
+  atlasMitigations?: string[];
   likelihood: number;
   impact: number;
   inherentRiskScore: number;

@@ -26,5 +26,7 @@ export const forbidden = (message: string) => new AppError(403, "FORBIDDEN", mes
 export const notFound = (message: string) => new AppError(404, "NOT_FOUND", message);
 export const conflict = (message: string, details?: unknown) =>
   new AppError(409, "CONFLICT", message, details);
+export const unprocessable = (message: string, details?: unknown) =>
+  new AppError(422, "VALIDATION_FAILED", message, details);
 export const notImplemented = (message: string) =>
   new AppError(501, "NOT_IMPLEMENTED", message);

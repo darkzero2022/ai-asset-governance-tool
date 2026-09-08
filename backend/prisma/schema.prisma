@@ -154,6 +154,7 @@ model Risk {
   euAiActRiskTier       EuAiActRiskTier?
   strideAiCategory      StrideAiCategory?
   atlasTechnique        String?
+  atlasMitigations      String[]         @default([])
   description           String
   likelihood            Int
   impact                Int
@@ -369,6 +370,14 @@ model StrideAtlasMapping {
 
 // Canonical list of MITRE ATLAS techniques offered for Risk.atlasTechnique.
 model AtlasTechniqueReference {
+  id   String @id @default(cuid())
+  name String @unique
+}
+
+// Canonical list of MITRE ATLAS mitigations offered for Risk.atlasMitigations —
+// the remediation-side counterpart of AtlasTechniqueReference. `name` is the
+// full "AML.Mxxxx — Title" label; each entry in Risk.atlasMitigations must match one.
+model AtlasMitigationReference {
   id   String @id @default(cuid())
   name String @unique
 }

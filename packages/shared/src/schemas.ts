@@ -68,6 +68,9 @@ export const riskSchema = z.object({
   euAiActRiskTier: z.enum(EU_AI_ACT_TIERS).optional().nullable(),
   strideAiCategory: z.enum(STRIDE_AI_CATEGORIES).optional().nullable(),
   atlasTechnique: z.string().min(1).optional().nullable(),
+  // MITRE ATLAS mitigations attached to the remediation plan. Each entry must
+  // match an AtlasMitigationReference row (enforced server-side, not in zod).
+  atlasMitigations: z.array(z.string().min(1)).optional(),
   description: z.string().min(1),
   likelihood: z.number().int().min(1).max(5),
   impact: z.number().int().min(1).max(5),

@@ -3,24 +3,25 @@ import { createBrowserRouter, Navigate, useNavigate, useOutletContext, useParams
 import type { Asset, Project, Risk } from "@aibom/shared";
 import App, { type AppOutletContext } from "./App";
 import { canManage, canTransitionAsset, hasRole } from "./auth";
-import { emptyAsset, emptyFilters, emptyProject, emptyRisk, type ImportSuggestion, label, nextStatuses, type ProjectForm } from "./formDefaults";
+import { emptyAiSystem, emptyFilters, emptyProject, emptyRisk, type ImportSuggestion, label, nextStatuses, type ProjectForm } from "./formDefaults";
 import { emptyModelCardForm, modelCardToForm, type ModelCardFormState } from "./components/ModelCardForm";
 import { Forbidden } from "./components/Forbidden";
+import { toast } from "./components/ui/toastStore";
 import { useAuditLogsQuery } from "./queries/auditLogs";
 import {
-  useAssetProjectLinkMutations,
-  useAssetProjectsQuery,
-  useAssetQuery,
-  useAssetRiskLinkMutations,
-  useAssetsQuery,
+  useAiSystemProjectLinkMutations,
+  useAiSystemProjectsQuery,
+  useAiSystemQuery,
+  useAiSystemRiskLinkMutations,
+  useAiSystemsQuery,
   useExportCycloneDxMutation,
-  useAssetModelCardQuery,
+  useAiSystemModelCardQuery,
   useImportUrlMutation,
   useModelCardMetricMutations,
-  useSaveAssetMutation,
+  useSaveAiSystemMutation,
   useSaveModelCardMutation,
-  useTransitionAssetMutation,
-} from "./queries/assets";
+  useTransitionAiSystemMutation,
+} from "./queries/aiSystems";
 import { useControlsQuery } from "./queries/controls";
 import {
   useExportProjectCycloneDxMutation,
@@ -31,7 +32,7 @@ import {
   useProjectsQuery,
   useSaveProjectMutation,
 } from "./queries/projects";
-import { useAtlasTechniquesQuery, useFrameworkCategoriesQuery } from "./queries/reference";
+import { useAtlasMitigationsQuery, useAtlasTechniquesQuery, useFrameworkCategoriesQuery } from "./queries/reference";
 import {
   useBulkUpdateRisksMutation,
   useRiskAssetLinkMutations,
@@ -45,8 +46,8 @@ import {
 // Route-level code splitting: each page becomes its own chunk, fetched only
 // when its route is visited, instead of all eight shipping in the one
 // initial bundle. App (the root layout, always needed) stays a static import.
-const AssetDetail = lazy(() => import("./pages/AssetDetail"));
-const AssetList = lazy(() => import("./pages/AssetList"));
+const AiSystemDetail = lazy(() => import("./pages/AiSystemDetail"));
+const AiSystemList = lazy(() => import("./pages/AiSystemList"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const ProjectList = lazy(() => import("./pages/ProjectList"));
@@ -83,29 +84,42 @@ function UsersRoute() {
   return <Users token={ctx.token} />;
 }
 
-function AssetListRoute() {
+function AiSystemListRoute() {
   const ctx = useCtx();
   const navigate = useNavigate();
   const [filters, setFilters] = useState(emptyFilters);
-  const [assetForm, setAssetForm] = useState(emptyAsset);
+  const [assetForm, setAssetForm] = useState(emptyAiSystem);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
   const [editBaseVersion, setEditBaseVersion] = useState<string | null>(null);
   const [importSuggestion, setImportSuggestion] = useState<ImportSuggestion | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const { data: assets = [] } = useAssetsQuery(ctx.token, filters);
-  const saveAsset = useSaveAssetMutation(ctx.token);
+  const { data: assets = [] } = useAiSystemsQuery(ctx.token, filters);
+  const saveAsset = useSaveAiSystemMutation(ctx.token);
   const importUrl = useImportUrlMutation(ctx.token);
   const exportCycloneDx = useExportCycloneDxMutation(ctx.token);
 
   function resetForm() {
-    setAssetForm(emptyAsset);
+    setAssetForm(emptyAiSystem);
     setEditingAssetId(null);
     setEditBaseVersion(null);
+    setImportSuggestion(null);
+  }
+
+  function onNewAiSystem() {
+    resetForm();
+    setDialogOpen(true);
+  }
+
+  function onDialogOpenChange(open: boolean) {
+    setDialogOpen(open);
+    if (!open) resetForm();
   }
 
   function onEdit(asset: Asset) {
     setEditingAssetId(asset.id);
     setEditBaseVersion(asset.updatedAt ?? null);
+    setImportSuggestion(null);
     setAssetForm({
       name: asset.name,
       version: asset.version,
@@ -120,6 +134,7 @@ function AssetListRoute() {
       downstreamConsumers: asset.downstreamConsumers ?? "",
       sourceUrl: asset.sourceUrl ?? "",
     });
+    setDialogOpen(true);
   }
 
   async function onSubmit(event: FormEvent) {
@@ -128,9 +143,11 @@ function AssetListRoute() {
     try {
       const payload = editingAssetId && editBaseVersion ? { ...assetForm, expectedUpdatedAt: editBaseVersion } : assetForm;
       await saveAsset.mutateAsync({ id: editingAssetId ?? undefined, payload });
+      toast.success(editingAssetId ? "AI system updated" : "AI system created", assetForm.name);
+      setDialogOpen(false);
       resetForm();
     } catch (err) {
-      reportError(ctx.setError, err, "Asset save failed");
+      reportError(ctx.setError, err, "AI system save failed");
     }
   }
 
@@ -161,19 +178,21 @@ function AssetListRoute() {
   }
 
   return (
-    <AssetList
+    <AiSystemList
       assets={assets}
       filters={filters}
       assetForm={assetForm}
       editingAssetId={editingAssetId}
+      dialogOpen={dialogOpen}
       label={label}
       onFiltersChange={setFilters}
       onFormChange={setAssetForm}
       importSuggestion={importSuggestion}
       onFetchImport={onFetchImport}
       onSubmit={onSubmit}
-      onNewAsset={resetForm}
-      onSelect={(id) => navigate(`/assets/${id}`)}
+      onNewAiSystem={onNewAiSystem}
+      onDialogOpenChange={onDialogOpenChange}
+      onSelect={(id) => navigate(`/ai-systems/${id}`)}
       onEdit={onEdit}
       onExport={onExport}
       canManage={canManage(ctx.currentUser)}
@@ -181,19 +200,19 @@ function AssetListRoute() {
   );
 }
 
-function AssetDetailRoute() {
+function AiSystemDetailRoute() {
   const ctx = useCtx();
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const { data: asset = null } = useAssetQuery(ctx.token, id);
-  const { data: linkedProjects = [] } = useAssetProjectsQuery(ctx.token, id);
-  const { data: modelCardData } = useAssetModelCardQuery(ctx.token, id);
+  const { data: asset = null } = useAiSystemQuery(ctx.token, id);
+  const { data: linkedProjects = [] } = useAiSystemProjectsQuery(ctx.token, id);
+  const { data: modelCardData } = useAiSystemModelCardQuery(ctx.token, id);
   const { data: auditLogs = [] } = useAuditLogsQuery(ctx.token, "AIAsset", id);
   const { data: risks = [] } = useRisksQuery(ctx.token, {});
   const { data: projects = [] } = useProjectsQuery(ctx.token);
 
-  const [assetForm, setAssetForm] = useState(emptyAsset);
+  const [assetForm, setAssetForm] = useState(emptyAiSystem);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
   const [editBaseVersion, setEditBaseVersion] = useState<string | null>(null);
   const [modelCardForm, setModelCardForm] = useState<ModelCardFormState>(emptyModelCardForm);
@@ -203,11 +222,11 @@ function AssetDetailRoute() {
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [workflowComments, setWorkflowComments] = useState("");
 
-  const saveAsset = useSaveAssetMutation(ctx.token);
-  const transitionAsset = useTransitionAssetMutation(ctx.token, id ?? "");
+  const saveAsset = useSaveAiSystemMutation(ctx.token);
+  const transitionAsset = useTransitionAiSystemMutation(ctx.token, id ?? "");
   const importUrl = useImportUrlMutation(ctx.token);
-  const riskLinks = useAssetRiskLinkMutations(ctx.token, id ?? "");
-  const projectLinks = useAssetProjectLinkMutations(ctx.token, id ?? "");
+  const riskLinks = useAiSystemRiskLinkMutations(ctx.token, id ?? "");
+  const projectLinks = useAiSystemProjectLinkMutations(ctx.token, id ?? "");
   const saveModelCard = useSaveModelCardMutation(ctx.token, id ?? "");
   const metricMutations = useModelCardMetricMutations(ctx.token, id ?? "");
 
@@ -373,7 +392,7 @@ function AssetDetailRoute() {
   }
 
   return (
-    <AssetDetail
+    <AiSystemDetail
       asset={asset}
       assetForm={assetForm}
       modelCard={modelCardData?.modelCard ?? null}
@@ -390,7 +409,7 @@ function AssetDetailRoute() {
       label={label}
       availableTransitions={(nextStatuses[asset?.status ?? ""] ?? []).filter((status) => canTransitionAsset(ctx.currentUser, status))}
       canManage={canManage(ctx.currentUser)}
-      onBack={() => navigate("/assets")}
+      onBack={() => navigate("/ai-systems")}
       onEditAsset={onEditAsset}
       onFormChange={setAssetForm}
       onSaveAsset={onSaveAsset}
@@ -421,10 +440,13 @@ function RiskRegisterRoute() {
   const [editBaseVersion, setEditBaseVersion] = useState<string | null>(null);
   const [selectedRiskIds, setSelectedRiskIds] = useState<string[]>([]);
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+
   const { data: risks = [] } = useRisksQuery(ctx.token, filters);
-  const { data: assets = [] } = useAssetsQuery(ctx.token, {});
+  const { data: assets = [] } = useAiSystemsQuery(ctx.token, {});
   const { data: categories = [] } = useFrameworkCategoriesQuery(ctx.token);
   const { data: atlasTechniques = [] } = useAtlasTechniquesQuery(ctx.token);
+  const { data: atlasMitigations = [] } = useAtlasMitigationsQuery(ctx.token);
   const saveRisk = useSaveRiskMutation(ctx.token);
   const bulkUpdateRisks = useBulkUpdateRisksMutation(ctx.token);
 
@@ -446,6 +468,16 @@ function RiskRegisterRoute() {
     setEditBaseVersion(null);
   }
 
+  function onNewRisk() {
+    resetForm();
+    setDialogOpen(true);
+  }
+
+  function onDialogOpenChange(open: boolean) {
+    setDialogOpen(open);
+    if (!open) resetForm();
+  }
+
   function onEditRisk(risk: Risk) {
     setEditingRiskId(risk.id);
     setEditBaseVersion(risk.updatedAt ?? null);
@@ -456,6 +488,7 @@ function RiskRegisterRoute() {
       euAiActRiskTier: risk.euAiActRiskTier ?? "",
       strideAiCategory: risk.strideAiCategory ?? "",
       atlasTechnique: risk.atlasTechnique ?? "",
+      atlasMitigations: risk.atlasMitigations ?? [],
       description: risk.description,
       likelihood: risk.likelihood,
       impact: risk.impact,
@@ -465,6 +498,7 @@ function RiskRegisterRoute() {
       dueDate: risk.dueDate ? risk.dueDate.slice(0, 10) : "",
       status: risk.status,
     });
+    setDialogOpen(true);
   }
 
   async function onSubmitRisk(event: FormEvent) {
@@ -479,10 +513,13 @@ function RiskRegisterRoute() {
         euAiActRiskTier: riskForm.euAiActRiskTier || null,
         strideAiCategory: riskForm.strideAiCategory || null,
         atlasTechnique: riskForm.atlasTechnique || null,
+        atlasMitigations: riskForm.atlasMitigations,
         dueDate: riskForm.dueDate ? new Date(riskForm.dueDate).toISOString() : null,
         ...(editingRiskId && editBaseVersion ? { expectedUpdatedAt: editBaseVersion } : {}),
       };
       await saveRisk.mutateAsync({ id: editingRiskId ?? undefined, payload });
+      toast.success(editingRiskId ? "Risk updated" : "Risk created");
+      setDialogOpen(false);
       resetForm();
     } catch (err) {
       reportError(ctx.setError, err, "Risk save failed");
@@ -514,15 +551,18 @@ function RiskRegisterRoute() {
       assets={assets}
       categories={categories}
       atlasTechniques={atlasTechniques}
+      atlasMitigations={atlasMitigations}
       filters={filters}
       riskForm={riskForm}
       editingRiskId={editingRiskId}
+      dialogOpen={dialogOpen}
       selectedRiskIds={selectedRiskIds}
       label={label}
       onFiltersChange={setFilters}
       onRiskFormChange={setRiskForm}
       onSubmitRisk={onSubmitRisk}
-      onNewRisk={resetForm}
+      onNewRisk={onNewRisk}
+      onDialogOpenChange={onDialogOpenChange}
       onEditRisk={onEditRisk}
       onOpenRisk={onOpenRisk}
       onToggleRisk={onToggleRisk}
@@ -538,7 +578,7 @@ function RiskDetailRoute() {
   const { id } = useParams();
 
   const { data: risk = null } = useRiskQuery(ctx.token, id);
-  const { data: assets = [] } = useAssetsQuery(ctx.token, {});
+  const { data: assets = [] } = useAiSystemsQuery(ctx.token, {});
   const { data: projects = [] } = useProjectsQuery(ctx.token);
   const { data: controls = [] } = useControlsQuery(ctx.token);
   const { data: auditLogs = [] } = useAuditLogsQuery(ctx.token, "Risk", id);
@@ -657,6 +697,7 @@ function ProjectListRoute() {
   const [projectForm, setProjectForm] = useState<ProjectForm>(emptyProject);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [editBaseVersion, setEditBaseVersion] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: projects = [] } = useProjectsQuery(ctx.token);
   const saveProject = useSaveProjectMutation(ctx.token);
@@ -665,6 +706,16 @@ function ProjectListRoute() {
     setProjectForm(emptyProject);
     setEditingProjectId(null);
     setEditBaseVersion(null);
+  }
+
+  function onNewProject() {
+    resetForm();
+    setDialogOpen(true);
+  }
+
+  function onDialogOpenChange(open: boolean) {
+    setDialogOpen(open);
+    if (!open) resetForm();
   }
 
   function onEditProject(project: Project) {
@@ -676,6 +727,7 @@ function ProjectListRoute() {
       businessOwner: project.businessOwner ?? "",
       status: project.status,
     });
+    setDialogOpen(true);
   }
 
   async function onSubmit(event: FormEvent) {
@@ -684,6 +736,8 @@ function ProjectListRoute() {
     try {
       const payload = editingProjectId && editBaseVersion ? { ...projectForm, expectedUpdatedAt: editBaseVersion } : projectForm;
       await saveProject.mutateAsync({ id: editingProjectId ?? undefined, payload });
+      toast.success(editingProjectId ? "Project updated" : "Project created", projectForm.name);
+      setDialogOpen(false);
       resetForm();
     } catch (err) {
       reportError(ctx.setError, err, "Project save failed");
@@ -695,10 +749,12 @@ function ProjectListRoute() {
       projects={projects}
       projectForm={projectForm}
       editingProjectId={editingProjectId}
+      dialogOpen={dialogOpen}
       label={label}
       onFormChange={setProjectForm}
       onSubmit={onSubmit}
-      onNewProject={resetForm}
+      onNewProject={onNewProject}
+      onDialogOpenChange={onDialogOpenChange}
       onOpenProject={(id) => navigate(`/projects/${id}`)}
       onEditProject={onEditProject}
       canManage={canManage(ctx.currentUser)}
@@ -712,7 +768,7 @@ function ProjectDetailRoute() {
   const { id } = useParams();
 
   const { data: project = null } = useProjectQuery(ctx.token, id);
-  const { data: assets = [] } = useAssetsQuery(ctx.token, {});
+  const { data: assets = [] } = useAiSystemsQuery(ctx.token, {});
   const { data: risks = [] } = useRisksQuery(ctx.token, {});
   const { data: mergedRisks = [] } = useProjectRisksQuery(ctx.token, id);
 
@@ -809,8 +865,8 @@ function downloadJson(data: unknown, filename: string) {
 function NotFoundRoute() {
   return (
     <section className="mx-auto max-w-7xl px-6 py-16 text-center">
-      <h1 className="text-2xl font-semibold">Page not found</h1>
-      <p className="mt-2 text-slate-500">There's nothing here.</p>
+      <h1 className="text-2xl font-semibold text-text">Page not found</h1>
+      <p className="mt-2 text-subtle">There's nothing here.</p>
     </section>
   );
 }
@@ -820,8 +876,8 @@ function RouteError() {
   const message = error instanceof Error ? error.message : "Something went wrong.";
   return (
     <section className="mx-auto max-w-7xl px-6 py-16 text-center">
-      <h1 className="text-2xl font-semibold">Something went wrong</h1>
-      <p className="mt-2 text-slate-500">{message}</p>
+      <h1 className="text-2xl font-semibold text-text">Something went wrong</h1>
+      <p className="mt-2 text-subtle">{message}</p>
     </section>
   );
 }
@@ -832,10 +888,10 @@ export const router = createBrowserRouter([
     element: <App />,
     errorElement: <RouteError />,
     children: [
-      { index: true, element: <Navigate to="/assets" replace /> },
+      { index: true, element: <Navigate to="/ai-systems" replace /> },
       { path: "dashboard", element: <DashboardRoute /> },
-      { path: "assets", element: <AssetListRoute /> },
-      { path: "assets/:id", element: <AssetDetailRoute /> },
+      { path: "ai-systems", element: <AiSystemListRoute /> },
+      { path: "ai-systems/:id", element: <AiSystemDetailRoute /> },
       { path: "risks", element: <RiskRegisterRoute /> },
       { path: "risks/:id", element: <RiskDetailRoute /> },
       { path: "projects", element: <ProjectListRoute /> },

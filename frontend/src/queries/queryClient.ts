@@ -6,6 +6,14 @@ import { ApiClientError } from "../api/client";
 // from wherever they're used, not through one App-owned function. This is a
 // tiny event bus so App can still react to it in one place without the
 // QueryClient (created once, outside React) needing to hold React state.
+//
+// Mutation *error reporting* (the toast every failed write shows — E7) is
+// deliberately NOT centralized here: every route component in router.tsx
+// already reports through ctx.setError -> toast.error with a
+// handler-specific fallback message, and Dashboard.tsx/Users.tsx (which own
+// their mutations locally) call toast.error directly. A blanket
+// MutationCache.onError toast here would double up with those on every
+// failure instead of replacing them.
 type UnauthorizedListener = () => void;
 let unauthorizedListener: UnauthorizedListener | null = null;
 

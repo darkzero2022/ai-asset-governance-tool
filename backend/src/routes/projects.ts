@@ -86,7 +86,7 @@ router.delete("/projects/:id", requireAuth, requireRole("ADMIN"), async (req, re
   }
 });
 
-router.post("/projects/:projectId/assets/:assetId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.post("/projects/:projectId/ai-systems/:assetId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const projectId = String(req.params.projectId);
     const assetId = String(req.params.assetId);
@@ -97,7 +97,7 @@ router.post("/projects/:projectId/assets/:assetId", requireAuth, requireRole("AD
   }
 });
 
-router.delete("/projects/:projectId/assets/:assetId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
+router.delete("/projects/:projectId/ai-systems/:assetId", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const projectId = String(req.params.projectId);
     const assetId = String(req.params.assetId);

@@ -71,7 +71,7 @@ and `TRUST_PROXY=1` in `.env`.
   `Referrer-Policy`, a restrictive `Content-Security-Policy`, and (when
   `NODE_ENV=production`) HSTS. The proxy serving the frontend should send an
   equivalent header set for the SPA.
-- **URL import egress**: `POST /api/v1/assets/import-url` and `/api/v1/assets/:id/import-url` fetch
+- **URL import egress**: `POST /api/v1/ai-systems/import-url` and `/api/v1/ai-systems/:id/import-url` fetch
   arbitrary user-supplied URLs. The app blocks loopback/private/link-local/CGNAT and
   cloud-metadata addresses at DNS-resolve time, but a hostile domain can still rebind
   DNS in the window between validation and connection. Run the backend with

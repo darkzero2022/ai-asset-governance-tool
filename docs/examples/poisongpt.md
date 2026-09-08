@@ -72,7 +72,7 @@ editable; the NIST/EU rows were mapped by hand.
   approval banner names each blocking reason.
 - **Blast radius.** The project's merged risk view rolls the asset's findings up so
   the business owner sees the exposure the use case inherits from the model.
-- **Machine-readable evidence.** `GET /assets/:id/export/cyclonedx`
+- **Machine-readable evidence.** `GET /api/v1/ai-systems/:id/export/cyclonedx`
   ([`poisongpt-aibom.json`](poisongpt-aibom.json)) records the component as
   `machine-learning-model`, carries the typosquat URL as an external reference, and
   captures the provenance note plus each finding's `aibom:risk:framework`,

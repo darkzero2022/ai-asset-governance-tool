@@ -1,0 +1,102 @@
+/**
+ * Wazuh-derived design tokens (enhancement plan Appendix 1). Change palette
+ * values here only — every color, radius, and shadow in the app reads from
+ * these, surfaced through Tailwind theme keys (tailwind.config.js).
+ * Dark is the default theme; :root[data-theme="light"] overrides it.
+ *
+ * Colors are stored as bare "R G B" triples (not hex) so Tailwind's opacity
+ * modifiers work at runtime — tailwind.config.js wraps each as
+ * `rgb(var(--x) / <alpha-value>)`, letting e.g. `bg-primary/12` resolve
+ * against whichever theme's channel values are currently active.
+ */
+:root {
+  /* Brand */
+  --wz-primary: 7 121 196; /* #0779c4 */
+  --wz-primary-hover: 10 95 160; /* #0a5fa0 */
+  --wz-cyan: 0 169 224; /* #00a9e0 */
+  --wz-indigo: 108 95 199; /* #6c5fc7 */
+
+  /* Neutrals — dark (default) */
+  --wz-bg: 18 20 26; /* #12141a */
+  --wz-surface: 26 29 36; /* #1a1d24 */
+  --wz-surface-alt: 34 38 46; /* #22262e */
+  --wz-border: 51 58 69; /* #333a45 */
+  --wz-text: 220 225 232; /* #dce1e8 */
+  --wz-text-subtle: 154 165 180; /* #9aa5b4 */
+  --wz-text-disabled: 90 97 110; /* #5a616e */
+
+  /* Semantic */
+  --wz-success: 79 209 176; /* #4fd1b0 */
+  --wz-warning: 245 194 75; /* #f5c24b */
+  --wz-danger: 248 107 107; /* #f86b6b */
+  --wz-info: 74 169 232; /* #4aa9e8 */
+
+  /* Risk severity */
+  --wz-severity-critical: 248 107 107; /* #f86b6b */
+  --wz-severity-high: 255 155 87; /* #ff9b57 */
+  --wz-severity-medium: 245 194 75; /* #f5c24b */
+  --wz-severity-low: 74 169 232; /* #4aa9e8 */
+  --wz-severity-none: 123 132 148; /* #7b8494 */
+
+  /* Chart categorical palette, ordered */
+  --wz-chart-1: 7 121 196;
+  --wz-chart-2: 0 169 224;
+  --wz-chart-3: 29 165 132;
+  --wz-chart-4: 245 167 0;
+  --wz-chart-5: 224 98 30;
+  --wz-chart-6: 179 34 23;
+  --wz-chart-7: 108 95 199;
+  --wz-chart-8: 154 165 180;
+
+  /* 5x5 heatmap gradient stops (score 1 -> 25) — consumed directly as hex by
+     RiskHeatmap's JS color interpolation, not through Tailwind utilities. */
+  --wz-heat-1: #1da584;
+  --wz-heat-6: #7fbf3f;
+  --wz-heat-12: #f5a700;
+  --wz-heat-18: #e0621e;
+  --wz-heat-25: #b32217;
+
+  /* Type */
+  --wz-font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --wz-font-mono: "JetBrains Mono", "Roboto Mono", ui-monospace, monospace;
+
+  /* Radius */
+  --wz-radius-sm: 4px;
+  --wz-radius-md: 6px;
+  --wz-radius-lg: 10px;
+
+  /* Elevation (dark) */
+  --wz-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.16);
+
+  /* Layout */
+  --wz-row-compact: 36px;
+  --wz-row-default: 40px;
+  --wz-sidebar-expanded: 240px;
+  --wz-sidebar-collapsed: 56px;
+}
+
+:root[data-theme="light"] {
+  /* Neutrals — light */
+  --wz-bg: 245 247 250; /* #f5f7fa */
+  --wz-surface: 255 255 255; /* #ffffff */
+  --wz-surface-alt: 240 243 247; /* #f0f3f7 */
+  --wz-border: 211 218 230; /* #d3dae6 */
+  --wz-text: 26 28 33; /* #1a1c21 */
+  --wz-text-subtle: 90 97 110; /* #5a616e */
+  --wz-text-disabled: 152 162 179; /* #98a2b3 */
+
+  /* Semantic (light) */
+  --wz-success: 29 165 132; /* #1da584 */
+  --wz-warning: 245 167 0; /* #f5a700 */
+  --wz-danger: 216 69 59; /* #d8453b */
+  --wz-info: 7 121 196; /* #0779c4 */
+
+  /* Risk severity (light) */
+  --wz-severity-critical: 179 34 23; /* #b32217 */
+  --wz-severity-high: 224 98 30; /* #e0621e */
+  --wz-severity-medium: 245 167 0; /* #f5a700 */
+  --wz-severity-low: 7 121 196; /* #0779c4 */
+  --wz-severity-none: 123 132 148; /* #7b8494 */
+
+  --wz-shadow-card: 0 1px 2px rgba(16, 24, 40, 0.06), 0 2px 8px rgba(16, 24, 40, 0.08);
+}

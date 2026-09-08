@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../auth.js";
 import { requireRole } from "../rbac.js";
-import { forbidden, notFound } from "../httpError.js";
+import { forbidden, notFound, unprocessable } from "../httpError.js";
 import { pagination, csv, MAX_EXPORT_ROWS } from "../lib/http.js";
 import { audit } from "../lib/audit.js";
 import { riskResponse } from "../lib/responses.js";
@@ -14,6 +14,26 @@ import { sendSlackRiskStatusChange } from "../integrations/slack.js";
 import { severityOf } from "../riskScoring.js";
 
 const router = express.Router();
+
+/**
+ * Reject any atlasMitigations entry that isn't a known AtlasMitigationReference.
+ * Returns the de-duplicated list to persist (undefined = "not provided", leave as-is).
+ */
+async function validatedAtlasMitigations(input: string[] | undefined): Promise<string[] | undefined> {
+  if (input === undefined) return undefined;
+  const unique = [...new Set(input)];
+  if (unique.length === 0) return [];
+  const known = await prisma.atlasMitigationReference.findMany({
+    where: { name: { in: unique } },
+    select: { name: true },
+  });
+  const knownNames = new Set(known.map((row) => row.name));
+  const unknown = unique.filter((name) => !knownNames.has(name));
+  if (unknown.length) {
+    throw unprocessable(`Unknown MITRE ATLAS mitigation(s): ${unknown.join(", ")}`, { atlasMitigations: unknown });
+  }
+  return unique;
+}
 
 router.get("/risks", requireAuth, async (req, res, next) => {
   try {
@@ -56,8 +76,8 @@ router.get("/risks/export/csv", requireAuth, async (req, res, next) => {
       take: MAX_EXPORT_ROWS,
     });
     const body = csv([
-      ["id", "description", "severity", "sourceFramework", "sourceCategoryId", "strideAiCategory", "atlasTechnique", "status", "likelihood", "impact", "inherentRiskScore", "residualRiskScore", "owner", "dueDate", "assetNames", "controlIds", "archived"],
-      ...risks.map((risk) => [risk.id, risk.description, severityOf(risk.inherentRiskScore), risk.sourceFramework, risk.sourceCategoryId, risk.strideAiCategory ?? "", risk.atlasTechnique ?? "", risk.status, risk.likelihood, risk.impact, risk.inherentRiskScore, risk.residualRiskScore, risk.owner, risk.dueDate?.toISOString() ?? "", risk.assets.map((link) => link.asset.name).join("; "), risk.controlLinks.map((link) => link.control.mappedControlId).join("; "), risk.archived]),
+      ["id", "description", "severity", "sourceFramework", "sourceCategoryId", "strideAiCategory", "atlasTechnique", "atlasMitigations", "status", "likelihood", "impact", "inherentRiskScore", "residualRiskScore", "owner", "dueDate", "assetNames", "controlIds", "archived"],
+      ...risks.map((risk) => [risk.id, risk.description, severityOf(risk.inherentRiskScore), risk.sourceFramework, risk.sourceCategoryId, risk.strideAiCategory ?? "", risk.atlasTechnique ?? "", risk.atlasMitigations.join("; "), risk.status, risk.likelihood, risk.impact, risk.inherentRiskScore, risk.residualRiskScore, risk.owner, risk.dueDate?.toISOString() ?? "", risk.assets.map((link) => link.asset.name).join("; "), risk.controlLinks.map((link) => link.control.mappedControlId).join("; "), risk.archived]),
     ]);
     res.header("Content-Type", "text/csv; charset=utf-8");
     res.attachment("risks.csv");
@@ -70,10 +90,12 @@ router.get("/risks/export/csv", requireAuth, async (req, res, next) => {
 router.post("/risks", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (req, res, next) => {
   try {
     const body = riskSchema.parse(req.body);
-    const { assetId, ...riskData } = body;
+    const { assetId, atlasMitigations: rawMitigations, ...riskData } = body;
+    const atlasMitigations = await validatedAtlasMitigations(rawMitigations);
     const risk = await prisma.risk.create({
       data: {
         ...riskData,
+        ...(atlasMitigations !== undefined ? { atlasMitigations } : {}),
         ...(await strideAtlasFor(body)),
         dueDate: body.dueDate ? new Date(body.dueDate) : null,
         inherentRiskScore: body.likelihood * body.impact,
@@ -108,7 +130,8 @@ router.put("/risks/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async 
   try {
     const id = String(req.params.id);
     const body = riskUpdateSchema.parse(req.body);
-    const { assetId, expectedUpdatedAt, ...riskData } = body;
+    const { assetId, expectedUpdatedAt, atlasMitigations: rawMitigations, ...riskData } = body;
+    const atlasMitigations = await validatedAtlasMitigations(rawMitigations);
     const before = await prisma.risk.findUniqueOrThrow({ where: { id }, include: { assets: true, controlLinks: { include: { control: true } }, frameworkCategory: true } });
 
     if (req.user!.role === "RISK_OWNER" && before.createdById !== req.user!.id) {
@@ -129,6 +152,7 @@ router.put("/risks/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async 
       where: { id },
       data: {
         ...riskData,
+        ...(atlasMitigations !== undefined ? { atlasMitigations } : {}),
         ...(await strideAtlasFor(body)),
         dueDate: body.dueDate ? new Date(body.dueDate) : null,
         inherentRiskScore: body.likelihood * body.impact,

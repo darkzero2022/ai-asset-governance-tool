@@ -1,5 +1,8 @@
 import { FormEvent, useState } from "react";
+import { ShieldCheck } from "lucide-react";
 import { apiFetch } from "../api/client";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Field";
 
 export default function Bootstrap({ onComplete }: { onComplete: (token: string) => void }) {
   const [name, setName] = useState("");
@@ -35,56 +38,27 @@ export default function Bootstrap({ onComplete }: { onComplete: (token: string) 
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <section className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-cyan-300">AI-BOM Governance</p>
-        <h1 className="text-4xl font-semibold tracking-tight">Create your administrator account</h1>
-        <p className="mt-3 text-sm text-slate-400">
-          This is the first time the app has run. Set up the administrator login — you can add more users afterwards.
-        </p>
-        <form onSubmit={submit} className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl shadow-cyan-950/40">
-          <label className="block text-sm text-slate-300" htmlFor="bootstrap-name">Name</label>
-          <input
-            id="bootstrap-name"
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Administrator"
-          />
-          <label className="mt-4 block text-sm text-slate-300" htmlFor="bootstrap-email">Email</label>
-          <input
-            id="bootstrap-email"
-            type="email"
-            required
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          <label className="mt-4 block text-sm text-slate-300" htmlFor="bootstrap-password">Password</label>
-          <input
-            id="bootstrap-password"
-            type="password"
-            required
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-          <label className="mt-4 block text-sm text-slate-300" htmlFor="bootstrap-confirm">Confirm password</label>
-          <input
-            id="bootstrap-confirm"
-            type="password"
-            required
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2"
-            value={confirm}
-            onChange={(event) => setConfirm(event.target.value)}
-          />
-          {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
-          <button
-            disabled={submitting}
-            className="mt-6 w-full rounded-lg bg-cyan-300 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-60"
-          >
+    <main className="flex min-h-screen items-center justify-center bg-bg px-6 text-text">
+      <section className="w-full max-w-md">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <ShieldCheck className="mb-3 h-10 w-10 text-primary" aria-hidden="true" />
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">AI-BOM Governance</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Create your administrator account</h1>
+          <p className="mt-2 text-sm text-subtle">
+            This is the first time the app has run. Set up the administrator login — you can add more users afterwards.
+          </p>
+        </div>
+        <form onSubmit={submit} className="rounded-lg border border-border bg-surface p-6 shadow-card">
+          <div className="space-y-4">
+            <Input id="bootstrap-name" label="Name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Administrator" />
+            <Input id="bootstrap-email" label="Email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
+            <Input id="bootstrap-password" label="Password" type="password" required value={password} onChange={(event) => setPassword(event.target.value)} />
+            <Input id="bootstrap-confirm" label="Confirm password" type="password" required value={confirm} onChange={(event) => setConfirm(event.target.value)} />
+          </div>
+          {error && <p className="mt-4 text-sm text-danger" role="alert">{error}</p>}
+          <Button type="submit" variant="primary" disabled={submitting} className="mt-6 w-full">
             {submitting ? "Creating…" : "Create account and sign in"}
-          </button>
+          </Button>
         </form>
       </section>
     </main>

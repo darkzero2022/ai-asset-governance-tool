@@ -1,4 +1,11 @@
 import { useState, type ReactNode } from "react";
+import { ArrowLeft } from "lucide-react";
+import { Card, CardBody, CardHeader } from "../components/ui/Card";
+import { Badge, SeverityBadge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Input, Select } from "../components/ui/Field";
+import { Combobox } from "../components/ui/Combobox";
+import { EmptyState } from "../components/ui/EmptyState";
 
 type Asset = { id: string; name: string };
 type Project = { id: string; name: string; status: string };
@@ -13,6 +20,7 @@ type RiskDetailData = {
   euAiActRiskTier?: string | null;
   strideAiCategory?: string | null;
   atlasTechnique?: string | null;
+  atlasMitigations?: string[];
   likelihood: number;
   impact: number;
   inherentRiskScore: number;
@@ -60,14 +68,24 @@ type Props = {
   canManage: boolean;
 };
 
+const controlStatuses = ["NOT_STARTED", "IN_PROGRESS", "IMPLEMENTED", "VERIFIED"];
+
+function BackLink({ onBack }: { onBack: () => void }) {
+  return (
+    <button className="mb-4 flex items-center gap-1 text-sm font-medium text-subtle hover:text-text" onClick={onBack}>
+      <ArrowLeft className="h-4 w-4" /> Back to Risk Register
+    </button>
+  );
+}
+
 export default function RiskDetail(props: Props) {
   const [controlSearch, setControlSearch] = useState("");
 
   if (!props.risk) {
     return (
-      <section className="mx-auto max-w-7xl px-6 py-8">
-        <button className="text-sm font-semibold text-cyan-700" onClick={props.onBack}>Back to Risk Register</button>
-        <div className="mt-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">Loading risk...</div>
+      <section className="mx-auto max-w-7xl px-6 py-6">
+        <BackLink onBack={props.onBack} />
+        <Card><CardBody>Loading risk…</CardBody></Card>
       </section>
     );
   }
@@ -84,119 +102,158 @@ export default function RiskDetail(props: Props) {
     : availableControls;
 
   return (
-    <section className="mx-auto grid max-w-7xl gap-6 px-6 py-8 xl:grid-cols-[1.1fr_0.9fr]">
-      <div className="space-y-6">
-        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <button className="text-sm font-semibold text-cyan-700" onClick={props.onBack}>Back to Risk Register</button>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h2 className="text-2xl font-semibold">{props.risk.description}</h2>
-              <p className="text-sm text-slate-500">{props.risk.sourceFramework} / {props.risk.sourceCategoryId}</p>
-            </div>
-            <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-bold text-white">{props.risk.severity ?? "UNKNOWN"}</span>
-          </div>
-          <dl className="mt-5 grid gap-3 text-sm md:grid-cols-2">
-            <Info label="Status" value={props.label(props.risk.status)} />
-            <Info label="Owner" value={props.risk.owner} />
-            <Info label="OWASP / NIST reference" value={`${props.risk.sourceFramework} / ${props.risk.sourceCategoryId}`} />
-            <Info label="EU AI Act tier" value={props.risk.euAiActRiskTier ? props.label(props.risk.euAiActRiskTier) : null} />
-            <Info label="STRIDE-AI category" value={props.risk.strideAiCategory ? props.label(props.risk.strideAiCategory) : null} />
-            <Info label="MITRE ATLAS technique" value={props.risk.atlasTechnique} />
-            <Info label="Due Date" value={props.risk.dueDate ? new Date(props.risk.dueDate).toLocaleDateString() : null} />
-            <Info label="Inherent Score" value={String(props.risk.inherentRiskScore)} />
-            <Info label="Likelihood" value={String(props.risk.likelihood)} />
-            <Info label="Impact" value={String(props.risk.impact)} />
-            <Info label="Residual Score" value={props.risk.residualRiskScore ? String(props.risk.residualRiskScore) : null} />
-            <Info label="Treatment Plan" value={props.risk.treatmentPlan} />
-          </dl>
-        </div>
-
-        <Panel title="Linked Assets">
-          {props.canManage && <LinkRow value={props.selectedAssetId} options={availableAssets.map((asset) => ({ id: asset.id, label: asset.name }))} placeholder="Select asset" onChange={props.onSelectedAssetChange} onLink={props.onLinkAsset} />}
-          <ItemList items={(props.risk.assets ?? []).map((link) => ({ id: link.assetId, title: link.asset.name, subtitle: "Asset link" }))} onRemove={props.canManage ? props.onUnlinkAsset : undefined} />
-        </Panel>
-
-        <Panel title="Linked Projects">
-          {props.canManage && <LinkRow value={props.selectedProjectId} options={availableProjects.map((project) => ({ id: project.id, label: project.name }))} placeholder="Select project" onChange={props.onSelectedProjectChange} onLink={props.onLinkProject} />}
-          <ItemList items={(props.risk.projects ?? []).map((link) => ({ id: link.projectId, title: link.project.name, subtitle: props.label(link.project.status) }))} onRemove={props.canManage ? props.onUnlinkProject : undefined} />
-        </Panel>
-      </div>
-
-      <aside className="space-y-6">
-        <Panel title="Linked Controls">
-          {props.canManage && (
-            <>
-              <input className="mb-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Search controls by name or ID" value={controlSearch} onChange={(event) => setControlSearch(event.target.value)} />
-              <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-                <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={props.selectedControlId} onChange={(event) => props.onSelectedControlChange(event.target.value)}>
-                  <option value="">Select control</option>
-                  {suggestedControls.map((control) => <option key={control.id} value={control.id}>{control.mappedControlId} - {control.name}</option>)}
-                </select>
-                <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={props.selectedControlStatus} onChange={(event) => props.onSelectedControlStatusChange(event.target.value)}>
-                  {controlStatuses.map((status) => <option key={status} value={status}>{props.label(status)}</option>)}
-                </select>
-                <button className="rounded-lg bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.selectedControlId} onClick={props.onLinkControl}>Link</button>
-              </div>
-            </>
-          )}
-          <div className="mt-4 space-y-3">
-            {(props.risk.controls ?? []).map((control) => (
-              <div key={control.id} className="rounded-xl border border-slate-200 p-3 text-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{control.mappedControlId}</p>
-                    <p className="text-slate-500">{control.mappedFramework}</p>
-                  </div>
-                  {props.canManage && <button className="text-xs font-semibold text-red-600" onClick={() => props.onUnlinkControl(control.id)}>Unlink</button>}
+    <section className="mx-auto max-w-7xl px-6 py-6">
+      <BackLink onBack={props.onBack} />
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-6">
+          <Card>
+            <CardBody>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h1 className="text-xl font-semibold text-text">{props.risk.description}</h1>
+                  <p className="mt-1 text-sm text-subtle">{props.risk.sourceFramework} / {props.risk.sourceCategoryId}</p>
                 </div>
-                {props.canManage ? (
-                  <select className="mt-3 rounded-lg border border-slate-300 px-3 py-2 text-sm" value={control.implementationStatus ?? "NOT_STARTED"} onChange={(event) => props.onUpdateControl(control.id, event.target.value)}>
-                    {controlStatuses.map((status) => <option key={status} value={status}>{props.label(status)}</option>)}
-                  </select>
+                <SeverityBadge severity={props.risk.severity} />
+              </div>
+
+              <div className="mt-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-subtle">Threat classification</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <ClassPill kind="framework" label={`${props.risk.sourceFramework} · ${props.risk.sourceCategoryId}`} />
+                  {props.risk.euAiActRiskTier && <ClassPill kind="framework" label={`EU AI Act: ${props.label(props.risk.euAiActRiskTier)}`} />}
+                  {props.risk.strideAiCategory && <ClassPill kind="stride" label={`STRIDE-AI: ${props.label(props.risk.strideAiCategory)}`} />}
+                  {props.risk.atlasTechnique && <ClassPill kind="atlas" label={`ATLAS: ${props.risk.atlasTechnique}`} />}
+                </div>
+              </div>
+
+              <dl className="mt-5 grid gap-3 text-sm md:grid-cols-2">
+                <Info label="Status" value={props.label(props.risk.status)} />
+                <Info label="Owner" value={props.risk.owner} />
+                <Info label="Due Date" value={props.risk.dueDate ? new Date(props.risk.dueDate).toLocaleDateString() : null} />
+                <Info label="Inherent Score" value={String(props.risk.inherentRiskScore)} />
+                <Info label="Likelihood" value={String(props.risk.likelihood)} />
+                <Info label="Impact" value={String(props.risk.impact)} />
+                <Info label="Residual Score" value={props.risk.residualRiskScore ? String(props.risk.residualRiskScore) : null} />
+              </dl>
+
+              <div className="mt-5 border-t border-border pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-subtle">Remediation action plan</p>
+                <p className="mt-2 text-sm text-text">{props.risk.treatmentPlan || "No treatment plan recorded."}</p>
+                <p className="mt-3 text-xs font-medium text-subtle">MITRE ATLAS mitigations</p>
+                {props.risk.atlasMitigations?.length ? (
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {props.risk.atlasMitigations.map((name) => <ClassPill key={name} kind="atlas" label={name} />)}
+                  </div>
                 ) : (
-                  <p className="mt-3 text-xs text-slate-500">{props.label(control.implementationStatus ?? "NOT_STARTED")}</p>
+                  <p className="mt-1.5 text-sm text-subtle">None mapped.</p>
                 )}
               </div>
-            ))}
-            {!(props.risk.controls ?? []).length && <p className="text-sm text-slate-500">No linked controls.</p>}
-          </div>
-        </Panel>
+            </CardBody>
+          </Card>
 
-        <Panel title="Audit History">
-          <div className="space-y-3">
-            {props.auditLogs.map((log) => (
-              <div key={log.id} className="border-t border-slate-200 pt-3 text-sm first:border-t-0 first:pt-0">
-                <p className="font-medium">{props.label(log.action)}</p>
-                <p className="text-slate-500">{log.actor?.name ?? "Unknown actor"} on {new Date(log.timestamp).toLocaleString()}</p>
+          <Panel title="Linked AI Systems">
+            {props.canManage && (
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1"><Combobox value={props.selectedAssetId} onChange={props.onSelectedAssetChange} options={availableAssets.map((asset) => ({ value: asset.id, label: asset.name }))} placeholder="Select AI system" /></div>
+                <Button variant="primary" size="sm" disabled={!props.selectedAssetId} onClick={props.onLinkAsset}>Link</Button>
               </div>
-            ))}
-            {!props.auditLogs.length && <p className="text-sm text-slate-500">No audit entries for this risk yet.</p>}
-          </div>
-        </Panel>
-      </aside>
+            )}
+            <ItemList items={(props.risk.assets ?? []).map((link) => ({ id: link.assetId, title: link.asset.name, subtitle: "AI system link" }))} onRemove={props.canManage ? props.onUnlinkAsset : undefined} />
+          </Panel>
+
+          <Panel title="Linked Projects">
+            {props.canManage && (
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1"><Combobox value={props.selectedProjectId} onChange={props.onSelectedProjectChange} options={availableProjects.map((project) => ({ value: project.id, label: project.name }))} placeholder="Select project" /></div>
+                <Button variant="primary" size="sm" disabled={!props.selectedProjectId} onClick={props.onLinkProject}>Link</Button>
+              </div>
+            )}
+            <ItemList items={(props.risk.projects ?? []).map((link) => ({ id: link.projectId, title: link.project.name, subtitle: props.label(link.project.status) }))} onRemove={props.canManage ? props.onUnlinkProject : undefined} />
+          </Panel>
+        </div>
+
+        <aside className="space-y-6">
+          <Panel title="Linked Controls">
+            {props.canManage && (
+              <>
+                <Input aria-label="Search controls by name or ID" placeholder="Search controls by name or ID" value={controlSearch} onChange={(event) => setControlSearch(event.target.value)} className="mb-2" />
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+                  <Select aria-label="Select control" value={props.selectedControlId} onChange={(event) => props.onSelectedControlChange(event.target.value)}>
+                    <option value="">Select control</option>
+                    {suggestedControls.map((control) => <option key={control.id} value={control.id}>{control.mappedControlId} - {control.name}</option>)}
+                  </Select>
+                  <Select aria-label="Implementation status" value={props.selectedControlStatus} onChange={(event) => props.onSelectedControlStatusChange(event.target.value)}>
+                    {controlStatuses.map((status) => <option key={status} value={status}>{props.label(status)}</option>)}
+                  </Select>
+                  <Button variant="primary" size="sm" disabled={!props.selectedControlId} onClick={props.onLinkControl}>Link</Button>
+                </div>
+              </>
+            )}
+            <div className="mt-4 space-y-3">
+              {(props.risk.controls ?? []).map((control) => (
+                <div key={control.id} className="rounded-md border border-border p-3 text-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-text">{control.mappedControlId}</p>
+                      <p className="text-subtle">{control.mappedFramework}</p>
+                    </div>
+                    {props.canManage && <button className="text-xs font-semibold text-danger hover:underline" onClick={() => props.onUnlinkControl(control.id)}>Unlink</button>}
+                  </div>
+                  {props.canManage ? (
+                    <Select aria-label={`Implementation status for ${control.mappedControlId}`} value={control.implementationStatus ?? "NOT_STARTED"} onChange={(event) => props.onUpdateControl(control.id, event.target.value)} className="mt-3">
+                      {controlStatuses.map((status) => <option key={status} value={status}>{props.label(status)}</option>)}
+                    </Select>
+                  ) : (
+                    <div className="mt-2"><Badge variant="neutral">{props.label(control.implementationStatus ?? "NOT_STARTED")}</Badge></div>
+                  )}
+                </div>
+              ))}
+              {!(props.risk.controls ?? []).length && <EmptyState title="No linked controls." />}
+            </div>
+          </Panel>
+
+          <Panel title="Audit History">
+            <div className="space-y-3">
+              {props.auditLogs.map((log) => (
+                <div key={log.id} className="border-t border-border pt-3 text-sm first:border-t-0 first:pt-0">
+                  <p className="font-medium text-text">{props.label(log.action)}</p>
+                  <p className="text-subtle">{log.actor?.name ?? "Unknown actor"} on {new Date(log.timestamp).toLocaleString()}</p>
+                </div>
+              ))}
+              {!props.auditLogs.length && <EmptyState title="No audit entries for this risk yet." />}
+            </div>
+          </Panel>
+        </aside>
+      </div>
     </section>
   );
 }
 
-const controlStatuses = ["NOT_STARTED", "IN_PROGRESS", "IMPLEMENTED", "VERIFIED"];
+const PILL_STYLES: Record<string, string> = {
+  framework: "border-primary/40 bg-primary/10 text-text",
+  stride: "border-warning/40 bg-warning/10 text-text",
+  atlas: "border-info/40 bg-info/10 text-text",
+};
+
+function ClassPill({ kind, label }: { kind: keyof typeof PILL_STYLES; label: string }) {
+  return <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${PILL_STYLES[kind]}`}>{label}</span>;
+}
 
 function Info(props: { label: string; value?: string | null }) {
-  return <div><dt className="font-semibold">{props.label}</dt><dd className="text-slate-600">{props.value || "Not set"}</dd></div>;
+  return (
+    <div>
+      <dt className="font-semibold text-text">{props.label}</dt>
+      <dd className="text-subtle">{props.value || "Not set"}</dd>
+    </div>
+  );
 }
 
 function Panel(props: { title: string; children: ReactNode }) {
-  return <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><h3 className="text-lg font-semibold">{props.title}</h3><div className="mt-4">{props.children}</div></div>;
-}
-
-function LinkRow(props: { value: string; options: Array<{ id: string; label: string }>; placeholder: string; onChange: (id: string) => void; onLink: () => void }) {
   return (
-    <div className="flex gap-2">
-      <select className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" value={props.value} onChange={(event) => props.onChange(event.target.value)}>
-        <option value="">{props.placeholder}</option>
-        {props.options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-      </select>
-      <button className="rounded-lg bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={!props.value} onClick={props.onLink}>Link</button>
-    </div>
+    <Card>
+      <CardHeader title={props.title} />
+      <CardBody>{props.children}</CardBody>
+    </Card>
   );
 }
 
@@ -204,14 +261,14 @@ function ItemList(props: { items: Array<{ id: string; title: string; subtitle: s
   return (
     <div className="mt-4 space-y-3">
       {props.items.map((item) => (
-        <div key={item.id} className="rounded-xl border border-slate-200 p-3 text-sm">
+        <div key={item.id} className="rounded-md border border-border p-3 text-sm">
           <div className="flex items-start justify-between gap-3">
-            <div><p className="font-medium">{item.title}</p><p className="text-slate-500">{item.subtitle}</p></div>
-            {props.onRemove && <button className="text-xs font-semibold text-red-600" onClick={() => props.onRemove!(item.id)}>Unlink</button>}
+            <div><p className="font-medium text-text">{item.title}</p><p className="text-subtle">{item.subtitle}</p></div>
+            {props.onRemove && <button className="text-xs font-semibold text-danger hover:underline" onClick={() => props.onRemove!(item.id)}>Unlink</button>}
           </div>
         </div>
       ))}
-      {!props.items.length && <p className="text-sm text-slate-500">No links yet.</p>}
+      {!props.items.length && <EmptyState title="No links yet." />}
     </div>
   );
 }
