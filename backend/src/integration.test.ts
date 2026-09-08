@@ -489,6 +489,15 @@ describe("STRIDE-AI and MITRE ATLAS mapping", () => {
 });
 
 describe("asset detail response", () => {
+  it("accepts an empty sourceUrl from an untouched create form", async () => {
+    await request(app)
+      .post("/api/v1/ai-systems")
+      .set(auth("ADMIN"))
+      .send({ ...assetBody(`${runId}-empty-url`), sourceUrl: "" })
+      .expect(201)
+      .expect((response) => expect(response.body.asset.sourceUrl).toBeNull());
+  });
+
   it("includes computed severity on linked risks so the approval banner matches the backend gate", async () => {
     const asset = await createAsset({ type: "MODEL" });
     await createRisk(asset.id, { likelihood: 5, impact: 5, inherentRiskScore: 25, status: "OPEN" });

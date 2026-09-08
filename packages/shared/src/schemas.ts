@@ -24,7 +24,8 @@ export const assetSchema = z.object({
   dataClassificationTouched: z.string().optional().nullable(),
   trainingDataProvenance: z.string().optional().nullable(),
   downstreamConsumers: z.string().optional().nullable(),
-  sourceUrl: z.string().url().optional().nullable(),
+  // Accept "" from an untouched form field as "no URL" rather than a validation error.
+  sourceUrl: z.preprocess((value) => (value === "" ? null : value), z.string().url().optional().nullable()),
 });
 
 export const importUrlSchema = z.object({ sourceUrl: z.string().url() });
