@@ -5,6 +5,7 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { httpLogger, requestContext } from "./middleware/requestContext.js";
 import { mountStaticSite, shouldServeStatic } from "./middleware/staticSite.js";
 import { mountApiDocs } from "./openapi.js";
+import { readiness } from "./lib/readiness.js";
 import authRouter from "./routes/auth.js";
 import usersRouter from "./routes/users.js";
 import referenceRouter from "./routes/reference.js";
@@ -79,8 +80,23 @@ app.use(cookieParser());
 // index.html ahead of any colliding API route. API/XHR calls fall through.
 mountStaticSite(app);
 
+// Liveness: is the process up and the event loop responsive. Deliberately does
+// NOT touch the database — a DB blip should not make an orchestrator kill and
+// restart an otherwise-healthy process (that is what /ready is for).
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
+});
+
+// Readiness: should this instance receive traffic. Verifies DB connectivity and
+// that every migration checked into the repo has been applied. 200 when ready,
+// 503 with the failing check(s) otherwise.
+app.get("/ready", async (_req, res, next) => {
+  try {
+    const result = await readiness();
+    res.status(result.status === "ready" ? 200 : 503).json(result);
+  } catch (err) {
+    next(err);
+  }
 });
 
 // All domain endpoints live under /api/v1. /health (above) is the one

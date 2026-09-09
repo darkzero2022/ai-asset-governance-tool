@@ -61,7 +61,13 @@ echo
 
 echo "Endpoints"
 if curl -fsS "http://localhost:${APP_PORT}/health" >/dev/null 2>&1; then
-  echo "  http://localhost:${APP_PORT}/health — ok"
+  echo "  http://localhost:${APP_PORT}/health — ok (process up)"
 else
   echo "  http://localhost:${APP_PORT}/health — unreachable"
 fi
+ready_body="$(curl -sS "http://localhost:${APP_PORT}/ready" 2>/dev/null || true)"
+case "$ready_body" in
+  *'"status":"ready"'*)     echo "  http://localhost:${APP_PORT}/ready  — ready (db + migrations ok)" ;;
+  *'"status":"not-ready"'*) echo "  http://localhost:${APP_PORT}/ready  — NOT ready: ${ready_body}" ;;
+  *)                        echo "  http://localhost:${APP_PORT}/ready  — unreachable" ;;
+esac

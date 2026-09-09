@@ -246,7 +246,8 @@ cd ../frontend && npm install && npm run dev    # frontend :5173
 ## Verify
 
 ```bash
-curl http://localhost:4000/health          # {"status":"ok"}
+curl http://localhost:4000/health          # {"status":"ok"} — liveness (process up)
+curl http://localhost:4000/ready           # {"status":"ready", ...} — DB + migrations OK (503 if not)
 # CI-equivalent, from a clean checkout:
 cd backend  && npm test && npm run build && npm run validate:cyclonedx
 cd ../frontend && npm test && npm run build
