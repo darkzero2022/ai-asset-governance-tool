@@ -43,8 +43,10 @@ admin force-reset.
 
 - Structured request/response metrics + a `/metrics` endpoint (Prometheus text).
 - Health check that also verifies DB connectivity and pending-migration state.
-- A production-grade `docker-compose.prod.yml` (or a small Helm chart) separate
-  from the dev compose file, with the reverse-proxy / TLS termination wired in.
+- Wire the reverse-proxy / TLS termination into `docker-compose.prod.yml` (a
+  Caddy sidecar), or ship a small Helm chart.
+- Refresh `docs/screenshots/` — the current set pre-dates the UI redesign and the
+  "Assets → AI Systems" rename (capture script in `docs/screenshots/README.md`).
 
 ## Testing & CI/CD
 
@@ -52,10 +54,13 @@ admin force-reset.
   login → create AI system → add risk (framework auto-fill) → link to project →
   submit for approval → approve as a second user → export + validate CycloneDX.
 - Lint + format gates (ESLint + Prettier) in CI.
-- Supply-chain scanning (`npm audit` gate once the pre-existing advisories are
-  cleared; dependency review action) and a self-SBOM of this repo published on
-  each tagged release.
-- Tagged releases with a changelog and a container image published to GHCR.
+- ~~Supply-chain scanning (`npm audit` gate…)~~ — **done**: production `npm audit`
+  gate + CodeQL + Dependabot in CI (`e29efc3`). Still to add: a
+  dependency-review action on PRs; enable secret scanning + push protection in
+  repo settings.
+- ~~Self-SBOM + tagged releases + GHCR image~~ — **workflow in place**
+  (`.github/workflows/release.yml`, fires on a `v*` tag); cut `v0.1.0` to
+  exercise it. `CHANGELOG.md` added.
 
 ## Framework coverage
 
