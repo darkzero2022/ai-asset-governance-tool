@@ -56,6 +56,30 @@ jobs:
           npx prisma migrate deploy
           npm run prisma:seed
 
+      # Catches a schema.prisma edit that never got a migration: the committed
+      # migrations, replayed onto an empty shadow database, must reproduce
+      # schema.prisma exactly. --exit-code is non-zero when there is a diff.
+      - name: Migrations reproduce the schema (no drift)
+        working-directory: backend
+        run: |
+          docker compose -f ../docker-compose.yml exec -T postgres createdb -U "$POSTGRES_USER" drift_shadow
+          npx prisma migrate diff \
+            --from-migrations ./prisma/migrations \
+            --to-schema-datamodel ./prisma/schema.prisma \
+            --shadow-database-url "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:55432/drift_shadow?schema=public" \
+            --exit-code \
+          && echo "no drift — migrations match schema.prisma"
+          docker compose -f ../docker-compose.yml exec -T postgres dropdb -U "$POSTGRES_USER" drift_shadow
+
+      # Cross-version: replay every migration from empty on a second database
+      # (the deploy step above ran against a DB the seed then mutated). Proves the
+      # ordered set still applies cleanly start to finish.
+      - name: Migrations apply cleanly from empty
+        run: |
+          docker compose exec -T postgres createdb -U "$POSTGRES_USER" migration_check
+          (cd backend && DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:55432/migration_check?schema=public" npx prisma migrate deploy)
+          docker compose exec -T postgres dropdb -U "$POSTGRES_USER" migration_check
+
       - name: Backup / restore round-trip
         run: |
           set -e
