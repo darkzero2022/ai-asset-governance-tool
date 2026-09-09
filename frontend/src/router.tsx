@@ -32,7 +32,7 @@ import {
   useProjectsQuery,
   useSaveProjectMutation,
 } from "./queries/projects";
-import { useAtlasMitigationsQuery, useAtlasTechniquesQuery, useFrameworkCategoriesQuery } from "./queries/reference";
+import { useAtlasMitigationsQuery, useAtlasTechniquesQuery, useFrameworkCategoriesQuery, useFrameworksQuery } from "./queries/reference";
 import {
   useBulkUpdateRisksMutation,
   useRiskAssetLinkMutations,
@@ -445,6 +445,7 @@ function RiskRegisterRoute() {
   const { data: risks = [] } = useRisksQuery(ctx.token, filters);
   const { data: assets = [] } = useAiSystemsQuery(ctx.token, {});
   const { data: categories = [] } = useFrameworkCategoriesQuery(ctx.token);
+  const { data: frameworks = [] } = useFrameworksQuery(ctx.token);
   const { data: atlasTechniques = [] } = useAtlasTechniquesQuery(ctx.token);
   const { data: atlasMitigations = [] } = useAtlasMitigationsQuery(ctx.token);
   const saveRisk = useSaveRiskMutation(ctx.token);
@@ -550,6 +551,7 @@ function RiskRegisterRoute() {
       risks={risks}
       assets={assets}
       categories={categories}
+      frameworks={frameworks}
       atlasTechniques={atlasTechniques}
       atlasMitigations={atlasMitigations}
       filters={filters}

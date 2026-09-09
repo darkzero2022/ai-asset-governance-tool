@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { FrameworkCategory } from "@aibom/shared";
+import type { FrameworkCategory, FrameworkMeta } from "@aibom/shared";
 import { apiFetch } from "../api/client";
 import { queryKeys } from "./keys";
 
@@ -12,6 +12,18 @@ export function useFrameworkCategoriesQuery(token: string) {
     queryFn: async () => {
       const data = await apiFetch<{ categories: FrameworkCategory[] }>("/reference/framework-categories", { token });
       return data.categories;
+    },
+    enabled: Boolean(token),
+    staleTime: REFERENCE_STALE_TIME,
+  });
+}
+
+export function useFrameworksQuery(token: string) {
+  return useQuery({
+    queryKey: queryKeys.frameworks(),
+    queryFn: async () => {
+      const data = await apiFetch<{ frameworks: FrameworkMeta[] }>("/reference/frameworks", { token });
+      return data.frameworks;
     },
     enabled: Boolean(token),
     staleTime: REFERENCE_STALE_TIME,

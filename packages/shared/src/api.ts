@@ -3,6 +3,7 @@ import type {
   AssetType,
   ControlStatus,
   EuAiActTier,
+  FrameworkStatus,
   HostingModel,
   NetworkDependency,
   ProjectStatus,
@@ -85,6 +86,25 @@ export interface Risk {
   controls?: Array<Control & { implementationStatus?: string; evidenceNotes?: string | null }>;
   controlLinks?: Array<{ control: Control; implementationStatus?: string; evidenceNotes?: string | null }>;
   frameworkCategory?: FrameworkCategory | null;
+  /** Categories in other frameworks our seeded crosswalk relates this risk to. Read-only. */
+  relatedClassifications?: RelatedClassification[];
+}
+
+export interface RelatedClassification {
+  framework: SourceFramework | string;
+  categoryId: string;
+  categoryName: string;
+  relationship: "EQUIVALENT" | "RELATED" | "BROADER" | "NARROWER" | string;
+  rationale?: string | null;
+}
+
+export interface FrameworkMeta {
+  framework: SourceFramework | string;
+  title: string;
+  revision: string;
+  status: FrameworkStatus | string;
+  sourceUrl: string;
+  licenseNote?: string | null;
 }
 
 export interface Project {

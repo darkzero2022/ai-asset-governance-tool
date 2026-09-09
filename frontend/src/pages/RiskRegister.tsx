@@ -6,9 +6,14 @@ import { Button } from "../components/ui/Button";
 import { Input, Select, TextArea } from "../components/ui/Field";
 import { Combobox } from "../components/ui/Combobox";
 import { Dialog, DialogFooter, DialogHeader, RadixDialog } from "../components/ui/Dialog";
+import { frameworkLabel } from "../formDefaults";
 
 type Asset = { id: string; name: string; dataClassificationTouched?: string | null };
 type FrameworkCategory = { framework: string; categoryId: string; name: string };
+type FrameworkMetaLite = { framework: string; title: string; revision: string; status: string };
+
+// Frameworks whose categories the backend auto-fills STRIDE-AI / ATLAS from.
+const AUTO_FILL_FRAMEWORKS = ["OWASP_LLM_TOP10", "OWASP_MCP_TOP10"];
 
 const STRIDE_AI_CATEGORIES = [
   "MODEL_IMPERSONATION",
@@ -72,6 +77,7 @@ type Props = {
   risks: Risk[];
   assets: Asset[];
   categories: FrameworkCategory[];
+  frameworks: FrameworkMetaLite[];
   atlasTechniques: string[];
   atlasMitigations: string[];
   filters: Filters;
@@ -101,6 +107,13 @@ export default function RiskRegister(props: Props) {
   const [heatmapFilter, setHeatmapFilter] = useState<{ likelihood: number; impact: number } | null>(null);
   const [strideFilter, setStrideFilter] = useState("");
   const filteredCategories = props.categories.filter((category) => category.framework === props.riskForm.sourceFramework);
+  const frameworkOptions =
+    props.frameworks.length > 0
+      ? props.frameworks
+      : [...new Set(props.categories.map((category) => category.framework))].map((framework) => ({ framework, title: frameworkLabel(framework), revision: "", status: "RELEASED" }));
+  const frameworkOptionLabel = (option: FrameworkMetaLite) =>
+    `${frameworkLabel(option.framework)}${option.status === "DRAFT" ? " (draft)" : ""}`;
+  const selectedFrameworkMeta = props.frameworks.find((framework) => framework.framework === props.riskForm.sourceFramework);
   const displayedRisks = props.risks.filter((risk) => {
     if (heatmapFilter && (risk.likelihood !== heatmapFilter.likelihood || risk.impact !== heatmapFilter.impact)) return false;
     if (strideFilter && (risk.strideAiCategory ?? "") !== strideFilter) return false;
@@ -127,7 +140,7 @@ export default function RiskRegister(props: Props) {
     <section className="mx-auto max-w-7xl px-6 py-6">
       <PageHeader
         title="Risk Register"
-        description="Threats mapped to NIST AI RMF / OWASP, STRIDE-AI, and MITRE ATLAS — with ATLAS-mapped remediation."
+        description="Threats mapped to NIST AI RMF, OWASP LLM & MCP Top 10, STRIDE-AI, and MITRE ATLAS — with ATLAS-mapped remediation."
         action={props.canManage && <Button variant="primary" onClick={props.onNewRisk}>New risk</Button>}
         filters={
           <div className="grid gap-3 md:grid-cols-3">
@@ -137,7 +150,7 @@ export default function RiskRegister(props: Props) {
             </Select>
             <Select label="Framework" value={props.filters.sourceFramework} onChange={(event) => updateFilter("sourceFramework", event.target.value)}>
               <option value="">All</option>
-              {["NIST_AI_RMF", "EU_AI_ACT", "OWASP_LLM_TOP10"].map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
+              {frameworkOptions.map((option) => <option key={option.framework} value={option.framework}>{frameworkOptionLabel(option)}</option>)}
             </Select>
             <Select label="STRIDE-AI" value={strideFilter} onChange={(event) => setStrideFilter(event.target.value)}>
               <option value="">All</option>
@@ -174,7 +187,7 @@ export default function RiskRegister(props: Props) {
         <Dialog open={props.dialogOpen} onOpenChange={props.onDialogOpenChange} size="lg">
           <DialogHeader
             title={props.editingRiskId ? "Edit risk" : "New risk"}
-            description="Classify the threat against NIST / OWASP, STRIDE-AI, and MITRE ATLAS, then map the remediation to ATLAS mitigations."
+            description="Classify the threat against a framework category, STRIDE-AI, and MITRE ATLAS, then map the remediation to ATLAS mitigations."
           />
           <form onSubmit={props.onSubmitRisk}>
             <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1">
@@ -189,8 +202,8 @@ export default function RiskRegister(props: Props) {
               <div className="space-y-3 rounded-md border border-border p-3">
                 <SectionLabel>Threat classification</SectionLabel>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Select label="Framework (NIST AI RMF / OWASP / EU AI Act)" value={props.riskForm.sourceFramework} onChange={(event) => updateForm("sourceFramework", event.target.value)}>
-                    {["NIST_AI_RMF", "EU_AI_ACT", "OWASP_LLM_TOP10"].map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
+                  <Select label="Framework" value={props.riskForm.sourceFramework} onChange={(event) => updateForm("sourceFramework", event.target.value)}>
+                    {frameworkOptions.map((option) => <option key={option.framework} value={option.framework}>{frameworkOptionLabel(option)}</option>)}
                   </Select>
                   <Select label="Category" value={props.riskForm.sourceCategoryId} onChange={(event) => updateForm("sourceCategoryId", event.target.value)}>
                     {filteredCategories.map((category) => <option key={category.categoryId} value={category.categoryId}>{category.categoryId} - {category.name}</option>)}
@@ -200,17 +213,22 @@ export default function RiskRegister(props: Props) {
                     {["UNACCEPTABLE", "HIGH", "LIMITED", "MINIMAL"].map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
                   </Select>
                   <Select label="STRIDE-AI Category" value={props.riskForm.strideAiCategory} onChange={(event) => updateForm("strideAiCategory", event.target.value)}>
-                    <option value="">Auto from OWASP category</option>
+                    <option value="">Auto from framework category</option>
                     {STRIDE_AI_CATEGORIES.map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
                   </Select>
                   <Select label="MITRE ATLAS Technique" value={props.riskForm.atlasTechnique} onChange={(event) => updateForm("atlasTechnique", event.target.value)} className="sm:col-span-2">
-                    <option value="">Auto from OWASP category</option>
+                    <option value="">Auto from framework category</option>
                     {props.atlasTechniques.map((technique) => <option key={technique} value={technique}>{technique}</option>)}
                   </Select>
                 </div>
                 {suggestedEuTier && <p className="text-xs text-subtle">Suggested EU AI Act tier: {props.label(suggestedEuTier)}. Confirm or override before saving.</p>}
-                {props.riskForm.sourceFramework === "OWASP_LLM_TOP10" && !props.riskForm.strideAiCategory && !props.riskForm.atlasTechnique && (
-                  <p className="text-xs text-subtle">STRIDE-AI and ATLAS technique will be auto-filled from {props.riskForm.sourceCategoryId} on save. Pick a value to override.</p>
+                {selectedFrameworkMeta?.status === "DRAFT" && (
+                  <p className="text-xs text-warning">
+                    {frameworkLabel(selectedFrameworkMeta.framework)} is a draft ({selectedFrameworkMeta.revision}) — categories and mappings may change.
+                  </p>
+                )}
+                {AUTO_FILL_FRAMEWORKS.includes(props.riskForm.sourceFramework) && !props.riskForm.strideAiCategory && !props.riskForm.atlasTechnique && (
+                  <p className="text-xs text-subtle">STRIDE-AI, ATLAS technique, and suggested ATLAS mitigations will be auto-filled from {props.riskForm.sourceCategoryId} on save. Pick a value to override.</p>
                 )}
               </div>
 

@@ -115,10 +115,10 @@ beforeAll(async () => {
     update: { name: "Supply Chain", description: "Test supply chain category" },
     create: { framework: "OWASP_LLM_TOP10", categoryId: "LLM03", name: "Supply Chain", description: "Test supply chain category" },
   });
-  await prisma.strideAtlasMapping.upsert({
-    where: { owaspCategoryId: "LLM03" },
-    update: { strideAiCategory: "MODEL_IMPERSONATION", atlasTechnique: "ML Supply Chain Compromise" },
-    create: { owaspCategoryId: "LLM03", strideAiCategory: "MODEL_IMPERSONATION", atlasTechnique: "ML Supply Chain Compromise" },
+  await prisma.frameworkThreatMapping.upsert({
+    where: { framework_categoryId: { framework: "OWASP_LLM_TOP10", categoryId: "LLM03" } },
+    update: { strideAiCategory: "MODEL_IMPERSONATION", atlasTechniques: ["ML Supply Chain Compromise"], atlasMitigations: ["AML.M0013 — Code Signing"] },
+    create: { framework: "OWASP_LLM_TOP10", categoryId: "LLM03", strideAiCategory: "MODEL_IMPERSONATION", atlasTechniques: ["ML Supply Chain Compromise"], atlasMitigations: ["AML.M0013 — Code Signing"] },
   });
 
   for (const role of roles) {
@@ -485,6 +485,63 @@ describe("STRIDE-AI and MITRE ATLAS mapping", () => {
     const props = bom.body.components[0].properties as Array<{ name: string; value: string }>;
     expect(props).toContainEqual({ name: "aibom:risk:strideAiCategory", value: "MODEL_IMPERSONATION" });
     expect(props).toContainEqual({ name: "aibom:risk:atlasTechnique", value: "ML Supply Chain Compromise" });
+  });
+});
+
+describe("OWASP MCP Top 10 + cross-framework mapping", () => {
+  it("lists MCP among the frameworks, with a DRAFT status", async () => {
+    const res = await request(app).get("/api/v1/reference/frameworks").set(auth("VIEWER")).expect(200);
+    const byKey = Object.fromEntries(res.body.frameworks.map((f: { framework: string }) => [f.framework, f]));
+    expect(byKey.OWASP_MCP_TOP10).toMatchObject({ status: "DRAFT", title: expect.stringContaining("MCP") });
+    expect(byKey.OWASP_LLM_TOP10).toMatchObject({ status: "RELEASED" });
+    const categories = await request(app).get("/api/v1/reference/framework-categories?framework=OWASP_MCP_TOP10").set(auth("VIEWER")).expect(200);
+    expect(categories.body.categories).toHaveLength(10);
+  });
+
+  it("auto-fills STRIDE-AI + ATLAS technique + suggested mitigations for an MCP-linked risk", async () => {
+    const asset = await createAsset();
+    const res = await request(app)
+      .post("/api/v1/risks")
+      .set(auth("ADMIN"))
+      .send({ assetId: asset.id, sourceFramework: "OWASP_MCP_TOP10", sourceCategoryId: "MCP06", description: `${runId}-mcp-auto`, likelihood: 4, impact: 4 })
+      .expect(201);
+    expect(res.body.risk).toMatchObject({ strideAiCategory: "ALIGNMENT_BYPASS", atlasTechnique: "LLM Prompt Injection" });
+    expect(res.body.risk.atlasMitigations.length).toBeGreaterThan(0);
+    expect(res.body.risk.atlasMitigations.every((m: string) => m.startsWith("AML.M"))).toBe(true);
+  });
+
+  it("exposes the seeded crosswalk and puts relatedClassifications on the risk detail", async () => {
+    const crosswalk = await request(app).get("/api/v1/reference/framework-crosswalk?framework=OWASP_MCP_TOP10&categoryId=MCP06").set(auth("VIEWER")).expect(200);
+    expect(crosswalk.body.crosswalk).toContainEqual(
+      expect.objectContaining({ toFramework: "OWASP_LLM_TOP10", toCategoryId: "LLM01", relationship: "EQUIVALENT" }),
+    );
+
+    const asset = await createAsset();
+    const created = await request(app)
+      .post("/api/v1/risks")
+      .set(auth("ADMIN"))
+      .send({ assetId: asset.id, sourceFramework: "OWASP_MCP_TOP10", sourceCategoryId: "MCP06", description: `${runId}-mcp-related`, likelihood: 3, impact: 3 })
+      .expect(201);
+
+    const detail = await request(app).get(`/api/v1/risks/${created.body.risk.id}`).set(auth("VIEWER")).expect(200);
+    expect(detail.body.risk.relatedClassifications).toContainEqual(
+      expect.objectContaining({ framework: "OWASP_LLM_TOP10", categoryId: "LLM01", relationship: "EQUIVALENT" }),
+    );
+  });
+
+  it("names the framework revision and related classifications in the CycloneDX export", async () => {
+    const asset = await createAsset({ type: "MODEL" });
+    await request(app)
+      .post("/api/v1/risks")
+      .set(auth("ADMIN"))
+      .send({ assetId: asset.id, sourceFramework: "OWASP_MCP_TOP10", sourceCategoryId: "MCP06", description: `${runId}-mcp-bom`, likelihood: 3, impact: 3 })
+      .expect(201);
+
+    const bom = await request(app).get(`/api/v1/ai-systems/${asset.id}/export/cyclonedx`).set(auth("VIEWER")).expect(200);
+    const props = bom.body.components[0].properties as Array<{ name: string; value: string }>;
+    expect(props.find((p) => p.name === "aibom:risk:frameworkRevision")?.value).toContain("Draft");
+    expect(props).toContainEqual(expect.objectContaining({ name: "aibom:risk:relatedClassification" }));
+    expect((await validateCycloneDxBom(bom.body)).valid).toBe(true);
   });
 });
 

@@ -9,12 +9,20 @@ const router = express.Router();
 router.get("/reports/framework-coverage", requireAuth, async (req, res, next) => {
   try {
     const riskWhere = req.query.includeArchived === "true" ? {} : { archived: false };
-    const [categories, risks] = await Promise.all([
+    const [categories, risks, meta] = await Promise.all([
       /* fixed reference set */ prisma.frameworkCategory.findMany({ orderBy: [{ framework: "asc" }, { categoryId: "asc" }] }),
       prisma.risk.groupBy({ by: ["sourceFramework", "sourceCategoryId"], where: riskWhere, _count: true }),
+      prisma.frameworkMeta.findMany(),
     ]);
     const riskCounts = new Map(risks.map((risk) => [`${risk.sourceFramework}:${risk.sourceCategoryId}`, risk._count]));
-    res.json({ coverage: categories.map((category) => ({ ...category, riskCount: riskCounts.get(`${category.framework}:${category.categoryId}`) ?? 0 })) });
+    const statusOf = new Map(meta.map((row) => [row.framework, row.status]));
+    res.json({
+      coverage: categories.map((category) => ({
+        ...category,
+        riskCount: riskCounts.get(`${category.framework}:${category.categoryId}`) ?? 0,
+        frameworkStatus: statusOf.get(category.framework) ?? "RELEASED",
+      })),
+    });
   } catch (error) {
     next(error);
   }

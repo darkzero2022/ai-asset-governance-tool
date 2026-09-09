@@ -7,7 +7,7 @@ import { forbidden, notFound, unprocessable } from "../httpError.js";
 import { pagination, csv, MAX_EXPORT_ROWS } from "../lib/http.js";
 import { audit } from "../lib/audit.js";
 import { riskResponse } from "../lib/responses.js";
-import { strideAtlasFor } from "../lib/riskAggregates.js";
+import { relatedClassificationsFor, strideAtlasFor } from "../lib/riskAggregates.js";
 import { riskSchema, riskUpdateSchema, controlSchema } from "../schemas.js";
 import { staleWrite } from "../lib/concurrency.js";
 import { sendSlackRiskStatusChange } from "../integrations/slack.js";
@@ -34,6 +34,23 @@ async function validatedAtlasMitigations(input: string[] | undefined): Promise<s
   }
   return unique;
 }
+
+/**
+ * The STRIDE-AI / ATLAS-technique / ATLAS-mitigation values to persist for a
+ * risk: the seeded FrameworkThreatMapping default for its (framework, category),
+ * with any explicit request value winning. Mitigations from the request are
+ * validated against the reference table; when the request supplies none, the
+ * mapping's suggested set is used as-is.
+ */
+async function resolveRiskThreat(body: z.infer<typeof riskSchema>, rawMitigations: string[] | undefined) {
+  const { strideAiCategory, atlasTechnique, suggestedMitigations } = await strideAtlasFor(body);
+  const atlasMitigations =
+    rawMitigations && rawMitigations.length > 0
+      ? await validatedAtlasMitigations(rawMitigations)
+      : suggestedMitigations;
+  return { strideAiCategory, atlasTechnique, atlasMitigations: atlasMitigations ?? [] };
+}
+
 
 router.get("/risks", requireAuth, async (req, res, next) => {
   try {
@@ -91,12 +108,10 @@ router.post("/risks", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async (re
   try {
     const body = riskSchema.parse(req.body);
     const { assetId, atlasMitigations: rawMitigations, ...riskData } = body;
-    const atlasMitigations = await validatedAtlasMitigations(rawMitigations);
     const risk = await prisma.risk.create({
       data: {
         ...riskData,
-        ...(atlasMitigations !== undefined ? { atlasMitigations } : {}),
-        ...(await strideAtlasFor(body)),
+        ...(await resolveRiskThreat(body, rawMitigations)),
         dueDate: body.dueDate ? new Date(body.dueDate) : null,
         inherentRiskScore: body.likelihood * body.impact,
         createdById: req.user!.id,
@@ -120,7 +135,8 @@ router.get("/risks/:id", requireAuth, async (req, res, next) => {
       throw notFound("Risk not found");
     }
 
-    res.json({ risk: riskResponse(risk) });
+    const relatedClassifications = await relatedClassificationsFor(risk.sourceFramework, risk.sourceCategoryId);
+    res.json({ risk: { ...riskResponse(risk), relatedClassifications } });
   } catch (error) {
     next(error);
   }
@@ -131,7 +147,6 @@ router.put("/risks/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async 
     const id = String(req.params.id);
     const body = riskUpdateSchema.parse(req.body);
     const { assetId, expectedUpdatedAt, atlasMitigations: rawMitigations, ...riskData } = body;
-    const atlasMitigations = await validatedAtlasMitigations(rawMitigations);
     const before = await prisma.risk.findUniqueOrThrow({ where: { id }, include: { assets: true, controlLinks: { include: { control: true } }, frameworkCategory: true } });
 
     if (req.user!.role === "RISK_OWNER" && before.createdById !== req.user!.id) {
@@ -152,8 +167,7 @@ router.put("/risks/:id", requireAuth, requireRole("ADMIN", "RISK_OWNER"), async 
       where: { id },
       data: {
         ...riskData,
-        ...(atlasMitigations !== undefined ? { atlasMitigations } : {}),
-        ...(await strideAtlasFor(body)),
+        ...(await resolveRiskThreat(body, rawMitigations)),
         dueDate: body.dueDate ? new Date(body.dueDate) : null,
         inherentRiskScore: body.likelihood * body.impact,
         assets: { connectOrCreate: { where: { assetId_riskId: { assetId, riskId: id } }, create: { assetId } } },

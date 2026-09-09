@@ -6,6 +6,7 @@ import { Button } from "../components/ui/Button";
 import { Input, Select } from "../components/ui/Field";
 import { Combobox } from "../components/ui/Combobox";
 import { EmptyState } from "../components/ui/EmptyState";
+import { frameworkLabel } from "../formDefaults";
 
 type Asset = { id: string; name: string };
 type Project = { id: string; name: string; status: string };
@@ -21,6 +22,7 @@ type RiskDetailData = {
   strideAiCategory?: string | null;
   atlasTechnique?: string | null;
   atlasMitigations?: string[];
+  relatedClassifications?: Array<{ framework: string; categoryId: string; categoryName: string; relationship: string; rationale?: string | null }>;
   likelihood: number;
   impact: number;
   inherentRiskScore: number;
@@ -119,12 +121,29 @@ export default function RiskDetail(props: Props) {
               <div className="mt-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-subtle">Threat classification</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <ClassPill kind="framework" label={`${props.risk.sourceFramework} · ${props.risk.sourceCategoryId}`} />
+                  <ClassPill kind="framework" label={`${frameworkLabel(props.risk.sourceFramework)}: ${props.risk.sourceCategoryId}`} />
                   {props.risk.euAiActRiskTier && <ClassPill kind="framework" label={`EU AI Act: ${props.label(props.risk.euAiActRiskTier)}`} />}
                   {props.risk.strideAiCategory && <ClassPill kind="stride" label={`STRIDE-AI: ${props.label(props.risk.strideAiCategory)}`} />}
                   {props.risk.atlasTechnique && <ClassPill kind="atlas" label={`ATLAS: ${props.risk.atlasTechnique}`} />}
                 </div>
               </div>
+
+              {props.risk.relatedClassifications && props.risk.relatedClassifications.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-subtle">Related classifications</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {props.risk.relatedClassifications.map((related) => (
+                      <ClassPill
+                        key={`${related.framework}:${related.categoryId}`}
+                        kind="related"
+                        label={`${frameworkLabel(related.framework)}: ${related.categoryId} (${related.relationship.toLowerCase()})`}
+                        title={related.rationale ?? undefined}
+                      />
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-subtle">Our analysis — not an official OWASP crosswalk. Hover for the rationale.</p>
+                </div>
+              )}
 
               <dl className="mt-5 grid gap-3 text-sm md:grid-cols-2">
                 <Info label="Status" value={props.label(props.risk.status)} />
@@ -233,10 +252,11 @@ const PILL_STYLES: Record<string, string> = {
   framework: "border-primary/40 bg-primary/10 text-text",
   stride: "border-warning/40 bg-warning/10 text-text",
   atlas: "border-info/40 bg-info/10 text-text",
+  related: "border-border bg-surface-alt text-subtle",
 };
 
-function ClassPill({ kind, label }: { kind: keyof typeof PILL_STYLES; label: string }) {
-  return <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${PILL_STYLES[kind]}`}>{label}</span>;
+function ClassPill({ kind, label, title }: { kind: keyof typeof PILL_STYLES; label: string; title?: string }) {
+  return <span title={title} className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${PILL_STYLES[kind]}`}>{label}</span>;
 }
 
 function Info(props: { label: string; value?: string | null }) {

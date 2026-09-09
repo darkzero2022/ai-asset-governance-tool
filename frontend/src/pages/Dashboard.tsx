@@ -8,6 +8,7 @@ import { Button } from "../components/ui/Button";
 import { Input, Select } from "../components/ui/Field";
 import { EmptyState } from "../components/ui/EmptyState";
 import { SkeletonRows } from "../components/ui/Skeleton";
+import { frameworkLabel } from "../formDefaults";
 import {
   useDashboardExposureQuery,
   useDashboardSummaryQuery,
@@ -177,7 +178,7 @@ export default function Dashboard({ token }: DashboardProps) {
         <Panel title="Framework coverage">
           <BarChart
             data={coverage.map((item) => ({
-              label: `${item.framework} ${item.categoryId}`,
+              label: `${frameworkLabel(item.framework)} ${item.categoryId}${item.frameworkStatus === "DRAFT" ? " (draft)" : ""}`,
               value: item.riskCount,
               color: item.riskCount === 0 ? "rgb(var(--wz-warning))" : CHART_1,
             }))}

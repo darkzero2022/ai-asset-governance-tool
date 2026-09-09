@@ -54,7 +54,14 @@ describe("RiskRegister — MITRE ATLAS mitigations", () => {
   const baseProps = {
     risks: [],
     assets: [{ id: "a1", name: "Claims Model" }],
-    categories: [{ framework: "OWASP_LLM_TOP10", categoryId: "LLM01", name: "Prompt Injection" }],
+    categories: [
+      { framework: "OWASP_LLM_TOP10", categoryId: "LLM01", name: "Prompt Injection" },
+      { framework: "OWASP_MCP_TOP10", categoryId: "MCP06", name: "Prompt Injection via Contextual Payloads" },
+    ],
+    frameworks: [
+      { framework: "OWASP_LLM_TOP10", title: "OWASP LLM Top 10", revision: "2025", status: "RELEASED" },
+      { framework: "OWASP_MCP_TOP10", title: "OWASP MCP Top 10", revision: "Draft v0.1 (2025)", status: "DRAFT" },
+    ],
     atlasTechniques: ["LLM Prompt Injection"],
     atlasMitigations: ["AML.M0000 — Limit Public Release of Information", "AML.M0020 — Generative AI Guardrails"],
     filters: emptyFilters,
@@ -102,6 +109,15 @@ describe("RiskRegister — MITRE ATLAS mitigations", () => {
     const checked = screen.getByLabelText("AML.M0000 — Limit Public Release of Information") as HTMLInputElement;
     expect(checked.checked).toBe(true);
     expect(within(document.body).getByText("1 selected")).toBeInTheDocument();
+  });
+
+  it("offers OWASP MCP Top 10 as a framework and marks it draft", () => {
+    render(
+      <MemoryRouter>
+        <RiskRegister {...baseProps} riskForm={{ ...emptyRisk }} onRiskFormChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+    expect(screen.getAllByRole("option", { name: "OWASP MCP Top 10 (draft)" }).length).toBeGreaterThan(0);
   });
 });
 

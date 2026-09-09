@@ -18,6 +18,14 @@ type AssetForBom = AIAsset & {
   modelCard?: (ModelCard & { metrics?: ModelCardMetric[] }) | null;
 };
 
+/** Framework revision + cross-framework crosswalk context, so exports can cite
+ *  which edition of each standard a risk was assessed against and what it maps
+ *  to. Optional — omitted by the CLI validator and tests. */
+export type BomFrameworkContext = {
+  frameworkRevisions?: Record<string, string>;
+  relatedByRisk?: Record<string, Array<{ framework: string; categoryId: string; relationship: string }>>;
+};
+
 type CycloneDxProperty = {
   name: string;
   value: string;
@@ -39,17 +47,23 @@ function componentType(asset: AIAsset) {
   return "machine-learning-model";
 }
 
-function assetProperties(asset: AssetForBom) {
+function assetProperties(asset: AssetForBom, context: BomFrameworkContext = {}) {
   const riskProperties = asset.risks.flatMap((risk) => [
     { name: "aibom:risk:id", value: risk.id },
     { name: "aibom:risk:framework", value: risk.sourceFramework },
     { name: "aibom:risk:category", value: risk.sourceCategoryId },
+    optionalProperty("aibom:risk:frameworkRevision", context.frameworkRevisions?.[risk.sourceFramework]),
     { name: "aibom:risk:status", value: risk.status },
     { name: "aibom:risk:inherentScore", value: String(risk.inherentRiskScore) },
     optionalProperty("aibom:risk:residualScore", risk.residualRiskScore?.toString()),
     optionalProperty("aibom:risk:euAiActTier", risk.euAiActRiskTier),
     optionalProperty("aibom:risk:strideAiCategory", risk.strideAiCategory),
     optionalProperty("aibom:risk:atlasTechnique", risk.atlasTechnique),
+    ...(risk.atlasMitigations ?? []).map((mitigation) => ({ name: "aibom:risk:atlasMitigation", value: mitigation })),
+    ...(context.relatedByRisk?.[risk.id] ?? []).map((related) => ({
+      name: "aibom:risk:relatedClassification",
+      value: `${related.framework} ${related.categoryId} (${related.relationship.toLowerCase()})`,
+    })),
     optionalProperty("aibom:risk:owner", risk.owner),
     optionalProperty("aibom:risk:treatmentPlan", risk.treatmentPlan),
     ...risk.controls.flatMap((control) => [
@@ -133,7 +147,7 @@ function modelCardForCycloneDx(asset: AssetForBom) {
   });
 }
 
-function mapComponent(asset: AssetForBom) {
+function mapComponent(asset: AssetForBom, context: BomFrameworkContext) {
   return {
     type: componentType(asset),
     "bom-ref": `asset:${asset.id}`,
@@ -143,24 +157,28 @@ function mapComponent(asset: AssetForBom) {
     ...(asset.license ? { licenses: [{ license: { name: asset.license } }] } : {}),
     ...(sourceExternalReferences(asset) ? { externalReferences: sourceExternalReferences(asset) } : {}),
     ...(modelCardForCycloneDx(asset) ? { modelCard: modelCardForCycloneDx(asset) } : {}),
-    properties: assetProperties(asset),
+    properties: assetProperties(asset, context),
   };
 }
 
-function mapService(asset: AssetForBom) {
+function mapService(asset: AssetForBom, context: BomFrameworkContext) {
   return {
     "bom-ref": `asset:${asset.id}`,
     name: asset.name,
     version: asset.version,
     provider: { name: asset.provider ?? asset.supplier },
     ...(sourceExternalReferences(asset) ? { externalReferences: sourceExternalReferences(asset) } : {}),
-    properties: assetProperties(asset),
+    properties: assetProperties(asset, context),
   };
 }
 
-export function buildCycloneDxBom(assets: AssetForBom[]) {
+export function buildCycloneDxBom(assets: AssetForBom[], context: BomFrameworkContext = {}) {
   const componentAssets = assets.filter((asset) => asset.type !== "SERVICE");
   const serviceAssets = assets.filter((asset) => asset.type === "SERVICE");
+  const frameworkRevisionProps = Object.entries(context.frameworkRevisions ?? {}).map(([framework, revision]) => ({
+    name: `aibom:framework:${framework}:revision`,
+    value: revision,
+  }));
 
   return {
     "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
@@ -183,10 +201,11 @@ export function buildCycloneDxBom(assets: AssetForBom[]) {
       properties: [
         { name: "aibom:export:source", value: "manual-grc-intake" },
         { name: "aibom:export:assetCount", value: String(assets.length) },
+        ...frameworkRevisionProps,
       ],
     },
-    ...(componentAssets.length ? { components: componentAssets.map(mapComponent) } : {}),
-    ...(serviceAssets.length ? { services: serviceAssets.map(mapService) } : {}),
+    ...(componentAssets.length ? { components: componentAssets.map((asset) => mapComponent(asset, context)) } : {}),
+    ...(serviceAssets.length ? { services: serviceAssets.map((asset) => mapService(asset, context)) } : {}),
   };
 }
 

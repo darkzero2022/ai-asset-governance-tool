@@ -5,6 +5,7 @@ import { requireAuth } from "../auth.js";
 import { AppError, notFound } from "../httpError.js";
 import { assetForBom } from "../lib/responses.js";
 import { buildCycloneDxBom, validateCycloneDxBom } from "../cyclonedx.js";
+import { buildBomFrameworkContext } from "../lib/bomContext.js";
 import { buildSpdxDocument } from "../spdx.js";
 
 const router = express.Router();
@@ -18,7 +19,8 @@ router.get("/ai-systems/:id/export/cyclonedx", requireAuth, async (req, res, nex
       throw notFound("Asset not found");
     }
 
-    const bom = buildCycloneDxBom([assetForBom(asset) as never]);
+    const forBom = [assetForBom(asset) as never];
+    const bom = buildCycloneDxBom(forBom, await buildBomFrameworkContext(forBom));
     const validation = await validateCycloneDxBom(bom);
 
     if (!validation.valid) {
@@ -58,7 +60,8 @@ router.get("/projects/:id/export/cyclonedx", requireAuth, async (req, res, next)
       throw notFound("Project not found");
     }
 
-    const bom = buildCycloneDxBom(project.assetLinks.map((link) => assetForBom(link.asset)) as never);
+    const forBom = project.assetLinks.map((link) => assetForBom(link.asset)) as never;
+    const bom = buildCycloneDxBom(forBom, await buildBomFrameworkContext(forBom));
     const validation = await validateCycloneDxBom(bom);
 
     if (!validation.valid) {
@@ -80,7 +83,8 @@ router.post("/exports/cyclonedx", requireAuth, async (req, res, next) => {
       throw notFound("One or more assets were not found");
     }
 
-    const bom = buildCycloneDxBom(assets.map(assetForBom) as never);
+    const forBom = assets.map(assetForBom) as never;
+    const bom = buildCycloneDxBom(forBom, await buildBomFrameworkContext(forBom));
     const validation = await validateCycloneDxBom(bom);
 
     if (!validation.valid) {

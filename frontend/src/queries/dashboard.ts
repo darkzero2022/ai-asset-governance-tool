@@ -52,7 +52,7 @@ export function useDashboardExposureQuery(token: string) {
 export function useFrameworkCoverageQuery(token: string) {
   return useQuery({
     queryKey: ["reports", "framework-coverage"],
-    queryFn: async () => (await apiFetch<{ coverage: Array<{ id: string; framework: string; categoryId: string; name: string; riskCount: number }> }>("/reports/framework-coverage", { token })).coverage,
+    queryFn: async () => (await apiFetch<{ coverage: Array<{ id: string; framework: string; categoryId: string; name: string; riskCount: number; frameworkStatus?: string }> }>("/reports/framework-coverage", { token })).coverage,
     enabled: Boolean(token),
   });
 }

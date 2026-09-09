@@ -53,34 +53,40 @@ describe("modelCardCompleteness", () => {
 });
 
 describe("resolveStrideAtlas", () => {
-  const llm03 = { strideAiCategory: "MODEL_IMPERSONATION", atlasTechnique: "ML Supply Chain Compromise" } as const;
+  const llm03 = {
+    strideAiCategory: "MODEL_IMPERSONATION",
+    atlasTechniques: ["ML Supply Chain Compromise"],
+    atlasMitigations: ["AML.M0013 — Code Signing"],
+  } as const;
 
   it("applies the lookup default when neither field is provided", () => {
     expect(resolveStrideAtlas({}, llm03)).toEqual({
       strideAiCategory: "MODEL_IMPERSONATION",
       atlasTechnique: "ML Supply Chain Compromise",
+      suggestedMitigations: ["AML.M0013 — Code Signing"],
     });
   });
 
   it("keeps an explicit value and treats empty string / null as unset", () => {
-    expect(resolveStrideAtlas({ strideAiCategory: "PROVENANCE_LOSS", atlasTechnique: "" }, llm03)).toEqual({
+    expect(resolveStrideAtlas({ strideAiCategory: "PROVENANCE_LOSS", atlasTechnique: "" }, llm03)).toMatchObject({
       strideAiCategory: "PROVENANCE_LOSS",
       atlasTechnique: "ML Supply Chain Compromise",
     });
-    expect(resolveStrideAtlas({ strideAiCategory: null, atlasTechnique: "Data Poisoning" }, llm03)).toEqual({
+    expect(resolveStrideAtlas({ strideAiCategory: null, atlasTechnique: "Data Poisoning" }, llm03)).toMatchObject({
       strideAiCategory: "MODEL_IMPERSONATION",
       atlasTechnique: "Data Poisoning",
     });
   });
 
-  it("returns nulls for a non-OWASP risk with no mapping and no provided values", () => {
-    expect(resolveStrideAtlas({}, null)).toEqual({ strideAiCategory: null, atlasTechnique: null });
+  it("returns nulls for a risk with no mapping and no provided values", () => {
+    expect(resolveStrideAtlas({}, null)).toEqual({ strideAiCategory: null, atlasTechnique: null, suggestedMitigations: [] });
   });
 
-  it("respects a null atlasTechnique in the lookup (e.g. LLM09)", () => {
-    expect(resolveStrideAtlas({}, { strideAiCategory: "MODEL_INVERSION", atlasTechnique: null })).toEqual({
+  it("respects an empty atlasTechniques list in the lookup (e.g. LLM09 / MCP08)", () => {
+    expect(resolveStrideAtlas({}, { strideAiCategory: "MODEL_INVERSION", atlasTechniques: [], atlasMitigations: [] })).toEqual({
       strideAiCategory: "MODEL_INVERSION",
       atlasTechnique: null,
+      suggestedMitigations: [],
     });
   });
 });

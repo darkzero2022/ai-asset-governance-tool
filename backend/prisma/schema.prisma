@@ -44,6 +44,19 @@ enum SourceFramework {
   NIST_AI_RMF
   EU_AI_ACT
   OWASP_LLM_TOP10
+  OWASP_MCP_TOP10
+}
+
+enum FrameworkStatus {
+  DRAFT
+  RELEASED
+}
+
+enum CrosswalkRelationship {
+  EQUIVALENT
+  RELATED
+  BROADER
+  NARROWER
 }
 
 enum EuAiActRiskTier {
@@ -357,15 +370,51 @@ model EuAiActRiskTierReference {
   description String
 }
 
-// Static lookup: an OWASP LLM Top 10 category -> its STRIDE-AI category and
-// (optionally) a MITRE ATLAS technique. Used to auto-populate Risk.strideAiCategory
-// and Risk.atlasTechnique when a risk is OWASP-linked. Seeded as reference data;
-// the mapping is a default, not a lock — both fields stay editable on the risk.
-model StrideAtlasMapping {
-  id               String           @id @default(cuid())
-  owaspCategoryId  String           @unique
-  strideAiCategory StrideAiCategory
-  atlasTechnique   String?
+// Static lookup: a framework category (OWASP LLM Top 10 or OWASP MCP Top 10) ->
+// its STRIDE-AI category, MITRE ATLAS technique(s), and suggested ATLAS
+// mitigation(s). Auto-populates Risk.strideAiCategory / Risk.atlasTechnique /
+// Risk.atlasMitigations when a risk is linked to a category that has a row.
+// Seeded as reference data; every value is a default, not a lock — all stay
+// editable on the risk.
+model FrameworkThreatMapping {
+  id               String            @id @default(cuid())
+  framework        SourceFramework
+  categoryId       String
+  strideAiCategory StrideAiCategory?
+  atlasTechniques  String[]          @default([])
+  atlasMitigations String[]          @default([])
+
+  @@unique([framework, categoryId])
+  @@index([framework])
+}
+
+// A relationship between a category in one framework and a category in another
+// (e.g. OWASP MCP Top 10 MCP06 <-> OWASP LLM Top 10 LLM01). Seeded reference data,
+// stored in both directions so either side can be looked up. There is no official
+// OWASP crosswalk; `rationale` records why we assert each link.
+model FrameworkCrosswalk {
+  id             String                @id @default(cuid())
+  fromFramework  SourceFramework
+  fromCategoryId String
+  toFramework    SourceFramework
+  toCategoryId   String
+  relationship   CrosswalkRelationship
+  rationale      String?
+
+  @@unique([fromFramework, fromCategoryId, toFramework, toCategoryId])
+  @@index([fromFramework, fromCategoryId])
+}
+
+// One row per framework: the exact revision/edition in use, whether it is a
+// draft, and where it came from. The UI badges drafts; exports cite the revision.
+model FrameworkMeta {
+  id          String          @id @default(cuid())
+  framework   SourceFramework @unique
+  title       String
+  revision    String
+  status      FrameworkStatus @default(RELEASED)
+  sourceUrl   String
+  licenseNote String?
 }
 
 // Canonical list of MITRE ATLAS techniques offered for Risk.atlasTechnique.

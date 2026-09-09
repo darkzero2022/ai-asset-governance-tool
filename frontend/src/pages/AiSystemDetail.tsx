@@ -8,6 +8,7 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Combobox } from "../components/ui/Combobox";
 import { Input, Select, TextArea } from "../components/ui/Field";
+import { frameworkLabel } from "../formDefaults";
 import { EmptyState } from "../components/ui/EmptyState";
 
 type Asset = {
@@ -337,15 +338,9 @@ export default function AiSystemDetail(props: Props) {
   );
 }
 
-const FRAMEWORK_LABELS: Record<string, string> = {
-  OWASP_LLM_TOP10: "OWASP LLM Top 10",
-  NIST_AI_RMF: "NIST AI RMF",
-  EU_AI_ACT: "EU AI Act",
-};
-
 function RiskReferenceTags(props: { risk: Risk; label: (value: string) => string }) {
   const { risk } = props;
-  const frameworkName = FRAMEWORK_LABELS[risk.sourceFramework] ?? risk.sourceFramework;
+  const frameworkName = frameworkLabel(risk.sourceFramework);
   const categoryText = risk.sourceFramework === "EU_AI_ACT" ? props.label(risk.sourceCategoryId) : risk.sourceCategoryId;
   const tags: Array<{ key: string; text: string; mapped: boolean }> = [
     { key: "framework", text: `${frameworkName}: ${categoryText}`, mapped: true },
