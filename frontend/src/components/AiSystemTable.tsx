@@ -34,23 +34,50 @@ export function AiSystemTable({ assets, label, onSelect, onEdit, onExport }: AiS
       sortValue: (asset) => asset.name,
       render: (asset) => (
         <div className="min-w-0">
-          <button className="truncate text-left font-medium text-text hover:text-primary" onClick={() => onSelect(asset.id)}>
+          <button
+            className="truncate text-left font-medium text-text hover:text-primary"
+            onClick={() => onSelect(asset.id)}
+          >
             {asset.name}
           </button>
-          <p className="truncate text-xs text-subtle">v{asset.version} · {label(asset.hostingModel)}</p>
+          <p className="truncate text-xs text-subtle">
+            v{asset.version} · {label(asset.hostingModel)}
+          </p>
         </div>
       ),
     },
-    { key: "type", header: "Type", sortValue: (asset) => asset.type, render: (asset) => label(asset.type) },
-    { key: "supplier", header: "Supplier", sortValue: (asset) => asset.supplier, render: (asset) => asset.supplier },
+    {
+      key: "type",
+      header: "Type",
+      sortValue: (asset) => asset.type,
+      render: (asset) => label(asset.type),
+    },
+    {
+      key: "supplier",
+      header: "Supplier",
+      sortValue: (asset) => asset.supplier,
+      render: (asset) => asset.supplier,
+    },
     {
       key: "status",
       header: "Status",
       sortValue: (asset) => asset.status,
       render: (asset) => <Badge variant="primary">{label(asset.status)}</Badge>,
     },
-    { key: "risks", header: "Risks", align: "right", sortValue: (asset) => asset._count?.risks ?? 0, render: (asset) => asset._count?.risks ?? 0 },
-    { key: "projects", header: "Projects", align: "right", sortValue: (asset) => asset.projectUsageCount ?? 0, render: (asset) => asset.projectUsageCount ?? 0 },
+    {
+      key: "risks",
+      header: "Risks",
+      align: "right",
+      sortValue: (asset) => asset._count?.risks ?? 0,
+      render: (asset) => asset._count?.risks ?? 0,
+    },
+    {
+      key: "projects",
+      header: "Projects",
+      align: "right",
+      sortValue: (asset) => asset.projectUsageCount ?? 0,
+      render: (asset) => asset.projectUsageCount ?? 0,
+    },
   ];
 
   return (

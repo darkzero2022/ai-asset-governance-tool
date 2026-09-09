@@ -76,7 +76,10 @@ describe("static site middleware", () => {
   });
 
   it("lets API clients through to the JSON route on the same path", async () => {
-    const res = await request(appServing).get("/risks/123").set("Accept", "application/json").expect(200);
+    const res = await request(appServing)
+      .get("/risks/123")
+      .set("Accept", "application/json")
+      .expect(200);
     expect(res.body).toEqual({ id: "risk-from-api" });
   });
 
@@ -86,12 +89,18 @@ describe("static site middleware", () => {
   });
 
   it("returns JSON (not an HTML page) for an unknown API path", async () => {
-    const res = await request(appServing).get("/reference/nope").set("Accept", "application/json").expect(404);
+    const res = await request(appServing)
+      .get("/reference/nope")
+      .set("Accept", "application/json")
+      .expect(404);
     expect(res.body).toEqual({ error: "Not found" });
   });
 
   it("does not shadow a collection route that shares a name with the assets dir", async () => {
-    const res = await request(appServing).get("/assets").set("Accept", "application/json").expect(200);
+    const res = await request(appServing)
+      .get("/assets")
+      .set("Accept", "application/json")
+      .expect(200);
     expect(res.body).toEqual({ list: "assets-from-api" });
   });
 });

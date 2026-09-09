@@ -17,7 +17,11 @@ function readStoredTheme(): Theme | null {
 export function getInitialTheme(): Theme {
   const stored = readStoredTheme();
   if (stored) return stored;
-  if (typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: light)").matches) {
+  if (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-color-scheme: light)").matches
+  ) {
     return "light";
   }
   return "dark";

@@ -23,10 +23,20 @@ export function Pagination({ pagination, onChange }: Props) {
         Showing {start}-{end} of {pagination.total}
       </p>
       <div className="flex gap-2">
-        <Button variant="secondary" size="sm" disabled={pagination.skip === 0} onClick={() => onChange({ skip: previousSkip, take: pagination.take })}>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={pagination.skip === 0}
+          onClick={() => onChange({ skip: previousSkip, take: pagination.take })}
+        >
           Previous
         </Button>
-        <Button variant="secondary" size="sm" disabled={nextSkip >= pagination.total} onClick={() => onChange({ skip: nextSkip, take: pagination.take })}>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={nextSkip >= pagination.total}
+          onClick={() => onChange({ skip: nextSkip, take: pagination.take })}
+        >
           Next
         </Button>
       </div>

@@ -10,5 +10,9 @@ export function lockWhere(id: string, expectedUpdatedAt: string | undefined) {
 }
 
 export function staleWrite(): AppError {
-  return new AppError(409, "STALE_WRITE", "This record changed since you opened it — reload and try again.");
+  return new AppError(
+    409,
+    "STALE_WRITE",
+    "This record changed since you opened it — reload and try again.",
+  );
 }

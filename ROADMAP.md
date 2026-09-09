@@ -5,20 +5,21 @@ project, not a product with a release train. Issues and PRs against any of these
 are welcome; comment on the tracking issue first for the larger ones.
 
 Done recently: monorepo shared types, `/api/v1` + generated OpenAPI, react-router
-+ TanStack Query, RBAC UI gating, the Wazuh-style UI redesign, "AI Systems"
-rename, modal-based creation, MITRE ATLAS mitigation mapping, **OWASP MCP Top 10 +
-cross-framework crosswalk + framework versioning**, Linux/Windows setup scripts
-with dependency auto-install, **auth hardening (F1 + F3 core)** — in-memory access
-token + httpOnly rotating refresh cookie + `tokenVersion` revocation + a `Session`
-table + per-account lockout + a password policy + self-service change-password +
-admin force-reset.
+
+- TanStack Query, RBAC UI gating, the Wazuh-style UI redesign, "AI Systems"
+  rename, modal-based creation, MITRE ATLAS mitigation mapping, **OWASP MCP Top 10 +
+  cross-framework crosswalk + framework versioning**, Linux/Windows setup scripts
+  with dependency auto-install, **auth hardening (F1 + F3 core)** — in-memory access
+  token + httpOnly rotating refresh cookie + `tokenVersion` revocation + a `Session`
+  table + per-account lockout + a password policy + self-service change-password +
+  admin force-reset.
 
 ## Security & auth hardening
 
 - **F3 — TOTP / 2FA (remainder).** Optional time-based OTP for `ADMIN` accounts
   behind `MFA_ENABLED`: enrollment (QR + secret), recovery codes, a second step
-  on login. *The rest of F3 (lockout, password policy, change-password,
-  force-reset) shipped.*
+  on login. _The rest of F3 (lockout, password policy, change-password,
+  force-reset) shipped._
 - **F2 — RBAC meta-test.** A test that asserts every mutating route has an
   explicit `requireRole` and matches the documented permission matrix, so the
   matrix can't silently drift.
@@ -31,7 +32,7 @@ admin force-reset.
   `delete` / `signedUrl`) with a local-filesystem driver (default) and an
   S3-compatible driver, size-capped and content-type-allowlisted, audited, served
   only with `Content-Disposition: attachment`. Attach a PDF sign-off to a
-  governance decision or a risk. *Why: GRC teams live on evidence.*
+  governance decision or a risk. _Why: GRC teams live on evidence._
 - **G3 — Real job scheduler.** An in-process scheduler (`ENABLE_SCHEDULER`,
   default on for a single instance) for recertification notices, stale-approval
   reminders, and optional backup triggers; every run writes a job-run audit

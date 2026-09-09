@@ -45,7 +45,11 @@ export function useSaveProjectMutation(token: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, payload }: { id?: string; payload: Record<string, unknown> }) =>
-      apiFetch(id ? `/projects/${id}` : "/projects", { method: id ? "PUT" : "POST", body: JSON.stringify(payload), token }),
+      apiFetch(id ? `/projects/${id}` : "/projects", {
+        method: id ? "PUT" : "POST",
+        body: JSON.stringify(payload),
+        token,
+      }),
     onSuccess: (_data, variables) => invalidateProject(queryClient, variables.id),
   });
 }
@@ -57,11 +61,13 @@ export function useProjectAssetLinkMutations(token: string, projectId: string) {
     queryClient.invalidateQueries({ queryKey: ["assets"] });
   };
   const link = useMutation({
-    mutationFn: (assetId: string) => apiFetch(`/projects/${projectId}/ai-systems/${assetId}`, { method: "POST", token }),
+    mutationFn: (assetId: string) =>
+      apiFetch(`/projects/${projectId}/ai-systems/${assetId}`, { method: "POST", token }),
     onSuccess: invalidate,
   });
   const unlink = useMutation({
-    mutationFn: (assetId: string) => apiFetch(`/projects/${projectId}/ai-systems/${assetId}`, { method: "DELETE", token }),
+    mutationFn: (assetId: string) =>
+      apiFetch(`/projects/${projectId}/ai-systems/${assetId}`, { method: "DELETE", token }),
     onSuccess: invalidate,
   });
   return { link, unlink };
@@ -75,11 +81,13 @@ export function useProjectRiskLinkMutations(token: string, projectId: string) {
     queryClient.invalidateQueries({ queryKey: ["risks"] });
   };
   const link = useMutation({
-    mutationFn: (riskId: string) => apiFetch(`/projects/${projectId}/risks/${riskId}`, { method: "POST", token }),
+    mutationFn: (riskId: string) =>
+      apiFetch(`/projects/${projectId}/risks/${riskId}`, { method: "POST", token }),
     onSuccess: invalidate,
   });
   const unlink = useMutation({
-    mutationFn: (riskId: string) => apiFetch(`/projects/${projectId}/risks/${riskId}`, { method: "DELETE", token }),
+    mutationFn: (riskId: string) =>
+      apiFetch(`/projects/${projectId}/risks/${riskId}`, { method: "DELETE", token }),
     onSuccess: invalidate,
   });
   return { link, unlink };
@@ -87,6 +95,7 @@ export function useProjectRiskLinkMutations(token: string, projectId: string) {
 
 export function useExportProjectCycloneDxMutation(token: string) {
   return useMutation({
-    mutationFn: (projectId: string) => apiFetch<Record<string, unknown>>(`/projects/${projectId}/export/cyclonedx`, { token }),
+    mutationFn: (projectId: string) =>
+      apiFetch<Record<string, unknown>>(`/projects/${projectId}/export/cyclonedx`, { token }),
   });
 }

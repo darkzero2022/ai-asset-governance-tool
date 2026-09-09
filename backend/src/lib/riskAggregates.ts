@@ -13,7 +13,9 @@ import type { z } from "zod";
  */
 export async function strideAtlasFor(body: z.infer<typeof riskSchema>) {
   const mapping = await prisma.frameworkThreatMapping.findUnique({
-    where: { framework_categoryId: { framework: body.sourceFramework, categoryId: body.sourceCategoryId } },
+    where: {
+      framework_categoryId: { framework: body.sourceFramework, categoryId: body.sourceCategoryId },
+    },
   });
   return resolveStrideAtlas(body, mapping);
 }
@@ -30,9 +32,13 @@ export async function relatedClassificationsFor(sourceFramework: string, sourceC
   });
   if (!links.length) return [];
   const categories = await prisma.frameworkCategory.findMany({
-    where: { OR: links.map((link) => ({ framework: link.toFramework, categoryId: link.toCategoryId })) },
+    where: {
+      OR: links.map((link) => ({ framework: link.toFramework, categoryId: link.toCategoryId })),
+    },
   });
-  const nameOf = new Map(categories.map((category) => [`${category.framework}:${category.categoryId}`, category.name]));
+  const nameOf = new Map(
+    categories.map((category) => [`${category.framework}:${category.categoryId}`, category.name]),
+  );
   return links.map((link) => ({
     framework: link.toFramework,
     categoryId: link.toCategoryId,

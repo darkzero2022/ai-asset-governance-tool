@@ -33,18 +33,35 @@ export type ModelCardCoverage = {
 };
 
 export type ModelMetricReport = {
-  metrics: Array<{ id: string; metricName: string; metricValue: number; slice?: string | null; asset: { id: string; name: string }; task?: string | null; architectureFamily?: string | null }>;
+  metrics: Array<{
+    id: string;
+    metricName: string;
+    metricValue: number;
+    slice?: string | null;
+    asset: { id: string; name: string };
+    task?: string | null;
+    architectureFamily?: string | null;
+  }>;
   aggregate: Array<{ group: string; avg: number; min: number; max: number; count: number }>;
 };
 
 export function useDashboardSummaryQuery(token: string) {
-  return useQuery({ queryKey: ["dashboard", "summary"], queryFn: () => apiFetch<Summary>("/dashboard/summary", { token }), enabled: Boolean(token) });
+  return useQuery({
+    queryKey: ["dashboard", "summary"],
+    queryFn: () => apiFetch<Summary>("/dashboard/summary", { token }),
+    enabled: Boolean(token),
+  });
 }
 
 export function useDashboardExposureQuery(token: string) {
   return useQuery({
     queryKey: ["dashboard", "exposure"],
-    queryFn: async () => (await apiFetch<{ exposures: Array<Record<string, unknown>> }>("/dashboard/exposure", { token })).exposures,
+    queryFn: async () =>
+      (
+        await apiFetch<{ exposures: Array<Record<string, unknown>> }>("/dashboard/exposure", {
+          token,
+        })
+      ).exposures,
     enabled: Boolean(token),
   });
 }
@@ -52,7 +69,19 @@ export function useDashboardExposureQuery(token: string) {
 export function useFrameworkCoverageQuery(token: string) {
   return useQuery({
     queryKey: ["reports", "framework-coverage"],
-    queryFn: async () => (await apiFetch<{ coverage: Array<{ id: string; framework: string; categoryId: string; name: string; riskCount: number; frameworkStatus?: string }> }>("/reports/framework-coverage", { token })).coverage,
+    queryFn: async () =>
+      (
+        await apiFetch<{
+          coverage: Array<{
+            id: string;
+            framework: string;
+            categoryId: string;
+            name: string;
+            riskCount: number;
+            frameworkStatus?: string;
+          }>;
+        }>("/reports/framework-coverage", { token })
+      ).coverage,
     enabled: Boolean(token),
   });
 }
@@ -60,7 +89,12 @@ export function useFrameworkCoverageQuery(token: string) {
 export function useRiskSummaryQuery(token: string) {
   return useQuery({
     queryKey: ["reports", "risk-summary"],
-    queryFn: () => apiFetch<{ total: number; byFramework: Record<string, number>; bySeverity: Record<string, number> }>("/reports/risk-summary", { token }),
+    queryFn: () =>
+      apiFetch<{
+        total: number;
+        byFramework: Record<string, number>;
+        bySeverity: Record<string, number>;
+      }>("/reports/risk-summary", { token }),
     enabled: Boolean(token),
   });
 }
@@ -68,7 +102,12 @@ export function useRiskSummaryQuery(token: string) {
 export function useRecertificationQuery(token: string) {
   return useQuery({
     queryKey: ["dashboard", "recertification"],
-    queryFn: async () => (await apiFetch<{ recertifications: RecertificationItem[] }>("/dashboard/recertification", { token })).recertifications,
+    queryFn: async () =>
+      (
+        await apiFetch<{ recertifications: RecertificationItem[] }>("/dashboard/recertification", {
+          token,
+        })
+      ).recertifications,
     enabled: Boolean(token),
   });
 }
@@ -84,13 +123,18 @@ export function useModelCardCoverageQuery(token: string) {
 export function useModelMetricsQuery(token: string, metricName: string) {
   return useQuery({
     queryKey: ["reports", "model-metrics", metricName],
-    queryFn: () => apiFetch<ModelMetricReport>(`/reports/model-metrics?metricName=${encodeURIComponent(metricName)}`, { token }),
+    queryFn: () =>
+      apiFetch<ModelMetricReport>(
+        `/reports/model-metrics?metricName=${encodeURIComponent(metricName)}`,
+        { token },
+      ),
     enabled: Boolean(token),
   });
 }
 
 export function useSearchMutation(token: string) {
   return useMutation({
-    mutationFn: (query: string) => apiFetch<SearchResults>(`/search?q=${encodeURIComponent(query)}`, { token }),
+    mutationFn: (query: string) =>
+      apiFetch<SearchResults>(`/search?q=${encodeURIComponent(query)}`, { token }),
   });
 }

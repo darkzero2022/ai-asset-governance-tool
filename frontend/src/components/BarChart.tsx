@@ -18,7 +18,10 @@ export function BarChart({ data }: { data: BarDatum[] }) {
           <div className="h-3 overflow-hidden rounded-full bg-surface-alt">
             <div
               className="h-full rounded-full bg-chart-1"
-              style={{ width: `${Math.max((item.value / max) * 100, item.value ? 4 : 0)}%`, backgroundColor: item.color }}
+              style={{
+                width: `${Math.max((item.value / max) * 100, item.value ? 4 : 0)}%`,
+                backgroundColor: item.color,
+              }}
             />
           </div>
         </div>

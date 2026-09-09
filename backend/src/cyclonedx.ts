@@ -9,12 +9,17 @@ const require = createRequire(import.meta.url);
 const Ajv = require("ajv");
 const addFormats = require("ajv-formats");
 
-const schemaUrl = "https://raw.githubusercontent.com/CycloneDX/specification/master/schema/bom-1.7.schema.json";
+const schemaUrl =
+  "https://raw.githubusercontent.com/CycloneDX/specification/master/schema/bom-1.7.schema.json";
 const schemaBaseUrl = "https://raw.githubusercontent.com/CycloneDX/specification/master/schema/";
 const vendorDir = join(dirname(fileURLToPath(import.meta.url)), "..", "vendor");
 
 type AssetForBom = AIAsset & {
-  risks: Array<Risk & { controls: Array<Control & { implementationStatus: string; evidenceNotes: string | null }> }>;
+  risks: Array<
+    Risk & {
+      controls: Array<Control & { implementationStatus: string; evidenceNotes: string | null }>;
+    }
+  >;
   modelCard?: (ModelCard & { metrics?: ModelCardMetric[] }) | null;
 };
 
@@ -23,7 +28,10 @@ type AssetForBom = AIAsset & {
  *  to. Optional — omitted by the CLI validator and tests. */
 export type BomFrameworkContext = {
   frameworkRevisions?: Record<string, string>;
-  relatedByRisk?: Record<string, Array<{ framework: string; categoryId: string; relationship: string }>>;
+  relatedByRisk?: Record<
+    string,
+    Array<{ framework: string; categoryId: string; relationship: string }>
+  >;
 };
 
 type CycloneDxProperty = {
@@ -52,14 +60,20 @@ function assetProperties(asset: AssetForBom, context: BomFrameworkContext = {}) 
     { name: "aibom:risk:id", value: risk.id },
     { name: "aibom:risk:framework", value: risk.sourceFramework },
     { name: "aibom:risk:category", value: risk.sourceCategoryId },
-    optionalProperty("aibom:risk:frameworkRevision", context.frameworkRevisions?.[risk.sourceFramework]),
+    optionalProperty(
+      "aibom:risk:frameworkRevision",
+      context.frameworkRevisions?.[risk.sourceFramework],
+    ),
     { name: "aibom:risk:status", value: risk.status },
     { name: "aibom:risk:inherentScore", value: String(risk.inherentRiskScore) },
     optionalProperty("aibom:risk:residualScore", risk.residualRiskScore?.toString()),
     optionalProperty("aibom:risk:euAiActTier", risk.euAiActRiskTier),
     optionalProperty("aibom:risk:strideAiCategory", risk.strideAiCategory),
     optionalProperty("aibom:risk:atlasTechnique", risk.atlasTechnique),
-    ...(risk.atlasMitigations ?? []).map((mitigation) => ({ name: "aibom:risk:atlasMitigation", value: mitigation })),
+    ...(risk.atlasMitigations ?? []).map((mitigation) => ({
+      name: "aibom:risk:atlasMitigation",
+      value: mitigation,
+    })),
     ...(context.relatedByRisk?.[risk.id] ?? []).map((related) => ({
       name: "aibom:risk:relatedClassification",
       value: `${related.framework} ${related.categoryId} (${related.relationship.toLowerCase()})`,
@@ -123,15 +137,25 @@ function modelCardForCycloneDx(asset: AssetForBom) {
     ...(card.outputsDescription ? { outputs: [{ format: card.outputsDescription }] } : {}),
   });
   const quantitativeAnalysis = optionalObject({
-    ...(performanceMetrics(card.metrics) ? { performanceMetrics: performanceMetrics(card.metrics) } : {}),
+    ...(performanceMetrics(card.metrics)
+      ? { performanceMetrics: performanceMetrics(card.metrics) }
+      : {}),
   });
   const considerations = optionalObject({
     ...(asList(card.intendedUsers) ? { users: asList(card.intendedUsers) } : {}),
     ...(asList(card.useCases) ? { useCases: asList(card.useCases) } : {}),
-    ...(asList(card.technicalLimitations) ? { technicalLimitations: asList(card.technicalLimitations) } : {}),
-    ...(asList(card.performanceTradeoffs) ? { performanceTradeoffs: asList(card.performanceTradeoffs) } : {}),
-    ...(card.ethicalConsiderations ? { ethicalConsiderations: [{ name: card.ethicalConsiderations }] } : {}),
-    ...(card.fairnessAssessments ? { fairnessAssessments: [{ groupAtRisk: card.fairnessAssessments }] } : {}),
+    ...(asList(card.technicalLimitations)
+      ? { technicalLimitations: asList(card.technicalLimitations) }
+      : {}),
+    ...(asList(card.performanceTradeoffs)
+      ? { performanceTradeoffs: asList(card.performanceTradeoffs) }
+      : {}),
+    ...(card.ethicalConsiderations
+      ? { ethicalConsiderations: [{ name: card.ethicalConsiderations }] }
+      : {}),
+    ...(card.fairnessAssessments
+      ? { fairnessAssessments: [{ groupAtRisk: card.fairnessAssessments }] }
+      : {}),
   });
 
   return optionalObject({
@@ -142,7 +166,10 @@ function modelCardForCycloneDx(asset: AssetForBom) {
     properties: compactProperties([
       optionalProperty("aibom:modelCard:approach", card.approach),
       optionalProperty("aibom:modelCard:datasetsDescription", card.datasetsDescription),
-      optionalProperty("aibom:modelCard:environmentalConsiderations", card.environmentalConsiderations),
+      optionalProperty(
+        "aibom:modelCard:environmentalConsiderations",
+        card.environmentalConsiderations,
+      ),
     ]),
   });
 }
@@ -155,7 +182,9 @@ function mapComponent(asset: AssetForBom, context: BomFrameworkContext) {
     version: asset.version,
     supplier: { name: asset.supplier },
     ...(asset.license ? { licenses: [{ license: { name: asset.license } }] } : {}),
-    ...(sourceExternalReferences(asset) ? { externalReferences: sourceExternalReferences(asset) } : {}),
+    ...(sourceExternalReferences(asset)
+      ? { externalReferences: sourceExternalReferences(asset) }
+      : {}),
     ...(modelCardForCycloneDx(asset) ? { modelCard: modelCardForCycloneDx(asset) } : {}),
     properties: assetProperties(asset, context),
   };
@@ -167,7 +196,9 @@ function mapService(asset: AssetForBom, context: BomFrameworkContext) {
     name: asset.name,
     version: asset.version,
     provider: { name: asset.provider ?? asset.supplier },
-    ...(sourceExternalReferences(asset) ? { externalReferences: sourceExternalReferences(asset) } : {}),
+    ...(sourceExternalReferences(asset)
+      ? { externalReferences: sourceExternalReferences(asset) }
+      : {}),
     properties: assetProperties(asset, context),
   };
 }
@@ -175,13 +206,15 @@ function mapService(asset: AssetForBom, context: BomFrameworkContext) {
 export function buildCycloneDxBom(assets: AssetForBom[], context: BomFrameworkContext = {}) {
   const componentAssets = assets.filter((asset) => asset.type !== "SERVICE");
   const serviceAssets = assets.filter((asset) => asset.type === "SERVICE");
-  const frameworkRevisionProps = Object.entries(context.frameworkRevisions ?? {}).map(([framework, revision]) => ({
-    name: `aibom:framework:${framework}:revision`,
-    value: revision,
-  }));
+  const frameworkRevisionProps = Object.entries(context.frameworkRevisions ?? {}).map(
+    ([framework, revision]) => ({
+      name: `aibom:framework:${framework}:revision`,
+      value: revision,
+    }),
+  );
 
   return {
-    "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+    $schema: "http://cyclonedx.org/schema/bom-1.7.schema.json",
     bomFormat: "CycloneDX",
     specVersion: "1.7",
     serialNumber: `urn:uuid:${randomUUID()}`,
@@ -204,8 +237,12 @@ export function buildCycloneDxBom(assets: AssetForBom[], context: BomFrameworkCo
         ...frameworkRevisionProps,
       ],
     },
-    ...(componentAssets.length ? { components: componentAssets.map((asset) => mapComponent(asset, context)) } : {}),
-    ...(serviceAssets.length ? { services: serviceAssets.map((asset) => mapService(asset, context)) } : {}),
+    ...(componentAssets.length
+      ? { components: componentAssets.map((asset) => mapComponent(asset, context)) }
+      : {}),
+    ...(serviceAssets.length
+      ? { services: serviceAssets.map((asset) => mapService(asset, context)) }
+      : {}),
   };
 }
 
@@ -226,7 +263,9 @@ async function fetchJsonSchema(url: string) {
   const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error(`Unable to fetch CycloneDX schema ${url}: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Unable to fetch CycloneDX schema ${url}: ${response.status} ${response.statusText}`,
+    );
   }
 
   return response.json();
@@ -301,7 +340,7 @@ export async function validateCycloneDxBom(bom: unknown) {
 
   return {
     valid,
-    errors: valid ? [] : validateBom.errors ?? [],
+    errors: valid ? [] : (validateBom.errors ?? []),
     schemaUrl,
   };
 }

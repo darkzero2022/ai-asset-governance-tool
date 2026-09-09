@@ -30,11 +30,15 @@ async function main() {
 
   for (const schedule of recertifications) {
     const status = schedule.nextDueDate < now ? "OVERDUE" : "DUE_SOON";
-    await sendSlackMessage(`Recertification ${status}: ${schedule.asset.name} (${schedule.asset.id}) due ${schedule.nextDueDate.toISOString().slice(0, 10)}`);
+    await sendSlackMessage(
+      `Recertification ${status}: ${schedule.asset.name} (${schedule.asset.id}) due ${schedule.nextDueDate.toISOString().slice(0, 10)}`,
+    );
   }
 
   for (const asset of staleAssets) {
-    await sendSlackMessage(`Stale asset workflow: ${asset.name} (${asset.id}) has been ${asset.status} since ${asset.updatedAt.toISOString().slice(0, 10)}`);
+    await sendSlackMessage(
+      `Stale asset workflow: ${asset.name} (${asset.id}) has been ${asset.status} since ${asset.updatedAt.toISOString().slice(0, 10)}`,
+    );
   }
 
   logger.info(

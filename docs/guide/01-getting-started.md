@@ -5,11 +5,11 @@ The full setup and install guide. For the one-paragraph version see the
 
 There are three ways to run AI-BOM. Pick the row that matches you:
 
-| Track | You get | Needs |
-|---|---|---|
-| **[Docker](#track-a--docker-recommended)** (recommended) | Whole stack in containers, app on one port, restarts itself | Docker Desktop / Docker Engine + `docker compose` |
-| **[No-Docker local](#track-b--no-docker-local)** | Backend + frontend on host Node, a *bundled* PostgreSQL — nothing else to install | Node 22+ (setup installs it if missing). `setup.sh` on Linux/macOS/Git Bash, `setup.ps1` on Windows PowerShell |
-| **[Linux server](#track-c--linux-server-always-on)** | The Docker track plus a systemd unit so it survives reboots | A Linux host with Docker |
+| Track                                                    | You get                                                                           | Needs                                                                                                          |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **[Docker](#track-a--docker-recommended)** (recommended) | Whole stack in containers, app on one port, restarts itself                       | Docker Desktop / Docker Engine + `docker compose`                                                              |
+| **[No-Docker local](#track-b--no-docker-local)**         | Backend + frontend on host Node, a _bundled_ PostgreSQL — nothing else to install | Node 22+ (setup installs it if missing). `setup.sh` on Linux/macOS/Git Bash, `setup.ps1` on Windows PowerShell |
+| **[Linux server](#track-c--linux-server-always-on)**     | The Docker track plus a systemd unit so it survives reboots                       | A Linux host with Docker                                                                                       |
 
 ---
 
@@ -37,11 +37,11 @@ Key settings: `DB_MODE` (`managed` / `docker` / `url`), `PORT` (default 4000),
 Three ports are configurable end to end — setup prompts for each (interactive),
 or take a flag, and writes them to `.env`:
 
-| `.env` key | flag (`.sh` / `.ps1`) | what | default |
-|---|---|---|---|
-| `PORT` | `--port` / `-Port` | API + web app | 4000 |
-| `DB_PORT` | `--db-port` / `-DbPort` | PostgreSQL host port (managed + docker) | 55432 |
-| `FRONTEND_PORT` | `--frontend-port` / `-FrontendPort` | Vite dev server (local mode only) | 5173 |
+| `.env` key      | flag (`.sh` / `.ps1`)               | what                                    | default |
+| --------------- | ----------------------------------- | --------------------------------------- | ------- |
+| `PORT`          | `--port` / `-Port`                  | API + web app                           | 4000    |
+| `DB_PORT`       | `--db-port` / `-DbPort`             | PostgreSQL host port (managed + docker) | 55432   |
+| `FRONTEND_PORT` | `--frontend-port` / `-FrontendPort` | Vite dev server (local mode only)       | 5173    |
 
 Each must be an integer 1024–65535 and the three must differ. `DATABASE_URL`,
 `APP_URL`, `CORS_ORIGIN`, the Docker port mappings, and the start/stop/status
@@ -186,16 +186,16 @@ pm2 instead and works on macOS/Windows too.
 Every `.sh` script below has a `.ps1` twin for Windows PowerShell
 (`setup.ps1`, `start.ps1`, `stop.ps1`); the rest run from Git Bash / WSL.
 
-| Script | Does |
-|---|---|
-| `scripts/setup.sh` / `scripts/setup.ps1` | Check/install deps, write `.env`, install packages, migrate, seed, create the admin |
-| `scripts/start.sh` / `scripts/stop.sh` (`.ps1`) | Start / stop everything for the recorded mode |
-| `scripts/status.sh` | Mode, versions, what's running, migration status, `/health` |
-| `scripts/upgrade.sh` | `git pull` → reinstall → migrate → rebuild → restart (refuses a dirty tree; backs up first) |
-| `scripts/reset.sh` | Drop all data and re-seed (asks for confirmation unless `--yes`) |
-| `scripts/install-service.sh` | Run on boot — pm2 (any OS) or `--systemd` (Linux). Docker mode: prints the "start on login" steps |
-| `scripts/serve-prod.sh` | Run the built app in production locally (DB + API + SPA on `$PORT`, no dev servers) |
-| `scripts/backup.sh` / `scripts/restore.sh <file>` | `pg_dump` to `backups/` / restore one |
+| Script                                            | Does                                                                                              |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `scripts/setup.sh` / `scripts/setup.ps1`          | Check/install deps, write `.env`, install packages, migrate, seed, create the admin               |
+| `scripts/start.sh` / `scripts/stop.sh` (`.ps1`)   | Start / stop everything for the recorded mode                                                     |
+| `scripts/status.sh`                               | Mode, versions, what's running, migration status, `/health`                                       |
+| `scripts/upgrade.sh`                              | `git pull` → reinstall → migrate → rebuild → restart (refuses a dirty tree; backs up first)       |
+| `scripts/reset.sh`                                | Drop all data and re-seed (asks for confirmation unless `--yes`)                                  |
+| `scripts/install-service.sh`                      | Run on boot — pm2 (any OS) or `--systemd` (Linux). Docker mode: prints the "start on login" steps |
+| `scripts/serve-prod.sh`                           | Run the built app in production locally (DB + API + SPA on `$PORT`, no dev servers)               |
+| `scripts/backup.sh` / `scripts/restore.sh <file>` | `pg_dump` to `backups/` / restore one                                                             |
 
 Re-running `scripts/setup.sh` is safe and idempotent — it never overwrites an
 existing secret or an admin password you changed in the UI (pass
@@ -267,12 +267,12 @@ password? Re-run setup with the same `--admin-email` and a new `--admin-password
 
 ## Troubleshooting
 
-| Symptom | Fix |
-|---|---|
-| `Port 4000 is in use` from setup | Re-run with `--port=<n>` / `-Port <n>` (or set `PORT` in `.env`). Setup checks this before changing anything. |
-| Port 5173 / 55432 in use | Re-run with `--frontend-port=<n>` / `--db-port=<n>` (`-FrontendPort` / `-DbPort`), or for the DB switch to `--database=url`. |
-| `POSTGRES_PASSWORD is required` from `docker compose` | Run `scripts/setup.sh` — it generates `.env`. For manual runs, create `.env` with `POSTGRES_PASSWORD` and `JWT_SECRET`. |
-| Requests fail with "Failed to fetch" after a manual/custom setup | The SPA and API must share an origin. Only set `VITE_API_BASE_URL` / `CORS_ORIGIN` if you deliberately split them. |
-| Managed database won't start | Needs the optional `embedded-postgres` binaries — re-run `npm install` in `backend/`, or use `--database=docker` / `--database=url`. |
-| `vite preview` returns 403 behind a proxy | Set `VITE_ALLOWED_HOSTS` (comma-separated) before it starts. |
-| Demo seed: "record not found" for the admin | The demo seed needs the same `ADMIN_EMAIL` the reference seed used. |
+| Symptom                                                          | Fix                                                                                                                                  |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `Port 4000 is in use` from setup                                 | Re-run with `--port=<n>` / `-Port <n>` (or set `PORT` in `.env`). Setup checks this before changing anything.                        |
+| Port 5173 / 55432 in use                                         | Re-run with `--frontend-port=<n>` / `--db-port=<n>` (`-FrontendPort` / `-DbPort`), or for the DB switch to `--database=url`.         |
+| `POSTGRES_PASSWORD is required` from `docker compose`            | Run `scripts/setup.sh` — it generates `.env`. For manual runs, create `.env` with `POSTGRES_PASSWORD` and `JWT_SECRET`.              |
+| Requests fail with "Failed to fetch" after a manual/custom setup | The SPA and API must share an origin. Only set `VITE_API_BASE_URL` / `CORS_ORIGIN` if you deliberately split them.                   |
+| Managed database won't start                                     | Needs the optional `embedded-postgres` binaries — re-run `npm install` in `backend/`, or use `--database=docker` / `--database=url`. |
+| `vite preview` returns 403 behind a proxy                        | Set `VITE_ALLOWED_HOSTS` (comma-separated) before it starts.                                                                         |
+| Demo seed: "record not found" for the admin                      | The demo seed needs the same `ADMIN_EMAIL` the reference seed used.                                                                  |

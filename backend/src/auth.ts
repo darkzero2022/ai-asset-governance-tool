@@ -34,7 +34,13 @@ function jwtSecret() {
 }
 
 export function signAccessToken(user: AuthUser, tokenVersion: number) {
-  const payload: AccessTokenPayload = { id: user.id, email: user.email, role: user.role, tokenVersion, typ: "access" };
+  const payload: AccessTokenPayload = {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    tokenVersion,
+    typ: "access",
+  };
   return jwt.sign(payload, jwtSecret(), { expiresIn: ACCESS_TOKEN_TTL });
 }
 
@@ -67,7 +73,10 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     return;
   }
 
-  const user = await prisma.user.findUnique({ where: { id: payload.id }, select: { active: true, tokenVersion: true } });
+  const user = await prisma.user.findUnique({
+    where: { id: payload.id },
+    select: { active: true, tokenVersion: true },
+  });
 
   if (!user?.active) {
     next(new AppError(401, "ACCOUNT_DEACTIVATED", "User account is deactivated"));

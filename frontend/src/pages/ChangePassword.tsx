@@ -45,11 +45,42 @@ export default function ChangePassword({ token, forced }: { token: string; force
       <Card>
         <CardBody>
           <form onSubmit={submit} className="space-y-4">
-            <Input label="Current password" type="password" autoComplete="current-password" value={current} onChange={(event) => setCurrent(event.target.value)} required />
-            <Input label="New password" type="password" autoComplete="new-password" value={next} onChange={(event) => setNext(event.target.value)} required hint={PASSWORD_POLICY_HINT} />
-            <Input label="Confirm new password" type="password" autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)} required />
-            {error && <p className="text-sm text-danger" role="alert">{error}</p>}
-            <Button type="submit" variant="primary" disabled={changePassword.isPending} className="w-full">
+            <Input
+              label="Current password"
+              type="password"
+              autoComplete="current-password"
+              value={current}
+              onChange={(event) => setCurrent(event.target.value)}
+              required
+            />
+            <Input
+              label="New password"
+              type="password"
+              autoComplete="new-password"
+              value={next}
+              onChange={(event) => setNext(event.target.value)}
+              required
+              hint={PASSWORD_POLICY_HINT}
+            />
+            <Input
+              label="Confirm new password"
+              type="password"
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(event) => setConfirm(event.target.value)}
+              required
+            />
+            {error && (
+              <p className="text-sm text-danger" role="alert">
+                {error}
+              </p>
+            )}
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={changePassword.isPending}
+              className="w-full"
+            >
               {changePassword.isPending ? "Saving…" : "Change password"}
             </Button>
           </form>

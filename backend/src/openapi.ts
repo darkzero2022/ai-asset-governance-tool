@@ -59,8 +59,8 @@ function collectRoutes(router: Router): RouteEntry[] {
       const { path, methods, stack: routeStack } = layer.route;
       const middlewares = routeStack.map((entry) => entry.handle);
       const requiresAuth = middlewares.includes(requireAuth as unknown);
-      const roleMiddleware = middlewares.find(
-        (mw) => Array.isArray((mw as { allowedRoles?: Role[] })?.allowedRoles),
+      const roleMiddleware = middlewares.find((mw) =>
+        Array.isArray((mw as { allowedRoles?: Role[] })?.allowedRoles),
       ) as { allowedRoles: Role[] } | undefined;
       for (const method of Object.keys(methods).filter((m) => methods[m])) {
         routes.push({ method, path, requiresAuth, roles: roleMiddleware?.allowedRoles ?? null });
@@ -181,7 +181,14 @@ const riskProperties = {
   dueDate: { type: "string", format: "date-time", nullable: true },
   status: { type: "string", enum: RISK_STATUSES },
 };
-const riskRequired = ["assetId", "sourceFramework", "sourceCategoryId", "description", "likelihood", "impact"];
+const riskRequired = [
+  "assetId",
+  "sourceFramework",
+  "sourceCategoryId",
+  "description",
+  "likelihood",
+  "impact",
+];
 
 const controlProperties = {
   mappedFramework: { type: "string", enum: SOURCE_FRAMEWORKS },
@@ -213,7 +220,10 @@ const schemas: Record<string, object> = {
   ErrorEnvelope: errorEnvelope,
   LoginInput: {
     type: "object",
-    properties: { email: { type: "string", format: "email" }, password: { type: "string", minLength: 1 } },
+    properties: {
+      email: { type: "string", format: "email" },
+      password: { type: "string", minLength: 1 },
+    },
     required: ["email", "password"],
   },
   BootstrapInput: {
@@ -221,7 +231,11 @@ const schemas: Record<string, object> = {
     properties: {
       email: { type: "string", format: "email" },
       name: { type: "string", minLength: 1 },
-      password: { type: "string", minLength: 12, description: "At least 12 characters, not a common/breached password." },
+      password: {
+        type: "string",
+        minLength: 12,
+        description: "At least 12 characters, not a common/breached password.",
+      },
     },
     required: ["email", "password"],
   },
@@ -229,7 +243,11 @@ const schemas: Record<string, object> = {
     type: "object",
     properties: {
       currentPassword: { type: "string", minLength: 1 },
-      newPassword: { type: "string", minLength: 12, description: "At least 12 characters, not a common/breached password." },
+      newPassword: {
+        type: "string",
+        minLength: 12,
+        description: "At least 12 characters, not a common/breached password.",
+      },
     },
     required: ["currentPassword", "newPassword"],
   },
@@ -241,7 +259,10 @@ const schemas: Record<string, object> = {
   },
   AssetTransitionInput: {
     type: "object",
-    properties: { toStatus: { type: "string", enum: ASSET_STATUSES }, comments: { type: "string", nullable: true } },
+    properties: {
+      toStatus: { type: "string", enum: ASSET_STATUSES },
+      comments: { type: "string", nullable: true },
+    },
     required: ["toStatus"],
   },
   ImportUrlInput: {
@@ -251,18 +272,36 @@ const schemas: Record<string, object> = {
   },
   RecertificationInput: {
     type: "object",
-    properties: { cadenceDays: { type: "integer", minimum: 1 }, nextDueDate: { type: "string", format: "date-time" } },
+    properties: {
+      cadenceDays: { type: "integer", minimum: 1 },
+      nextDueDate: { type: "string", format: "date-time" },
+    },
     required: ["cadenceDays", "nextDueDate"],
   },
   ProjectInput: { type: "object", properties: projectProperties, required: ["name"] },
-  ProjectUpdateInput: { type: "object", properties: { ...projectProperties, ...lockFields }, required: ["name"] },
+  ProjectUpdateInput: {
+    type: "object",
+    properties: { ...projectProperties, ...lockFields },
+    required: ["name"],
+  },
   RiskInput: { type: "object", properties: riskProperties, required: riskRequired },
-  RiskUpdateInput: { type: "object", properties: { ...riskProperties, ...lockFields }, required: riskRequired },
+  RiskUpdateInput: {
+    type: "object",
+    properties: { ...riskProperties, ...lockFields },
+    required: riskRequired,
+  },
   ControlInput: { type: "object", properties: controlProperties, required: controlRequired },
-  ControlUpdateInput: { type: "object", properties: { ...controlProperties, ...lockFields }, required: controlRequired },
+  ControlUpdateInput: {
+    type: "object",
+    properties: { ...controlProperties, ...lockFields },
+    required: controlRequired,
+  },
   RiskControlLinkUpdateInput: {
     type: "object",
-    properties: { implementationStatus: { type: "string", enum: CONTROL_STATUSES }, evidenceNotes: { type: "string", nullable: true } },
+    properties: {
+      implementationStatus: { type: "string", enum: CONTROL_STATUSES },
+      evidenceNotes: { type: "string", nullable: true },
+    },
   },
   ModelCardUpdateInput: { type: "object", properties: { ...modelCardProperties, ...lockFields } },
   ModelCardMetricInput: {
@@ -296,13 +335,21 @@ const schemas: Record<string, object> = {
   },
   CycloneDxExportInput: {
     type: "object",
-    properties: { assetIds: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 500 } },
+    properties: {
+      assetIds: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 500 },
+    },
     required: ["assetIds"],
   },
 };
 
-const genericResponse = { description: "See the running app for the exact response shape.", content: { "application/json": { schema: {} } } };
-const errorResponse = { description: "Error envelope", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } } };
+const genericResponse = {
+  description: "See the running app for the exact response shape.",
+  content: { "application/json": { schema: {} } },
+};
+const errorResponse = {
+  description: "Error envelope",
+  content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
+};
 
 function buildOperation(entry: RouteEntry) {
   const key = `${entry.method.toUpperCase()} ${entry.path}`;
@@ -312,19 +359,21 @@ function buildOperation(entry: RouteEntry) {
     tags: [tagFor(entry.path)],
     summary: key,
     ...(entry.requiresAuth ? { security: [{ bearerAuth: [] }] } : {}),
-    ...(entry.roles
-      ? { description: `Requires role: ${entry.roles.join(", ")}.` }
-      : {}),
+    ...(entry.roles ? { description: `Requires role: ${entry.roles.join(", ")}.` } : {}),
     ...(hasBody
       ? {
           requestBody: {
             required: true,
-            content: { "application/json": { schema: { $ref: `#/components/schemas/${bodySchemaName}` } } },
+            content: {
+              "application/json": { schema: { $ref: `#/components/schemas/${bodySchemaName}` } },
+            },
           },
         }
       : {}),
     responses: {
-      ...(entry.method === "delete" ? { "204": { description: "No content" } } : { "200": genericResponse }),
+      ...(entry.method === "delete"
+        ? { "204": { description: "No content" } }
+        : { "200": genericResponse }),
       ...(entry.requiresAuth ? { "401": errorResponse } : {}),
       ...(entry.roles ? { "403": errorResponse } : {}),
       "422": errorResponse,

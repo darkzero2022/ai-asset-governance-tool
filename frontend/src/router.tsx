@@ -1,10 +1,30 @@
 import { FormEvent, lazy, useEffect, useState } from "react";
-import { createBrowserRouter, Navigate, useNavigate, useOutletContext, useParams, useRouteError } from "react-router-dom";
+import {
+  createBrowserRouter,
+  Navigate,
+  useNavigate,
+  useOutletContext,
+  useParams,
+  useRouteError,
+} from "react-router-dom";
 import type { Asset, Project, Risk } from "@aibom/shared";
 import App, { type AppOutletContext } from "./App";
 import { canManage, canTransitionAsset, hasRole } from "./auth";
-import { emptyAiSystem, emptyFilters, emptyProject, emptyRisk, type ImportSuggestion, label, nextStatuses, type ProjectForm } from "./formDefaults";
-import { emptyModelCardForm, modelCardToForm, type ModelCardFormState } from "./components/ModelCardForm";
+import {
+  emptyAiSystem,
+  emptyFilters,
+  emptyProject,
+  emptyRisk,
+  type ImportSuggestion,
+  label,
+  nextStatuses,
+  type ProjectForm,
+} from "./formDefaults";
+import {
+  emptyModelCardForm,
+  modelCardToForm,
+  type ModelCardFormState,
+} from "./components/ModelCardForm";
 import { Forbidden } from "./components/Forbidden";
 import { toast } from "./components/ui/toastStore";
 import { useAuditLogsQuery } from "./queries/auditLogs";
@@ -32,7 +52,12 @@ import {
   useProjectsQuery,
   useSaveProjectMutation,
 } from "./queries/projects";
-import { useAtlasMitigationsQuery, useAtlasTechniquesQuery, useFrameworkCategoriesQuery, useFrameworksQuery } from "./queries/reference";
+import {
+  useAtlasMitigationsQuery,
+  useAtlasTechniquesQuery,
+  useFrameworkCategoriesQuery,
+  useFrameworksQuery,
+} from "./queries/reference";
 import {
   useBulkUpdateRisksMutation,
   useRiskAssetLinkMutations,
@@ -153,7 +178,10 @@ function AiSystemListRoute() {
     event.preventDefault();
     ctx.setError("");
     try {
-      const payload = editingAssetId && editBaseVersion ? { ...assetForm, expectedUpdatedAt: editBaseVersion } : assetForm;
+      const payload =
+        editingAssetId && editBaseVersion
+          ? { ...assetForm, expectedUpdatedAt: editBaseVersion }
+          : assetForm;
       await saveAsset.mutateAsync({ id: editingAssetId ?? undefined, payload });
       toast.success(editingAssetId ? "AI system updated" : "AI system created", assetForm.name);
       setDialogOpen(false);
@@ -229,7 +257,8 @@ function AiSystemDetailRoute() {
   const [editBaseVersion, setEditBaseVersion] = useState<string | null>(null);
   const [modelCardForm, setModelCardForm] = useState<ModelCardFormState>(emptyModelCardForm);
   const [modelCardSourceUrl, setModelCardSourceUrl] = useState("");
-  const [modelCardImportSuggestion, setModelCardImportSuggestion] = useState<ImportSuggestion | null>(null);
+  const [modelCardImportSuggestion, setModelCardImportSuggestion] =
+    useState<ImportSuggestion | null>(null);
   const [selectedRiskId, setSelectedRiskId] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [workflowComments, setWorkflowComments] = useState("");
@@ -274,7 +303,10 @@ function AiSystemDetailRoute() {
     event.preventDefault();
     ctx.setError("");
     try {
-      const payload = editingAssetId && editBaseVersion ? { ...assetForm, expectedUpdatedAt: editBaseVersion } : assetForm;
+      const payload =
+        editingAssetId && editBaseVersion
+          ? { ...assetForm, expectedUpdatedAt: editBaseVersion }
+          : assetForm;
       await saveAsset.mutateAsync({ id: editingAssetId ?? undefined, payload });
       setEditingAssetId(null);
       setEditBaseVersion(null);
@@ -307,7 +339,9 @@ function AiSystemDetailRoute() {
       const payload = {
         ...modelCardForm,
         metrics: undefined,
-        performanceMetrics: modelCardForm.performanceMetrics ? JSON.parse(modelCardForm.performanceMetrics) : null,
+        performanceMetrics: modelCardForm.performanceMetrics
+          ? JSON.parse(modelCardForm.performanceMetrics)
+          : null,
       };
       await saveModelCard.mutateAsync(payload);
 
@@ -335,7 +369,11 @@ function AiSystemDetailRoute() {
         if (!metric.metricName.trim() || !metric.metricValue.trim()) continue;
         const metricValue = Number(metric.metricValue);
         if (!Number.isFinite(metricValue)) continue;
-        const metricPayload = { metricName: metric.metricName.trim(), metricValue, slice: metric.slice.trim() || null };
+        const metricPayload = {
+          metricName: metric.metricName.trim(),
+          metricValue,
+          slice: metric.slice.trim() || null,
+        };
         if (metric.id) {
           await metricMutations.update.mutateAsync({ metricId: metric.id, payload: metricPayload });
         } else {
@@ -419,7 +457,9 @@ function AiSystemDetailRoute() {
       selectedProjectId={selectedProjectId}
       workflowComments={workflowComments}
       label={label}
-      availableTransitions={(nextStatuses[asset?.status ?? ""] ?? []).filter((status) => canTransitionAsset(ctx.currentUser, status))}
+      availableTransitions={(nextStatuses[asset?.status ?? ""] ?? []).filter((status) =>
+        canTransitionAsset(ctx.currentUser, status),
+      )}
       canManage={canManage(ctx.currentUser)}
       onBack={() => navigate("/ai-systems")}
       onEditAsset={onEditAsset}
@@ -468,9 +508,14 @@ function RiskRegisterRoute() {
   // longer belongs to it, snap to the first valid one so the select's real
   // value always matches what it's showing, not just the first <option>.
   useEffect(() => {
-    const filteredCategories = categories.filter((category) => category.framework === riskForm.sourceFramework);
+    const filteredCategories = categories.filter(
+      (category) => category.framework === riskForm.sourceFramework,
+    );
     const firstCategory = filteredCategories[0];
-    if (firstCategory && !filteredCategories.some((category) => category.categoryId === riskForm.sourceCategoryId)) {
+    if (
+      firstCategory &&
+      !filteredCategories.some((category) => category.categoryId === riskForm.sourceCategoryId)
+    ) {
       setRiskForm((current) => ({ ...current, sourceCategoryId: firstCategory.categoryId }));
     }
   }, [categories, riskForm.sourceFramework, riskForm.sourceCategoryId]);
@@ -544,7 +589,9 @@ function RiskRegisterRoute() {
   }
 
   function onToggleRisk(id: string) {
-    setSelectedRiskIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+    setSelectedRiskIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
   }
 
   async function onBulkUpdate(status: string) {
@@ -650,7 +697,10 @@ function RiskDetailRoute() {
     if (!selectedControlId) return;
     ctx.setError("");
     try {
-      await controlLinks.link.mutateAsync({ controlId: selectedControlId, implementationStatus: selectedControlStatus });
+      await controlLinks.link.mutateAsync({
+        controlId: selectedControlId,
+        implementationStatus: selectedControlStatus,
+      });
       setSelectedControlId("");
       setSelectedControlStatus("NOT_STARTED");
     } catch (err) {
@@ -748,7 +798,10 @@ function ProjectListRoute() {
     event.preventDefault();
     ctx.setError("");
     try {
-      const payload = editingProjectId && editBaseVersion ? { ...projectForm, expectedUpdatedAt: editBaseVersion } : projectForm;
+      const payload =
+        editingProjectId && editBaseVersion
+          ? { ...projectForm, expectedUpdatedAt: editBaseVersion }
+          : projectForm;
       await saveProject.mutateAsync({ id: editingProjectId ?? undefined, payload });
       toast.success(editingProjectId ? "Project updated" : "Project created", projectForm.name);
       setDialogOpen(false);

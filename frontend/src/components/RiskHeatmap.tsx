@@ -24,7 +24,9 @@ function heatColor(score: number): string {
     const [toScore, toColor] = HEAT_STOPS[i + 1];
     if (clamped >= fromScore && clamped <= toScore) {
       const t = (clamped - fromScore) / (toScore - fromScore);
-      const rgb = fromColor.map((channel, index) => Math.round(channel + (toColor[index] - channel) * t));
+      const rgb = fromColor.map((channel, index) =>
+        Math.round(channel + (toColor[index] - channel) * t),
+      );
       return `rgb(${rgb.join(" ")})`;
     }
   }
@@ -39,24 +41,43 @@ function textColorFor(score: number): string {
 }
 
 export function RiskHeatmap({ risks, onCellClick }: Props) {
-  const count = (likelihood: number, impact: number) => risks.filter((risk) => risk.likelihood === likelihood && risk.impact === impact).length;
+  const count = (likelihood: number, impact: number) =>
+    risks.filter((risk) => risk.likelihood === likelihood && risk.impact === impact).length;
 
   return (
     <div className="mt-5 rounded-lg border border-border bg-surface p-4">
       <h3 className="text-sm font-semibold text-text">Likelihood × Impact</h3>
       <div className="mt-3 grid grid-cols-[auto_repeat(5,minmax(0,1fr))] gap-1 text-center text-xs">
-        <div className="flex items-center justify-center text-[10px] uppercase tracking-wide text-subtle">Impact</div>
-        {[1, 2, 3, 4, 5].map((likelihood) => <div key={likelihood} className="text-[10px] text-subtle">L{likelihood}</div>)}
+        <div className="flex items-center justify-center text-[10px] uppercase tracking-wide text-subtle">
+          Impact
+        </div>
+        {[1, 2, 3, 4, 5].map((likelihood) => (
+          <div key={likelihood} className="text-[10px] text-subtle">
+            L{likelihood}
+          </div>
+        ))}
         {[5, 4, 3, 2, 1].flatMap((impact) => [
-          <div key={`impact-${impact}`} className="flex items-center justify-center text-[10px] text-subtle">I{impact}</div>,
+          <div
+            key={`impact-${impact}`}
+            className="flex items-center justify-center text-[10px] text-subtle"
+          >
+            I{impact}
+          </div>,
           ...[1, 2, 3, 4, 5].map((likelihood) => {
             const total = count(likelihood, impact);
             const score = likelihood * impact;
             return (
               <button
                 key={`${likelihood}-${impact}`}
-                className={cn("rounded p-2 font-semibold transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", !total && "bg-surface-alt")}
-                style={total ? { backgroundColor: heatColor(score), color: textColorFor(score) } : undefined}
+                className={cn(
+                  "rounded p-2 font-semibold transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                  !total && "bg-surface-alt",
+                )}
+                style={
+                  total
+                    ? { backgroundColor: heatColor(score), color: textColorFor(score) }
+                    : undefined
+                }
                 aria-label={`Likelihood ${likelihood}, impact ${impact}: ${total} risk${total === 1 ? "" : "s"}`}
                 onClick={() => onCellClick?.({ likelihood, impact })}
               >

@@ -39,12 +39,24 @@ export function Toaster() {
               "data-[swipe=end]:animate-out",
             )}
           >
-            <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", ACCENT[item.variant])} aria-hidden="true" />
+            <Icon
+              className={cn("mt-0.5 h-4 w-4 shrink-0", ACCENT[item.variant])}
+              aria-hidden="true"
+            />
             <div className="min-w-0">
-              <RadixToast.Title className="text-sm font-medium text-text">{item.title}</RadixToast.Title>
-              {item.description && <RadixToast.Description className="mt-0.5 text-xs text-subtle">{item.description}</RadixToast.Description>}
+              <RadixToast.Title className="text-sm font-medium text-text">
+                {item.title}
+              </RadixToast.Title>
+              {item.description && (
+                <RadixToast.Description className="mt-0.5 text-xs text-subtle">
+                  {item.description}
+                </RadixToast.Description>
+              )}
             </div>
-            <RadixToast.Close aria-label="Dismiss" className="rounded p-0.5 text-subtle hover:bg-surface-alt hover:text-text">
+            <RadixToast.Close
+              aria-label="Dismiss"
+              className="rounded p-0.5 text-subtle hover:bg-surface-alt hover:text-text"
+            >
               <X className="h-3.5 w-3.5" />
             </RadixToast.Close>
           </RadixToast.Root>

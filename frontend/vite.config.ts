@@ -8,7 +8,8 @@ import react from "@vitejs/plugin-react";
 // client-router path, plus the two unprefixed infra probes.
 const API_PREFIXES = ["/health", "/ready", "/api/v1"];
 
-const backendTarget = process.env.VITE_DEV_API_TARGET ?? `http://localhost:${process.env.PORT || 4000}`;
+const backendTarget =
+  process.env.VITE_DEV_API_TARGET ?? `http://localhost:${process.env.PORT || 4000}`;
 const devPort = Number(process.env.FRONTEND_PORT) || 5173;
 
 const apiProxy: Record<string, ProxyOptions> = Object.fromEntries(

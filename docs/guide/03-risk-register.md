@@ -48,8 +48,8 @@ and every field can be cleared or changed afterwards. For NIST- or EU-anchored
 risks the fields are set manually.
 
 STRIDE-AI is a model-centric taxonomy, so several OWASP MCP entries
-(infrastructure/agent threats such as *Shadow MCP Servers* or *Lack of Audit and
-Telemetry*) map to the closest-fit STRIDE-AI category rather than an exact match.
+(infrastructure/agent threats such as _Shadow MCP Servers_ or _Lack of Audit and
+Telemetry_) map to the closest-fit STRIDE-AI category rather than an exact match.
 
 ## Cross-framework crosswalk
 
@@ -59,7 +59,7 @@ risk shows `OWASP LLM Top 10: LLM01 (equivalent)` and `NIST AI RMF: MAP (related
 These relations are seeded reference data (`GET
 /api/v1/reference/framework-crosswalk`) and are **this project's analysis, not an
 official OWASP/NIST/MITRE crosswalk** — each carries a rationale (hover the pill).
-Propose corrections with the *Framework mapping* issue template.
+Propose corrections with the _Framework mapping_ issue template.
 
 The Risk Register list adds a `STRIDE-AI` filter and a sortable `STRIDE-AI / ATLAS`
 column. The CycloneDX export emits `aibom:risk:strideAiCategory`,

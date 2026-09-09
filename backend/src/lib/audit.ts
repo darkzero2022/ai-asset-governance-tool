@@ -25,7 +25,8 @@ export async function audit(
       entityType,
       entityId,
       action,
-      beforeJson: beforeJson === undefined ? Prisma.JsonNull : (beforeJson as Prisma.InputJsonValue),
+      beforeJson:
+        beforeJson === undefined ? Prisma.JsonNull : (beforeJson as Prisma.InputJsonValue),
       afterJson: afterJson === undefined ? Prisma.JsonNull : (afterJson as Prisma.InputJsonValue),
     },
   });

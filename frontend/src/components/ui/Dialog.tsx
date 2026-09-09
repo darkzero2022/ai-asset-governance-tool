@@ -37,13 +37,26 @@ export function Dialog({
   );
 }
 
-export function DialogHeader({ title, description }: { title: ReactNode; description?: ReactNode }) {
+export function DialogHeader({
+  title,
+  description,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+}) {
   return (
     <div className="mb-4 pr-6">
       <RadixDialog.Title className="text-base font-semibold text-text">{title}</RadixDialog.Title>
-      {description && <RadixDialog.Description className="mt-1 text-sm text-subtle">{description}</RadixDialog.Description>}
+      {description && (
+        <RadixDialog.Description className="mt-1 text-sm text-subtle">
+          {description}
+        </RadixDialog.Description>
+      )}
       <RadixDialog.Close asChild>
-        <button className="absolute right-4 top-4 rounded-md p-1 text-subtle hover:bg-surface-alt hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="Close">
+        <button
+          className="absolute right-4 top-4 rounded-md p-1 text-subtle hover:bg-surface-alt hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label="Close"
+        >
           <X className="h-4 w-4" />
         </button>
       </RadixDialog.Close>
@@ -80,7 +93,9 @@ export function ConfirmDialog({
       <DialogHeader title={title} description={description} />
       <DialogFooter>
         <RadixDialog.Close asChild>
-          <Button variant="secondary" size="sm">Cancel</Button>
+          <Button variant="secondary" size="sm">
+            Cancel
+          </Button>
         </RadixDialog.Close>
         <Button
           variant={danger ? "danger" : "primary"}

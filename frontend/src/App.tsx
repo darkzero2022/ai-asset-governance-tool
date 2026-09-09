@@ -67,11 +67,18 @@ function App() {
     event.preventDefault();
     setError("");
     try {
-      const result = await apiFetch<{ accessToken: string; user: CurrentUser; mustChangePassword?: boolean }>("/auth/login", {
+      const result = await apiFetch<{
+        accessToken: string;
+        user: CurrentUser;
+        mustChangePassword?: boolean;
+      }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      queryClient.setQueryData(queryKeys.currentUser(), { ...result.user, mustChangePassword: result.mustChangePassword });
+      queryClient.setQueryData(queryKeys.currentUser(), {
+        ...result.user,
+        mustChangePassword: result.mustChangePassword,
+      });
       setAccessToken(result.accessToken);
       if (result.mustChangePassword) navigate("/account/change-password");
     } catch (err) {
@@ -86,7 +93,9 @@ function App() {
   }
 
   if (!authChecked) {
-    return <main className="flex min-h-screen items-center justify-center bg-bg" aria-busy="true" />;
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-bg" aria-busy="true" />
+    );
   }
 
   if (!token && needsBootstrap === true) {
@@ -106,16 +115,43 @@ function App() {
         <section className="w-full max-w-sm">
           <div className="mb-6 flex flex-col items-center text-center">
             <ShieldCheck className="mb-3 h-10 w-10 text-primary" aria-hidden="true" />
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">AI-BOM Governance</p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight">Sign in to manage AI systems</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+              AI-BOM Governance
+            </p>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+              Sign in to manage AI systems
+            </h1>
           </div>
-          <form onSubmit={login} className="rounded-lg border border-border bg-surface p-6 shadow-card">
+          <form
+            onSubmit={login}
+            className="rounded-lg border border-border bg-surface p-6 shadow-card"
+          >
             <div className="space-y-4">
-              <Input id="email" label="Email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" />
-              <Input id="password" label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" hint={PASSWORD_POLICY_HINT} />
+              <Input
+                id="email"
+                label="Email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="username"
+              />
+              <Input
+                id="password"
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                hint={PASSWORD_POLICY_HINT}
+              />
             </div>
-            {error && <p className="mt-4 text-sm text-danger" role="alert">{error}</p>}
-            <Button type="submit" variant="primary" className="mt-6 w-full">Sign in</Button>
+            {error && (
+              <p className="mt-4 text-sm text-danger" role="alert">
+                {error}
+              </p>
+            )}
+            <Button type="submit" variant="primary" className="mt-6 w-full">
+              Sign in
+            </Button>
           </form>
         </section>
       </main>
@@ -123,9 +159,23 @@ function App() {
   }
 
   return (
-    <AppShell currentUser={currentUser} token={token} theme={theme} onToggleTheme={toggleTheme} onSignOut={signOut}>
-      <Suspense fallback={<div className="mx-auto max-w-7xl px-6 py-8"><SkeletonRows rows={6} /></div>}>
-        <Outlet context={{ token, currentUser, setError: (message: string) => toast.error(message) }} />
+    <AppShell
+      currentUser={currentUser}
+      token={token}
+      theme={theme}
+      onToggleTheme={toggleTheme}
+      onSignOut={signOut}
+    >
+      <Suspense
+        fallback={
+          <div className="mx-auto max-w-7xl px-6 py-8">
+            <SkeletonRows rows={6} />
+          </div>
+        }
+      >
+        <Outlet
+          context={{ token, currentUser, setError: (message: string) => toast.error(message) }}
+        />
       </Suspense>
     </AppShell>
   );

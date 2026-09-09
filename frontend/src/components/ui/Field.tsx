@@ -1,4 +1,11 @@
-import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import {
+  forwardRef,
+  useId,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from "react";
 import { cn } from "../../lib/cn";
 
 const controlClass =
@@ -14,31 +21,40 @@ function Label({ htmlFor, children }: { htmlFor: string; children: ReactNode }) 
 
 type InputProps = InputHTMLAttributes<HTMLInputElement> & { label?: string; hint?: string };
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(({ label, hint, id, className, ...props }, ref) => {
-  const autoId = useId();
-  const fieldId = id ?? autoId;
-  return (
-    <div>
-      {label && <Label htmlFor={fieldId}>{label}</Label>}
-      <input ref={ref} id={fieldId} className={cn(controlClass, className)} {...props} />
-      {hint && <p className="mt-1 text-xs text-subtle">{hint}</p>}
-    </div>
-  );
-});
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, hint, id, className, ...props }, ref) => {
+    const autoId = useId();
+    const fieldId = id ?? autoId;
+    return (
+      <div>
+        {label && <Label htmlFor={fieldId}>{label}</Label>}
+        <input ref={ref} id={fieldId} className={cn(controlClass, className)} {...props} />
+        {hint && <p className="mt-1 text-xs text-subtle">{hint}</p>}
+      </div>
+    );
+  },
+);
 Input.displayName = "Input";
 
 type TextAreaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string };
 
-export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(({ label, id, className, ...props }, ref) => {
-  const autoId = useId();
-  const fieldId = id ?? autoId;
-  return (
-    <div>
-      {label && <Label htmlFor={fieldId}>{label}</Label>}
-      <textarea ref={ref} id={fieldId} className={cn(controlClass, "min-h-24", className)} {...props} />
-    </div>
-  );
-});
+export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
+  ({ label, id, className, ...props }, ref) => {
+    const autoId = useId();
+    const fieldId = id ?? autoId;
+    return (
+      <div>
+        {label && <Label htmlFor={fieldId}>{label}</Label>}
+        <textarea
+          ref={ref}
+          id={fieldId}
+          className={cn(controlClass, "min-h-24", className)}
+          {...props}
+        />
+      </div>
+    );
+  },
+);
 TextArea.displayName = "TextArea";
 
 // A plain, styled native <select>, not a Radix primitive: a native select is
@@ -49,16 +65,18 @@ TextArea.displayName = "TextArea";
 // no equivalent.
 type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & { label?: string };
 
-export const Select = forwardRef<HTMLSelectElement, SelectProps>(({ label, id, className, children, ...props }, ref) => {
-  const autoId = useId();
-  const fieldId = id ?? autoId;
-  return (
-    <div>
-      {label && <Label htmlFor={fieldId}>{label}</Label>}
-      <select ref={ref} id={fieldId} className={cn(controlClass, className)} {...props}>
-        {children}
-      </select>
-    </div>
-  );
-});
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  ({ label, id, className, children, ...props }, ref) => {
+    const autoId = useId();
+    const fieldId = id ?? autoId;
+    return (
+      <div>
+        {label && <Label htmlFor={fieldId}>{label}</Label>}
+        <select ref={ref} id={fieldId} className={cn(controlClass, className)} {...props}>
+          {children}
+        </select>
+      </div>
+    );
+  },
+);
 Select.displayName = "Select";

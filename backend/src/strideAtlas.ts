@@ -25,14 +25,18 @@ function isSet(value: unknown): value is string {
 export function resolveStrideAtlas(
   provided: { strideAiCategory?: string | null; atlasTechnique?: string | null },
   mapping: FrameworkThreatMapping,
-): { strideAiCategory: StrideAiCategory | null; atlasTechnique: string | null; suggestedMitigations: string[] } {
+): {
+  strideAiCategory: StrideAiCategory | null;
+  atlasTechnique: string | null;
+  suggestedMitigations: string[];
+} {
   return {
     strideAiCategory: isSet(provided.strideAiCategory)
       ? (provided.strideAiCategory as StrideAiCategory)
-      : mapping?.strideAiCategory ?? null,
+      : (mapping?.strideAiCategory ?? null),
     atlasTechnique: isSet(provided.atlasTechnique)
       ? provided.atlasTechnique.trim()
-      : mapping?.atlasTechniques?.[0] ?? null,
+      : (mapping?.atlasTechniques?.[0] ?? null),
     suggestedMitigations: mapping?.atlasMitigations ?? [],
   };
 }

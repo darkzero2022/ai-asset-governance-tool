@@ -27,7 +27,10 @@ export function useChangePasswordMutation(token: string) {
       }),
     onSuccess: (data) => {
       setAccessToken(data.accessToken);
-      queryClient.setQueryData(queryKeys.currentUser(), { ...data.user, mustChangePassword: false });
+      queryClient.setQueryData(queryKeys.currentUser(), {
+        ...data.user,
+        mustChangePassword: false,
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.sessions() });
     },
   });
@@ -36,7 +39,8 @@ export function useChangePasswordMutation(token: string) {
 export function useSessionsQuery(token: string) {
   return useQuery({
     queryKey: queryKeys.sessions(),
-    queryFn: async () => (await apiFetch<{ sessions: AuthSession[] }>("/auth/sessions", { token })).sessions,
+    queryFn: async () =>
+      (await apiFetch<{ sessions: AuthSession[] }>("/auth/sessions", { token })).sessions,
     enabled: Boolean(token),
   });
 }

@@ -34,13 +34,13 @@ now** — each links to its planned fix in [ROADMAP.md](ROADMAP.md). Deploy
 accordingly (single-tenant, trusted operators, behind your own reverse proxy /
 SSO where possible).
 
-| Area | Current state | Planned fix |
-|---|---|---|
-| MFA | No TOTP / 2FA yet | ROADMAP → *F3 remainder: optional TOTP for admins* |
-| Delete semantics | A few endpoints hard-delete; most archive | ROADMAP → *F4: archive-not-delete everywhere* |
-| Evidence handling | Governance decisions / risks cannot attach evidence files | ROADMAP → *G2: audited attachment storage (local FS / S3)* |
-| Scheduled jobs | Recertification notices run only via an external cron of `npm run notify:recertifications` | ROADMAP → *G3: in-process scheduler with job-run audit records* |
-| Multi-tenancy | Single tenant; no org isolation | ROADMAP → *multi-tenancy* |
+| Area              | Current state                                                                                                                                                                                                    | Planned fix                                                                                                                                |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| MFA               | No TOTP / 2FA yet                                                                                                                                                                                                | ROADMAP → _F3 remainder: optional TOTP for admins_                                                                                         |
+| Delete semantics  | A few endpoints hard-delete; most archive                                                                                                                                                                        | ROADMAP → _F4: archive-not-delete everywhere_                                                                                              |
+| Evidence handling | Governance decisions / risks cannot attach evidence files                                                                                                                                                        | ROADMAP → _G2: audited attachment storage (local FS / S3)_                                                                                 |
+| Scheduled jobs    | Recertification notices run only via an external cron of `npm run notify:recertifications`                                                                                                                       | ROADMAP → _G3: in-process scheduler with job-run audit records_                                                                            |
+| Multi-tenancy     | Single tenant; no org isolation                                                                                                                                                                                  | ROADMAP → _multi-tenancy_                                                                                                                  |
 | URL import egress | `POST /api/v1/ai-systems/import-url` fetches user-supplied URLs; blocks loopback/private/link-local/CGNAT/cloud-metadata at DNS-resolve time, but a hostile domain can DNS-rebind in the validate→connect window | run the backend with network-level egress controls (egress proxy allowlist or NAT policy) — see [`docs/deployment.md`](docs/deployment.md) |
 
 Set `TRUST_PROXY` when running behind a reverse proxy so rate-limiting and

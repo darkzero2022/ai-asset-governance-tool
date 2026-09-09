@@ -24,7 +24,9 @@ by the security/GRC team, not auto-discovered from source code.
 ## 3. Core Data Model
 
 ### AIAsset (the AI-BOM entry)
+
 CycloneDX AI-BOM aligned fields:
+
 - `name`, `version`, `type` (model / dataset / service / library)
 - `supplier` / `provider` (e.g. OpenAI, Anthropic, self-hosted, HuggingFace)
 - `hostingModel` (SaaS API / self-hosted / embedded in app)
@@ -38,6 +40,7 @@ CycloneDX AI-BOM aligned fields:
 Relationships: one `AIAsset` has many `Risk` and many `GovernanceWorkflow` entries.
 
 ### Risk
+
 - linked to one `AIAsset`
 - `sourceFramework`: enum — `NIST_AI_RMF` / `EU_AI_ACT` / `OWASP_LLM_TOP10`
 - `sourceCategoryId`: the specific category/control ID within that framework
@@ -52,12 +55,14 @@ Relationships: one `AIAsset` has many `Risk` and many `GovernanceWorkflow` entri
 - `owner`, `dueDate`, `status` (`Open` / `In Progress` / `Mitigated` / `Accepted`)
 
 ### Control
+
 - linked to one `Risk` (a risk can have multiple mitigating controls)
 - `mappedFramework` + `mappedControlId` (NIST AI RMF function, EU AI Act obligation, etc.)
 - `implementationStatus`: `Not Started` / `In Progress` / `Implemented` / `Verified`
 - `evidenceNotes` (free text, for audit trail)
 
 ### GovernanceWorkflow
+
 - linked to one `AIAsset`
 - records each status transition: `fromStatus`, `toStatus`, `approvedBy`, `timestamp`, `comments`
 - effectively an approval audit trail for the asset's lifecycle
@@ -65,6 +70,7 @@ Relationships: one `AIAsset` has many `Risk` and many `GovernanceWorkflow` entri
 ## 4. Framework Reference Data
 
 Seed the database with static reference tables (not user-editable in v1) for:
+
 - **NIST AI RMF** categories (Govern, Map, Measure, Manage functions and their sub-categories)
 - **EU AI Act** risk tiers (Unacceptable / High / Limited / Minimal) with brief definitions
 - **OWASP LLM Top 10 (2025)** categories with IDs and short descriptions

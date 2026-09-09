@@ -6,10 +6,17 @@ import type { z } from "zod";
 
 export function riskResponse<T extends { assets?: Array<{ asset: unknown }> }>(risk: T) {
   const controlLinks =
-    (risk as T & {
-      controlLinks?: Array<{ control: object; implementationStatus: string; evidenceNotes: string | null }>;
-    }).controlLinks ?? [];
-  const assetLinks = (risk as T & { assets?: Array<{ assetId?: string; asset: unknown }> }).assets ?? [];
+    (
+      risk as T & {
+        controlLinks?: Array<{
+          control: object;
+          implementationStatus: string;
+          evidenceNotes: string | null;
+        }>;
+      }
+    ).controlLinks ?? [];
+  const assetLinks =
+    (risk as T & { assets?: Array<{ assetId?: string; asset: unknown }> }).assets ?? [];
   const inherentRiskScore = (risk as T & { inherentRiskScore?: number }).inherentRiskScore;
   return {
     ...risk,
@@ -25,10 +32,15 @@ export function riskResponse<T extends { assets?: Array<{ asset: unknown }> }>(r
 }
 
 export function assetResponse<T extends { riskLinks?: Array<{ risk: unknown }> }>(asset: T) {
-  return { ...asset, risks: asset.riskLinks?.map((link) => riskResponse(link.risk as never)) ?? [] };
+  return {
+    ...asset,
+    risks: asset.riskLinks?.map((link) => riskResponse(link.risk as never)) ?? [],
+  };
 }
 
-export function assetListResponse<T extends { _count?: { riskLinks?: number; projectLinks?: number } }>(asset: T) {
+export function assetListResponse<
+  T extends { _count?: { riskLinks?: number; projectLinks?: number } },
+>(asset: T) {
   return {
     ...asset,
     _count: { risks: asset._count?.riskLinks ?? 0 },
@@ -37,7 +49,10 @@ export function assetListResponse<T extends { _count?: { riskLinks?: number; pro
 }
 
 export function assetForBom<T extends { riskLinks?: Array<{ risk: unknown }> }>(asset: T) {
-  return { ...asset, risks: asset.riskLinks?.map((link) => riskResponse(link.risk as never)) ?? [] };
+  return {
+    ...asset,
+    risks: asset.riskLinks?.map((link) => riskResponse(link.risk as never)) ?? [],
+  };
 }
 
 export function modelCardResponse<T extends object | null>(card: T) {
@@ -52,7 +67,9 @@ export function modelCardData(body: z.infer<typeof modelCardSchema>) {
       ? {}
       : {
           performanceMetrics:
-            performanceMetrics === null ? Prisma.JsonNull : (performanceMetrics as Prisma.InputJsonValue),
+            performanceMetrics === null
+              ? Prisma.JsonNull
+              : (performanceMetrics as Prisma.InputJsonValue),
         }),
   };
 }

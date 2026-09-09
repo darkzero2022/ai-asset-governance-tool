@@ -4,7 +4,12 @@ export const NETWORK_DEPENDENCIES = ["AIR_GAPPED", "HYBRID", "FULLY_CONNECTED"] 
 export const ASSET_STATUSES = ["DRAFT", "UNDER_REVIEW", "APPROVED", "DEPLOYED", "RETIRED"] as const;
 export const PROJECT_STATUSES = ["ACTIVE", "INACTIVE", "RETIRED"] as const;
 export const RISK_STATUSES = ["OPEN", "IN_PROGRESS", "MITIGATED", "ACCEPTED"] as const;
-export const SOURCE_FRAMEWORKS = ["NIST_AI_RMF", "EU_AI_ACT", "OWASP_LLM_TOP10", "OWASP_MCP_TOP10"] as const;
+export const SOURCE_FRAMEWORKS = [
+  "NIST_AI_RMF",
+  "EU_AI_ACT",
+  "OWASP_LLM_TOP10",
+  "OWASP_MCP_TOP10",
+] as const;
 export const FRAMEWORK_STATUSES = ["DRAFT", "RELEASED"] as const;
 export const EU_AI_ACT_TIERS = ["UNACCEPTABLE", "HIGH", "LIMITED", "MINIMAL"] as const;
 export const CONTROL_STATUSES = ["NOT_STARTED", "IN_PROGRESS", "IMPLEMENTED", "VERIFIED"] as const;

@@ -46,7 +46,9 @@ router.get("/reference/atlas-techniques", requireAuth, async (_req, res, next) =
 router.get("/reference/atlas-mitigations", requireAuth, async (_req, res, next) => {
   try {
     // Fixed reference set (MITRE ATLAS mitigations, for Risk.atlasMitigations).
-    const mitigations = await prisma.atlasMitigationReference.findMany({ orderBy: { name: "asc" } });
+    const mitigations = await prisma.atlasMitigationReference.findMany({
+      orderBy: { name: "asc" },
+    });
     res.json({ mitigations });
   } catch (error) {
     next(error);
@@ -67,7 +69,9 @@ router.get("/reference/frameworks", requireAuth, async (_req, res, next) => {
 router.get("/reference/threat-mappings", requireAuth, async (_req, res, next) => {
   try {
     // Framework category -> STRIDE-AI + ATLAS technique(s) + suggested ATLAS mitigation(s).
-    const mappings = await prisma.frameworkThreatMapping.findMany({ orderBy: [{ framework: "asc" }, { categoryId: "asc" }] });
+    const mappings = await prisma.frameworkThreatMapping.findMany({
+      orderBy: [{ framework: "asc" }, { categoryId: "asc" }],
+    });
     res.json({ mappings });
   } catch (error) {
     next(error);
@@ -77,7 +81,9 @@ router.get("/reference/threat-mappings", requireAuth, async (_req, res, next) =>
 // Deprecated alias for /reference/threat-mappings — kept for one release.
 router.get("/reference/stride-atlas-map", requireAuth, async (_req, res, next) => {
   try {
-    const mappings = await prisma.frameworkThreatMapping.findMany({ orderBy: [{ framework: "asc" }, { categoryId: "asc" }] });
+    const mappings = await prisma.frameworkThreatMapping.findMany({
+      orderBy: [{ framework: "asc" }, { categoryId: "asc" }],
+    });
     res.json({ mappings });
   } catch (error) {
     next(error);
@@ -89,8 +95,16 @@ router.get("/reference/framework-crosswalk", requireAuth, async (req, res, next)
     const framework = req.query.framework as string | undefined;
     const categoryId = req.query.categoryId as string | undefined;
     const crosswalk = await prisma.frameworkCrosswalk.findMany({
-      where: framework && categoryId ? { fromFramework: framework as never, fromCategoryId: categoryId } : undefined,
-      orderBy: [{ fromFramework: "asc" }, { fromCategoryId: "asc" }, { toFramework: "asc" }, { toCategoryId: "asc" }],
+      where:
+        framework && categoryId
+          ? { fromFramework: framework as never, fromCategoryId: categoryId }
+          : undefined,
+      orderBy: [
+        { fromFramework: "asc" },
+        { fromCategoryId: "asc" },
+        { toFramework: "asc" },
+        { toCategoryId: "asc" },
+      ],
     });
     res.json({ crosswalk });
   } catch (error) {

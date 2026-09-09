@@ -28,5 +28,4 @@ export const conflict = (message: string, details?: unknown) =>
   new AppError(409, "CONFLICT", message, details);
 export const unprocessable = (message: string, details?: unknown) =>
   new AppError(422, "VALIDATION_FAILED", message, details);
-export const notImplemented = (message: string) =>
-  new AppError(501, "NOT_IMPLEMENTED", message);
+export const notImplemented = (message: string) => new AppError(501, "NOT_IMPLEMENTED", message);

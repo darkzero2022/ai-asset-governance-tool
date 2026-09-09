@@ -30,7 +30,15 @@ describe("ApprovalBanner", () => {
       <ApprovalBanner
         assetType="MODEL"
         modelCardCompleteness={{ missingFields: ["task", "architecture"] }}
-        risks={[{ id: "risk-1", description: "Prompt injection", status: "OPEN", inherentRiskScore: 12, severity: "HIGH" }]}
+        risks={[
+          {
+            id: "risk-1",
+            description: "Prompt injection",
+            status: "OPEN",
+            inherentRiskScore: 12,
+            severity: "HIGH",
+          },
+        ]}
       />,
     );
 
@@ -42,7 +50,14 @@ describe("ApprovalBanner", () => {
 
 describe("BarChart", () => {
   it("applies per-datum color overrides", () => {
-    const { container } = render(<BarChart data={[{ label: "Missing", value: 0, color: "#f59e0b" }, { label: "Covered", value: 4 }]} />);
+    const { container } = render(
+      <BarChart
+        data={[
+          { label: "Missing", value: 0, color: "#f59e0b" },
+          { label: "Covered", value: 4 },
+        ]}
+      />,
+    );
     const bars = container.querySelectorAll(".h-full.rounded-full");
 
     expect(bars[0]).toHaveStyle({ backgroundColor: "#f59e0b" });
@@ -56,14 +71,31 @@ describe("RiskRegister — MITRE ATLAS mitigations", () => {
     assets: [{ id: "a1", name: "Claims Model" }],
     categories: [
       { framework: "OWASP_LLM_TOP10", categoryId: "LLM01", name: "Prompt Injection" },
-      { framework: "OWASP_MCP_TOP10", categoryId: "MCP06", name: "Prompt Injection via Contextual Payloads" },
+      {
+        framework: "OWASP_MCP_TOP10",
+        categoryId: "MCP06",
+        name: "Prompt Injection via Contextual Payloads",
+      },
     ],
     frameworks: [
-      { framework: "OWASP_LLM_TOP10", title: "OWASP LLM Top 10", revision: "2025", status: "RELEASED" },
-      { framework: "OWASP_MCP_TOP10", title: "OWASP MCP Top 10", revision: "Draft v0.1 (2025)", status: "DRAFT" },
+      {
+        framework: "OWASP_LLM_TOP10",
+        title: "OWASP LLM Top 10",
+        revision: "2025",
+        status: "RELEASED",
+      },
+      {
+        framework: "OWASP_MCP_TOP10",
+        title: "OWASP MCP Top 10",
+        revision: "Draft v0.1 (2025)",
+        status: "DRAFT",
+      },
     ],
     atlasTechniques: ["LLM Prompt Injection"],
-    atlasMitigations: ["AML.M0000 — Limit Public Release of Information", "AML.M0020 — Generative AI Guardrails"],
+    atlasMitigations: [
+      "AML.M0000 — Limit Public Release of Information",
+      "AML.M0020 — Generative AI Guardrails",
+    ],
     filters: emptyFilters,
     editingRiskId: null,
     dialogOpen: true,
@@ -84,11 +116,17 @@ describe("RiskRegister — MITRE ATLAS mitigations", () => {
     const onRiskFormChange = vi.fn();
     render(
       <MemoryRouter>
-        <RiskRegister {...baseProps} riskForm={{ ...emptyRisk }} onRiskFormChange={onRiskFormChange} />
+        <RiskRegister
+          {...baseProps}
+          riskForm={{ ...emptyRisk }}
+          onRiskFormChange={onRiskFormChange}
+        />
       </MemoryRouter>,
     );
 
-    const guardrails = screen.getByLabelText("AML.M0020 — Generative AI Guardrails") as HTMLInputElement;
+    const guardrails = screen.getByLabelText(
+      "AML.M0020 — Generative AI Guardrails",
+    ) as HTMLInputElement;
     expect(guardrails.checked).toBe(false);
     fireEvent.click(guardrails);
     expect(onRiskFormChange).toHaveBeenCalledWith(
@@ -101,12 +139,17 @@ describe("RiskRegister — MITRE ATLAS mitigations", () => {
       <MemoryRouter>
         <RiskRegister
           {...baseProps}
-          riskForm={{ ...emptyRisk, atlasMitigations: ["AML.M0000 — Limit Public Release of Information"] }}
+          riskForm={{
+            ...emptyRisk,
+            atlasMitigations: ["AML.M0000 — Limit Public Release of Information"],
+          }}
           onRiskFormChange={vi.fn()}
         />
       </MemoryRouter>,
     );
-    const checked = screen.getByLabelText("AML.M0000 — Limit Public Release of Information") as HTMLInputElement;
+    const checked = screen.getByLabelText(
+      "AML.M0000 — Limit Public Release of Information",
+    ) as HTMLInputElement;
     expect(checked.checked).toBe(true);
     expect(within(document.body).getByText("1 selected")).toBeInTheDocument();
   });
@@ -117,14 +160,21 @@ describe("RiskRegister — MITRE ATLAS mitigations", () => {
         <RiskRegister {...baseProps} riskForm={{ ...emptyRisk }} onRiskFormChange={vi.fn()} />
       </MemoryRouter>,
     );
-    expect(screen.getAllByRole("option", { name: "OWASP MCP Top 10 (draft)" }).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("option", { name: "OWASP MCP Top 10 (draft)" }).length,
+    ).toBeGreaterThan(0);
   });
 });
 
 describe("RiskHeatmap", () => {
   it("colors populated cells by severity band and invokes the click callback", () => {
     const onCellClick = vi.fn();
-    render(<RiskHeatmap risks={[{ id: "risk-1", likelihood: 5, impact: 4 }]} onCellClick={onCellClick} />);
+    render(
+      <RiskHeatmap
+        risks={[{ id: "risk-1", likelihood: 5, impact: 4 }]}
+        onCellClick={onCellClick}
+      />,
+    );
 
     const criticalCell = screen.getByRole("button", { name: "Likelihood 5, impact 4: 1 risk" });
     expect(criticalCell).toHaveStyle({ color: "#ffffff" });

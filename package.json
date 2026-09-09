@@ -1,0 +1,20 @@
+{
+  "name": "ai-asset-governance-tool",
+  "private": true,
+  "description": "Repo-level dev tooling (lint + format). The app lives in backend/, frontend/, and packages/shared/, each with its own package.json.",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.38.0",
+    "eslint": "^9.38.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.6",
+    "typescript-eslint": "^8.70.0"
+  }
+}

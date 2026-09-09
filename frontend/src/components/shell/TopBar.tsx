@@ -2,7 +2,14 @@ import type { CurrentUser } from "@aibom/shared";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Menu, Moon, Sun, UserCog } from "lucide-react";
 import { Badge } from "../ui/Badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/DropdownMenu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/DropdownMenu";
 import type { Theme } from "../../theme/useTheme";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { CommandPalette } from "./CommandPalette";
@@ -52,15 +59,25 @@ export function TopBar({
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/12 text-xs font-semibold text-primary">
                 {(currentUser?.name ?? "?").slice(0, 1).toUpperCase()}
               </span>
-              <span className="hidden max-w-[10rem] truncate sm:inline">{currentUser?.name ?? "Account"}</span>
+              <span className="hidden max-w-[10rem] truncate sm:inline">
+                {currentUser?.name ?? "Account"}
+              </span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuLabel>
               <div className="flex flex-col gap-1">
-                <span className="truncate text-sm font-medium normal-case text-text">{currentUser?.name}</span>
-                <span className="truncate text-xs normal-case text-subtle">{currentUser?.email}</span>
-                {currentUser?.role && <Badge variant="primary" className="w-fit">{currentUser.role}</Badge>}
+                <span className="truncate text-sm font-medium normal-case text-text">
+                  {currentUser?.name}
+                </span>
+                <span className="truncate text-xs normal-case text-subtle">
+                  {currentUser?.email}
+                </span>
+                {currentUser?.role && (
+                  <Badge variant="primary" className="w-fit">
+                    {currentUser.role}
+                  </Badge>
+                )}
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

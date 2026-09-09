@@ -54,7 +54,9 @@ export function CommandPalette({ token, isAdmin }: { token: string; isAdmin: boo
       >
         <Search className="h-4 w-4" aria-hidden="true" />
         <span className="hidden sm:inline">Search…</span>
-        <kbd className="hidden rounded border border-border bg-surface-alt px-1.5 py-0.5 font-mono text-[10px] text-disabled sm:inline">⌘K</kbd>
+        <kbd className="hidden rounded border border-border bg-surface-alt px-1.5 py-0.5 font-mono text-[10px] text-disabled sm:inline">
+          ⌘K
+        </kbd>
       </button>
 
       <Command.Dialog
@@ -75,10 +77,15 @@ export function CommandPalette({ token, isAdmin }: { token: string; isAdmin: boo
           />
         </div>
         <Command.List className="max-h-80 overflow-y-auto p-2">
-          <Command.Empty className="px-3 py-6 text-center text-sm text-subtle">No results.</Command.Empty>
+          <Command.Empty className="px-3 py-6 text-center text-sm text-subtle">
+            No results.
+          </Command.Empty>
 
           {!query.trim() && (
-            <Command.Group heading="Go to" className="mb-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:text-disabled">
+            <Command.Group
+              heading="Go to"
+              className="mb-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:text-disabled"
+            >
               {STATIC_COMMANDS.filter((item) => !item.adminOnly || isAdmin).map((item) => (
                 <Command.Item
                   key={item.path}
@@ -94,18 +101,43 @@ export function CommandPalette({ token, isAdmin }: { token: string; isAdmin: boo
 
           {results && (
             <>
-              {[...results.assets.map((item) => ({ ...item, type: "AI System" as const, path: `/ai-systems/${item.id}` })), ...results.projects.map((item) => ({ ...item, type: "Project" as const, path: `/projects/${item.id}` }))].map((item) => {
+              {[
+                ...results.assets.map((item) => ({
+                  ...item,
+                  type: "AI System" as const,
+                  path: `/ai-systems/${item.id}`,
+                })),
+                ...results.projects.map((item) => ({
+                  ...item,
+                  type: "Project" as const,
+                  path: `/projects/${item.id}`,
+                })),
+              ].map((item) => {
                 const Icon = TYPE_ICON[item.type];
                 return (
-                  <Command.Item key={`${item.type}-${item.id}`} onSelect={() => go(item.path)} className="flex cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-2 text-sm text-text data-[selected=true]:bg-surface-alt">
-                    <span className="flex items-center gap-2 truncate"><Icon className="h-4 w-4 shrink-0 text-subtle" aria-hidden="true" />{item.name}</span>
+                  <Command.Item
+                    key={`${item.type}-${item.id}`}
+                    onSelect={() => go(item.path)}
+                    className="flex cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-2 text-sm text-text data-[selected=true]:bg-surface-alt"
+                  >
+                    <span className="flex items-center gap-2 truncate">
+                      <Icon className="h-4 w-4 shrink-0 text-subtle" aria-hidden="true" />
+                      {item.name}
+                    </span>
                     <span className="shrink-0 text-xs text-subtle">{item.type}</span>
                   </Command.Item>
                 );
               })}
               {results.risks.map((risk) => (
-                <Command.Item key={`Risk-${risk.id}`} onSelect={() => go(`/risks/${risk.id}`)} className="flex cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-2 text-sm text-text data-[selected=true]:bg-surface-alt">
-                  <span className="flex items-center gap-2 truncate"><ShieldAlert className="h-4 w-4 shrink-0 text-subtle" aria-hidden="true" />{risk.description}</span>
+                <Command.Item
+                  key={`Risk-${risk.id}`}
+                  onSelect={() => go(`/risks/${risk.id}`)}
+                  className="flex cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-2 text-sm text-text data-[selected=true]:bg-surface-alt"
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <ShieldAlert className="h-4 w-4 shrink-0 text-subtle" aria-hidden="true" />
+                    {risk.description}
+                  </span>
                   <span className="shrink-0 text-xs text-subtle">Risk</span>
                 </Command.Item>
               ))}

@@ -1,0 +1,18 @@
+# Build output / deps
+**/node_modules
+**/dist
+**/build
+backend/prisma/migrations
+frontend/dist
+
+# Generated / vendored
+**/*.min.js
+package-lock.json
+**/package-lock.json
+CHANGELOG.md
+
+# Data
+data
+backups
+logs
+docs/screenshots

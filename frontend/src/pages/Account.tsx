@@ -27,8 +27,13 @@ export default function Account({ token }: { token: string }) {
         <Card>
           <CardHeader title="Password" />
           <CardBody>
-            <p className="text-sm text-subtle">Changing your password signs you out of every other device.</p>
-            <Link to="/account/change-password" className={`mt-3 inline-flex ${buttonVariants({ variant: "secondary", size: "sm" })}`}>
+            <p className="text-sm text-subtle">
+              Changing your password signs you out of every other device.
+            </p>
+            <Link
+              to="/account/change-password"
+              className={`mt-3 inline-flex ${buttonVariants({ variant: "secondary", size: "sm" })}`}
+            >
               <KeyRound className="h-3.5 w-3.5" /> Change password
             </Link>
           </CardBody>
@@ -38,7 +43,12 @@ export default function Account({ token }: { token: string }) {
           <CardHeader
             title="Active sessions"
             action={
-              <Button variant="danger" size="sm" onClick={onLogoutAll} disabled={logoutAll.isPending}>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={onLogoutAll}
+                disabled={logoutAll.isPending}
+              >
                 <LogOut className="h-3.5 w-3.5" /> Log out of all devices
               </Button>
             }
@@ -51,19 +61,33 @@ export default function Account({ token }: { token: string }) {
             ) : (
               <ul className="space-y-2">
                 {sessions.map((session) => (
-                  <li key={session.id} className="flex items-start justify-between gap-3 rounded-md border border-border p-3 text-sm">
+                  <li
+                    key={session.id}
+                    className="flex items-start justify-between gap-3 rounded-md border border-border p-3 text-sm"
+                  >
                     <div className="min-w-0">
                       <p className="flex items-center gap-1.5 font-medium text-text">
                         <Monitor className="h-3.5 w-3.5 text-subtle" />
                         {session.current ? "This device" : "Another device"}
                       </p>
-                      <p className="truncate text-xs text-subtle">{session.userAgent || "Unknown client"}</p>
+                      <p className="truncate text-xs text-subtle">
+                        {session.userAgent || "Unknown client"}
+                      </p>
                       <p className="text-xs text-subtle">
-                        {session.ip ? `${session.ip} · ` : ""}last used {new Date(session.lastUsedAt).toLocaleString()}
+                        {session.ip ? `${session.ip} · ` : ""}last used{" "}
+                        {new Date(session.lastUsedAt).toLocaleString()}
                       </p>
                     </div>
                     {!session.current && (
-                      <Button variant="ghost" size="sm" onClick={() => revoke.mutate(session.id, { onSuccess: () => toast.success("Session revoked") })}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          revoke.mutate(session.id, {
+                            onSuccess: () => toast.success("Session revoked"),
+                          })
+                        }
+                      >
                         Revoke
                       </Button>
                     )}

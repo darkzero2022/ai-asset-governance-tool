@@ -15,7 +15,8 @@ function normalizeImportUrl(sourceUrl: string) {
 
 export function isBlockedIpv4(address: string) {
   const parts = address.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+  if (parts.length !== 4 || parts.some((n) => !Number.isInteger(n) || n < 0 || n > 255))
+    return true;
   const [a, b] = parts;
   return (
     a === 0 || // "this" network / 0.0.0.0
@@ -142,10 +143,18 @@ export function extractHtmlSuggestion(html: string) {
     .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ");
   const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(withoutScripts)?.[1] ?? "";
   const description =
-    /<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["'][^>]*>/i.exec(withoutScripts)?.[1] ??
-    /<meta[^>]+content=["']([^"']*)["'][^>]+name=["']description["'][^>]*>/i.exec(withoutScripts)?.[1] ??
+    /<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["'][^>]*>/i.exec(
+      withoutScripts,
+    )?.[1] ??
+    /<meta[^>]+content=["']([^"']*)["'][^>]+name=["']description["'][^>]*>/i.exec(
+      withoutScripts,
+    )?.[1] ??
     "";
-  const excerpt = withoutScripts.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 1000);
+  const excerpt = withoutScripts
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 1000);
 
   return {
     suggestedTitle: decodeHtml(title).trim(),

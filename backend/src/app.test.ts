@@ -28,14 +28,22 @@ afterAll(async () => {
 
 describe("POST /auth/login", () => {
   it("returns an access token + sets a refresh cookie for valid credentials", async () => {
-    const response = await request(app).post("/api/v1/auth/login").send({ email, password }).expect(200);
+    const response = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email, password })
+      .expect(200);
 
     expect(response.body.accessToken).toEqual(expect.any(String));
     expect(response.body.user).toMatchObject({ email, role: "ADMIN" });
-    expect(response.headers["set-cookie"]?.some((c: string) => c.startsWith("refresh_token="))).toBe(true);
+    expect(
+      response.headers["set-cookie"]?.some((c: string) => c.startsWith("refresh_token=")),
+    ).toBe(true);
   });
 
   it("rejects invalid credentials", async () => {
-    await request(app).post("/api/v1/auth/login").send({ email, password: "wrong-password-here" }).expect(401);
+    await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email, password: "wrong-password-here" })
+      .expect(401);
   });
 });

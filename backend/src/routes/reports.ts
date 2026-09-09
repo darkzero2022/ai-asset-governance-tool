@@ -10,11 +10,19 @@ router.get("/reports/framework-coverage", requireAuth, async (req, res, next) =>
   try {
     const riskWhere = req.query.includeArchived === "true" ? {} : { archived: false };
     const [categories, risks, meta] = await Promise.all([
-      /* fixed reference set */ prisma.frameworkCategory.findMany({ orderBy: [{ framework: "asc" }, { categoryId: "asc" }] }),
-      prisma.risk.groupBy({ by: ["sourceFramework", "sourceCategoryId"], where: riskWhere, _count: true }),
+      /* fixed reference set */ prisma.frameworkCategory.findMany({
+        orderBy: [{ framework: "asc" }, { categoryId: "asc" }],
+      }),
+      prisma.risk.groupBy({
+        by: ["sourceFramework", "sourceCategoryId"],
+        where: riskWhere,
+        _count: true,
+      }),
       prisma.frameworkMeta.findMany(),
     ]);
-    const riskCounts = new Map(risks.map((risk) => [`${risk.sourceFramework}:${risk.sourceCategoryId}`, risk._count]));
+    const riskCounts = new Map(
+      risks.map((risk) => [`${risk.sourceFramework}:${risk.sourceCategoryId}`, risk._count]),
+    );
     const statusOf = new Map(meta.map((row) => [row.framework, row.status]));
     res.json({
       coverage: categories.map((category) => ({
@@ -38,7 +46,9 @@ router.get("/reports/risk-summary", requireAuth, async (req, res, next) => {
       countRiskSeverityBuckets(riskWhere),
     ]);
     const byStatus = Object.fromEntries(statusGroups.map((risk) => [risk.status, risk._count]));
-    const byFramework = Object.fromEntries(frameworkGroups.map((risk) => [risk.sourceFramework, risk._count]));
+    const byFramework = Object.fromEntries(
+      frameworkGroups.map((risk) => [risk.sourceFramework, risk._count]),
+    );
     res.json({ total, byStatus, byFramework, bySeverity });
   } catch (error) {
     next(error);
@@ -57,7 +67,9 @@ router.get("/reports/model-metrics", requireAuth, async (req, res, next) => {
     const aggregate = new Map<string, { group: string; values: number[] }>();
 
     for (const metric of metrics) {
-      for (const group of [metric.modelCard.task, metric.modelCard.architectureFamily].filter((value): value is string => Boolean(value))) {
+      for (const group of [metric.modelCard.task, metric.modelCard.architectureFamily].filter(
+        (value): value is string => Boolean(value),
+      )) {
         const key = group;
         const entry = aggregate.get(key) ?? { group: key, values: [] };
         entry.values.push(metric.metricValue);

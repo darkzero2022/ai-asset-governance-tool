@@ -102,11 +102,21 @@ export function DataGrid<T>({
       <Table>
         <Thead>
           <tr>
-            {selectable && <th className="w-10 py-2 pl-3"><span className="sr-only">Select</span></th>}
+            {selectable && (
+              <th className="w-10 py-2 pl-3">
+                <span className="sr-only">Select</span>
+              </th>
+            )}
             {columns.map((column) => (
-              <th key={column.key} className={cn("px-3 py-2", column.align === "right" && "text-right")}>
+              <th
+                key={column.key}
+                className={cn("px-3 py-2", column.align === "right" && "text-right")}
+              >
                 {column.sortValue ? (
-                  <button className="inline-flex items-center gap-1 hover:text-text" onClick={() => changeSort(column.key)}>
+                  <button
+                    className="inline-flex items-center gap-1 hover:text-text"
+                    onClick={() => changeSort(column.key)}
+                  >
                     {column.header}
                     <SortIcon active={sortKey === column.key} direction={sortDirection} />
                   </button>
@@ -124,7 +134,10 @@ export function DataGrid<T>({
             return (
               <tr
                 key={id}
-                className={cn("h-row-default", (onRowClick || selectable) && "cursor-pointer hover:bg-surface-alt")}
+                className={cn(
+                  "h-row-default",
+                  (onRowClick || selectable) && "cursor-pointer hover:bg-surface-alt",
+                )}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
                 {selectable && (
@@ -139,7 +152,15 @@ export function DataGrid<T>({
                   </td>
                 )}
                 {columns.map((column) => (
-                  <td key={column.key} className={cn("px-3 py-1.5 text-text", compact ? "text-xs sm:text-sm" : "text-sm", column.align === "right" && "text-right tabular-nums", column.className)}>
+                  <td
+                    key={column.key}
+                    className={cn(
+                      "px-3 py-1.5 text-text",
+                      compact ? "text-xs sm:text-sm" : "text-sm",
+                      column.align === "right" && "text-right tabular-nums",
+                      column.className,
+                    )}
+                  >
                     {column.render(row)}
                   </td>
                 ))}
@@ -147,7 +168,10 @@ export function DataGrid<T>({
                   <td className="w-10 pr-3 text-right" onClick={(event) => event.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="rounded p-1 text-subtle hover:bg-surface hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="Row actions">
+                        <button
+                          className="rounded p-1 text-subtle hover:bg-surface hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          aria-label="Row actions"
+                        >
                           <MoreVertical className="h-4 w-4" />
                         </button>
                       </DropdownMenuTrigger>
@@ -175,5 +199,9 @@ export function DataGrid<T>({
 
 function SortIcon({ active, direction }: { active: boolean; direction: "asc" | "desc" }) {
   if (!active) return <ArrowUpDown className="h-3 w-3 text-disabled" aria-hidden="true" />;
-  return direction === "asc" ? <ArrowUp className="h-3 w-3" aria-hidden="true" /> : <ArrowDown className="h-3 w-3" aria-hidden="true" />;
+  return direction === "asc" ? (
+    <ArrowUp className="h-3 w-3" aria-hidden="true" />
+  ) : (
+    <ArrowDown className="h-3 w-3" aria-hidden="true" />
+  );
 }

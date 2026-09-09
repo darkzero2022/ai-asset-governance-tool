@@ -10,7 +10,10 @@ export function useFrameworkCategoriesQuery(token: string) {
   return useQuery({
     queryKey: queryKeys.frameworkCategories(),
     queryFn: async () => {
-      const data = await apiFetch<{ categories: FrameworkCategory[] }>("/reference/framework-categories", { token });
+      const data = await apiFetch<{ categories: FrameworkCategory[] }>(
+        "/reference/framework-categories",
+        { token },
+      );
       return data.categories;
     },
     enabled: Boolean(token),
@@ -22,7 +25,9 @@ export function useFrameworksQuery(token: string) {
   return useQuery({
     queryKey: queryKeys.frameworks(),
     queryFn: async () => {
-      const data = await apiFetch<{ frameworks: FrameworkMeta[] }>("/reference/frameworks", { token });
+      const data = await apiFetch<{ frameworks: FrameworkMeta[] }>("/reference/frameworks", {
+        token,
+      });
       return data.frameworks;
     },
     enabled: Boolean(token),
@@ -34,7 +39,10 @@ export function useAtlasTechniquesQuery(token: string) {
   return useQuery({
     queryKey: queryKeys.atlasTechniques(),
     queryFn: async () => {
-      const data = await apiFetch<{ techniques: Array<{ name: string }> }>("/reference/atlas-techniques", { token });
+      const data = await apiFetch<{ techniques: Array<{ name: string }> }>(
+        "/reference/atlas-techniques",
+        { token },
+      );
       return data.techniques.map((technique) => technique.name);
     },
     enabled: Boolean(token),
@@ -46,7 +54,10 @@ export function useAtlasMitigationsQuery(token: string) {
   return useQuery({
     queryKey: queryKeys.atlasMitigations(),
     queryFn: async () => {
-      const data = await apiFetch<{ mitigations: Array<{ name: string }> }>("/reference/atlas-mitigations", { token });
+      const data = await apiFetch<{ mitigations: Array<{ name: string }> }>(
+        "/reference/atlas-mitigations",
+        { token },
+      );
       return data.mitigations.map((mitigation) => mitigation.name);
     },
     enabled: Boolean(token),

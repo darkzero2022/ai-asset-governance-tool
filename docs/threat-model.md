@@ -58,14 +58,14 @@ deployment is one organisation.
 
 ### Assets worth protecting
 
-| Asset | Why |
-|---|---|
-| Operator credentials + sessions | account takeover → full read/write of the governance record |
+| Asset                                                                  | Why                                                                               |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Operator credentials + sessions                                        | account takeover → full read/write of the governance record                       |
 | The governance record (assets, risks, controls, evidence, model cards) | integrity: it is the organisation's audit trail; tampering undermines its purpose |
-| `JWT_SECRET` | forge any token |
-| `DATABASE_URL` / `POSTGRES_PASSWORD` | direct database access |
-| The audit log | must be append-only in practice; its loss hides an incident |
-| Availability of the API | it is a system-of-record for compliance work |
+| `JWT_SECRET`                                                           | forge any token                                                                   |
+| `DATABASE_URL` / `POSTGRES_PASSWORD`                                   | direct database access                                                            |
+| The audit log                                                          | must be append-only in practice; its loss hides an incident                       |
+| Availability of the API                                                | it is a system-of-record for compliance work                                      |
 
 ### Trusted vs untrusted
 
@@ -81,39 +81,39 @@ deployment is one organisation.
 
 ### Operator ↔ Express (the request pipeline)
 
-| Threat | Vector | Mitigation |
-|---|---|---|
-| **S**poofing | stolen/guessed credentials; token replay | bcrypt password hashes; ≥ 12-char + breached-list password policy; per-account lockout (8 fails → 15 min, `423`); login rate limit; short-lived (15 min) access token; refresh token rotated + SHA-256 hashed in the `Session` table; `tokenVersion` in the JWT — bumped by change-password / logout-all / admin reset invalidates every outstanding token |
-| **T**ampering | modified request body; parameter injection | `zod` schema on every body (shared with the client); Prisma parameterises all SQL; optimistic concurrency (`updatedAt` / `editBaseVersion` → `409 STALE_WRITE`) stops silent overwrite |
-| **R**epudiation | "I didn't change that" | Prisma `$allOperations` extension writes an `AuditLog` row for every mutation to an audited model; domain `audit()` events add actor + before/after; `X-Request-Id` correlates logs |
-| **I**nformation disclosure | verbose errors; over-broad reads; CORS | central error envelope (`{ error: { code, message }, requestId }`) — no stack traces to the client; `CORS_ORIGIN` allow-list (no `*`); helmet security headers + a SPA CSP; access token never in `localStorage`; refresh cookie `httpOnly` + `SameSite=Strict` + `Secure` (prod) + `Path=/api/v1/auth` |
-| **D**enial of service | unbounded list/export; login flooding; large bodies | `MAX_LIST_ROWS` / `MAX_EXPORT_ROWS` caps; `assetIds` capped at 500; `express.json` body-size limit; global + per-route rate limits; `LOGIN_RATE_LIMIT` |
-| **E**levation of privilege | calling a mutating route without the role | `requireRole(...)` on every mutating route (not just `requireAuth`); the RBAC matrix is introspectable via the generated OpenAPI doc; the SPA gates UI the same way but the server is authoritative; first-run bootstrap is disabled once any user exists |
+| Threat                     | Vector                                              | Mitigation                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **S**poofing               | stolen/guessed credentials; token replay            | bcrypt password hashes; ≥ 12-char + breached-list password policy; per-account lockout (8 fails → 15 min, `423`); login rate limit; short-lived (15 min) access token; refresh token rotated + SHA-256 hashed in the `Session` table; `tokenVersion` in the JWT — bumped by change-password / logout-all / admin reset invalidates every outstanding token |
+| **T**ampering              | modified request body; parameter injection          | `zod` schema on every body (shared with the client); Prisma parameterises all SQL; optimistic concurrency (`updatedAt` / `editBaseVersion` → `409 STALE_WRITE`) stops silent overwrite                                                                                                                                                                     |
+| **R**epudiation            | "I didn't change that"                              | Prisma `$allOperations` extension writes an `AuditLog` row for every mutation to an audited model; domain `audit()` events add actor + before/after; `X-Request-Id` correlates logs                                                                                                                                                                        |
+| **I**nformation disclosure | verbose errors; over-broad reads; CORS              | central error envelope (`{ error: { code, message }, requestId }`) — no stack traces to the client; `CORS_ORIGIN` allow-list (no `*`); helmet security headers + a SPA CSP; access token never in `localStorage`; refresh cookie `httpOnly` + `SameSite=Strict` + `Secure` (prod) + `Path=/api/v1/auth`                                                    |
+| **D**enial of service      | unbounded list/export; login flooding; large bodies | `MAX_LIST_ROWS` / `MAX_EXPORT_ROWS` caps; `assetIds` capped at 500; `express.json` body-size limit; global + per-route rate limits; `LOGIN_RATE_LIMIT`                                                                                                                                                                                                     |
+| **E**levation of privilege | calling a mutating route without the role           | `requireRole(...)` on every mutating route (not just `requireAuth`); the RBAC matrix is introspectable via the generated OpenAPI doc; the SPA gates UI the same way but the server is authoritative; first-run bootstrap is disabled once any user exists                                                                                                  |
 
 ### Express ↔ PostgreSQL
 
-| Threat | Mitigation |
-|---|---|
+| Threat                              | Mitigation                                                                                                                                                           |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **T**ampering / **I**nfo disclosure | Prisma parameterised queries only — no string-built SQL; `DATABASE_URL` from the environment, never logged; DB not published on the host in the prod compose overlay |
-| **D**enial of service | connection pool bounds; bounded result sets; `pg` statement timeouts inherited from the server config |
-| **R**epudiation | `AuditLog` rows are only ever inserted by the app; no route exposes update/delete on them |
+| **D**enial of service               | connection pool bounds; bounded result sets; `pg` statement timeouts inherited from the server config                                                                |
+| **R**epudiation                     | `AuditLog` rows are only ever inserted by the app; no route exposes update/delete on them                                                                            |
 
 ### Operator browser (the SPA)
 
-| Threat | Mitigation |
-|---|---|
-| **XSS** | React escapes by default; no `dangerouslySetInnerHTML`; CSP restricts script sources; the access token is unreachable to injected script only insofar as it is a module-scoped variable (a successful XSS still forfeits the session — XSS prevention is the real control) |
-| **CSRF** | state-changing calls need the `Authorization` header or the access cookie **plus** the refresh flow requires a custom `X-Requested-With` header (not settable cross-origin without CORS); refresh cookie is `SameSite=Strict` |
-| **Clickjacking** | `X-Frame-Options` / frame-ancestors via helmet |
+| Threat           | Mitigation                                                                                                                                                                                                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **XSS**          | React escapes by default; no `dangerouslySetInnerHTML`; CSP restricts script sources; the access token is unreachable to injected script only insofar as it is a module-scoped variable (a successful XSS still forfeits the session — XSS prevention is the real control) |
+| **CSRF**         | state-changing calls need the `Authorization` header or the access cookie **plus** the refresh flow requires a custom `X-Requested-With` header (not settable cross-origin without CORS); refresh cookie is `SameSite=Strict`                                              |
+| **Clickjacking** | `X-Frame-Options` / frame-ancestors via helmet                                                                                                                                                                                                                             |
 
 ### Setup / ops scripts
 
-| Threat | Mitigation |
-|---|---|
-| Weak secrets | `setup.sh` / `setup.ps1` generate `JWT_SECRET` and `POSTGRES_PASSWORD` with a CSPRNG; `.env` is gitignored |
+| Threat              | Mitigation                                                                                                                                         |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Weak secrets        | `setup.sh` / `setup.ps1` generate `JWT_SECRET` and `POSTGRES_PASSWORD` with a CSPRNG; `.env` is gitignored                                         |
 | Weak admin password | interactive setup requires ≥ 12 chars; `seed-reference.ts` validates `ADMIN_PASSWORD` against the shared policy and exits non-zero on a weak value |
-| Accidental exposure | `BIND_HOST` defaults to `127.0.0.1`; docs require a reverse proxy before `0.0.0.0` |
-| Backup handling | `backup.sh` writes to `backups/` (gitignored); operators are responsible for encryption at rest of those dumps — documented in SECURITY.md |
+| Accidental exposure | `BIND_HOST` defaults to `127.0.0.1`; docs require a reverse proxy before `0.0.0.0`                                                                 |
+| Backup handling     | `backup.sh` writes to `backups/` (gitignored); operators are responsible for encryption at rest of those dumps — documented in SECURITY.md         |
 
 ## Residual risk / known gaps
 

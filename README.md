@@ -75,11 +75,11 @@ install packages, migrate, seed, and create the admin account.
 
 Pick one of three tracks (full guide: **[docs/guide/01-getting-started.md](docs/guide/01-getting-started.md)**):
 
-| Track | Command (`.sh` shown; `.ps1` flags are `-Mode` / `-Data` / …) | Needs |
-|---|---|---|
-| **Docker** (recommended) | `scripts/setup.sh --mode=docker --data=demo --yes` | Docker + `docker compose` (setup can install it) |
-| **No-Docker local** | `scripts/setup.sh --mode=local --database=managed --data=demo --yes` | Node 22+ (setup can install it); a PostgreSQL is bundled |
-| **Existing PostgreSQL** | set `DATABASE_URL` in `.env`, then `--mode=local --database=url` | Node 22+, a reachable database |
+| Track                    | Command (`.sh` shown; `.ps1` flags are `-Mode` / `-Data` / …)        | Needs                                                    |
+| ------------------------ | -------------------------------------------------------------------- | -------------------------------------------------------- |
+| **Docker** (recommended) | `scripts/setup.sh --mode=docker --data=demo --yes`                   | Docker + `docker compose` (setup can install it)         |
+| **No-Docker local**      | `scripts/setup.sh --mode=local --database=managed --data=demo --yes` | Node 22+ (setup can install it); a PostgreSQL is bundled |
+| **Existing PostgreSQL**  | set `DATABASE_URL` in `.env`, then `--mode=local --database=url`     | Node 22+, a reachable database                           |
 
 Data modes: **empty** (reference data + admin only) or **demo** (adds a fictional
 portfolio).
@@ -119,18 +119,18 @@ scripts/restore.sh <backup-file>  # destructive — requires typing RESTORE or p
 
 The full user and operator guide lives in [`docs/guide/`](docs/guide/README.md), organized by feature area:
 
-| Guide | Covers |
-|---|---|
-| [Getting Started](docs/guide/01-getting-started.md) | Install modes, setup, start/stop, first login |
-| [Asset Management](docs/guide/02-asset-management.md) | Asset fields/lifecycle, dependency graph, exports, URL import |
-| [Risk Register](docs/guide/03-risk-register.md) | Risk scoring, heatmap, bulk updates, linking, EU AI Act tier suggestions |
-| [Projects](docs/guide/04-projects.md) | Reuse tracking, project-scoped risk, project-level SBOM export |
-| [Model Cards](docs/guide/05-model-cards.md) | Model Card fields, completeness scoring, metrics, policy gates |
-| [Governance Workflow](docs/guide/06-governance-workflow.md) | Status lifecycle, policy gates, segregation of duties, recertification |
-| [RBAC & Users](docs/guide/07-rbac-and-users.md) | Roles, permission matrix, ownership scoping, user management |
-| [Dashboard](docs/guide/08-dashboard.md) | Every dashboard panel explained |
-| [Audit & Compliance](docs/guide/09-audit-and-compliance.md) | Audit log, field history, archive-not-delete, CSV export |
-| [Operations](docs/guide/10-operations.md) | Scripts, backup/restore, deployment, the recertification notification job |
+| Guide                                                       | Covers                                                                    |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------- |
+| [Getting Started](docs/guide/01-getting-started.md)         | Install modes, setup, start/stop, first login                             |
+| [Asset Management](docs/guide/02-asset-management.md)       | Asset fields/lifecycle, dependency graph, exports, URL import             |
+| [Risk Register](docs/guide/03-risk-register.md)             | Risk scoring, heatmap, bulk updates, linking, EU AI Act tier suggestions  |
+| [Projects](docs/guide/04-projects.md)                       | Reuse tracking, project-scoped risk, project-level SBOM export            |
+| [Model Cards](docs/guide/05-model-cards.md)                 | Model Card fields, completeness scoring, metrics, policy gates            |
+| [Governance Workflow](docs/guide/06-governance-workflow.md) | Status lifecycle, policy gates, segregation of duties, recertification    |
+| [RBAC & Users](docs/guide/07-rbac-and-users.md)             | Roles, permission matrix, ownership scoping, user management              |
+| [Dashboard](docs/guide/08-dashboard.md)                     | Every dashboard panel explained                                           |
+| [Audit & Compliance](docs/guide/09-audit-and-compliance.md) | Audit log, field history, archive-not-delete, CSV export                  |
+| [Operations](docs/guide/10-operations.md)                   | Scripts, backup/restore, deployment, the recertification notification job |
 
 Production deployment guidance (containerizing both services, a real Postgres target, secrets management, running migrations) is in [`docs/deployment.md`](docs/deployment.md).
 
@@ -163,12 +163,12 @@ cd frontend && npm run test
 
 _Captured against the demo dataset (`scripts/setup.sh --data=demo`). Full-page versions are in [`docs/screenshots/`](docs/screenshots/)._
 
-| | |
-|---|---|
-| [![Dashboard](docs/screenshots/dashboard.png)](docs/screenshots/dashboard-full.png) | [![Risk Register](docs/screenshots/risk-register.png)](docs/screenshots/risk-register-full.png) |
-| **Governance dashboard** — severity distribution, framework coverage gaps, reuse leaderboard, recertification due-list | **Risk register** — likelihood × impact heatmap and a sortable, bulk-updatable risk table |
-| [![Asset detail](docs/screenshots/asset-detail.png)](docs/screenshots/asset-detail-full.png) | [![Model Card](docs/screenshots/model-card.png)](docs/screenshots/model-card-full.png) |
-| **Asset detail** — an approved model whose deploy is blocked by an open critical risk, with its complete Model Card | **Approval gate** — a service blocked from approval until its Model Card is filled in |
+|                                                                                                                        |                                                                                                 |
+| ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [![Dashboard](docs/screenshots/dashboard.png)](docs/screenshots/dashboard-full.png)                                    | [![Risk Register](docs/screenshots/risk-register.png)](docs/screenshots/risk-register-full.png) |
+| **Governance dashboard** — severity distribution, framework coverage gaps, reuse leaderboard, recertification due-list | **Risk register** — likelihood × impact heatmap and a sortable, bulk-updatable risk table       |
+| [![Asset detail](docs/screenshots/asset-detail.png)](docs/screenshots/asset-detail-full.png)                           | [![Model Card](docs/screenshots/model-card.png)](docs/screenshots/model-card-full.png)          |
+| **Asset detail** — an approved model whose deploy is blocked by an open critical risk, with its complete Model Card    | **Approval gate** — a service blocked from approval until its Model Card is filled in           |
 
 ## Contributing & security
 

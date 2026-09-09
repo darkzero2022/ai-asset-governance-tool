@@ -8,10 +8,14 @@ afterEach(() => {
 
 describe("resolvePort", () => {
   it("prefers MANAGED_PG_PORT", () => {
-    expect(resolvePort({ MANAGED_PG_PORT: "6000", DATABASE_URL: "postgresql://u:p@127.0.0.1:5555/db" })).toBe(6000);
+    expect(
+      resolvePort({ MANAGED_PG_PORT: "6000", DATABASE_URL: "postgresql://u:p@127.0.0.1:5555/db" }),
+    ).toBe(6000);
   });
   it("falls back to the port in DATABASE_URL", () => {
-    expect(resolvePort({ DATABASE_URL: "postgresql://u:p@127.0.0.1:55432/aibom?schema=public" })).toBe(55432);
+    expect(
+      resolvePort({ DATABASE_URL: "postgresql://u:p@127.0.0.1:55432/aibom?schema=public" }),
+    ).toBe(55432);
   });
   it("defaults to 55432", () => {
     expect(resolvePort({})).toBe(55432);

@@ -26,7 +26,10 @@ export const assetSchema = z.object({
   trainingDataProvenance: z.string().optional().nullable(),
   downstreamConsumers: z.string().optional().nullable(),
   // Accept "" from an untouched form field as "no URL" rather than a validation error.
-  sourceUrl: z.preprocess((value) => (value === "" ? null : value), z.string().url().optional().nullable()),
+  sourceUrl: z.preprocess(
+    (value) => (value === "" ? null : value),
+    z.string().url().optional().nullable(),
+  ),
 });
 
 export const importUrlSchema = z.object({ sourceUrl: z.string().url() });
@@ -91,11 +94,15 @@ export const controlSchema = z.object({
 });
 
 // Password policy: >= 12 chars and not on the common/breached deny-list.
-export const PASSWORD_POLICY_HINT = "At least 12 characters, and not a common or previously-breached password.";
+export const PASSWORD_POLICY_HINT =
+  "At least 12 characters, and not a common or previously-breached password.";
 export const passwordSchema = z
   .string()
   .min(12, "Password must be at least 12 characters")
-  .refine((value) => !isCommonPassword(value), "This password is too common — choose something less predictable");
+  .refine(
+    (value) => !isCommonPassword(value),
+    "This password is too common — choose something less predictable",
+  );
 
 export const userCreateSchema = z.object({
   email: z.string().email(),

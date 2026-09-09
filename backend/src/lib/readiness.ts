@@ -20,7 +20,9 @@ function migrationsOnDisk(): string[] {
   try {
     return fs
       .readdirSync(MIGRATIONS_DIR, { withFileTypes: true })
-      .filter((e) => e.isDirectory() && fs.existsSync(path.join(MIGRATIONS_DIR, e.name, "migration.sql")))
+      .filter(
+        (e) => e.isDirectory() && fs.existsSync(path.join(MIGRATIONS_DIR, e.name, "migration.sql")),
+      )
       .map((e) => e.name)
       .sort();
   } catch {

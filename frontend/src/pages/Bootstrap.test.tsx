@@ -10,8 +10,12 @@ describe("Bootstrap", () => {
     render(<Bootstrap onComplete={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@b.com" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "a-long-enough-passphrase" } });
-    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "a-different-long-passphrase" } });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "a-long-enough-passphrase" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirm password"), {
+      target: { value: "a-different-long-passphrase" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
     expect(await screen.findByText(/passwords do not match/i)).toBeInTheDocument();
@@ -29,26 +33,39 @@ describe("Bootstrap", () => {
 
     render(<Bootstrap onComplete={onComplete} />);
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "admin@b.com" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "a-long-enough-passphrase" } });
-    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "a-long-enough-passphrase" } });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "a-long-enough-passphrase" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirm password"), {
+      target: { value: "a-long-enough-passphrase" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledWith("tok-123"));
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe("/api/v1/auth/bootstrap");
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe(
+      "/api/v1/auth/bootstrap",
+    );
   });
 
   it("surfaces the API error envelope message", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ error: { code: "ALREADY_BOOTSTRAPPED", message: "Already set up" } }), {
-        status: 409,
-        headers: { "Content-Type": "application/json" },
-      }),
+      new Response(
+        JSON.stringify({ error: { code: "ALREADY_BOOTSTRAPPED", message: "Already set up" } }),
+        {
+          status: 409,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
 
     render(<Bootstrap onComplete={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@b.com" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "a-long-enough-passphrase" } });
-    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "a-long-enough-passphrase" } });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "a-long-enough-passphrase" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirm password"), {
+      target: { value: "a-long-enough-passphrase" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
     expect(await screen.findByText("Already set up")).toBeInTheDocument();

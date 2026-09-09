@@ -5,7 +5,11 @@ import { cn } from "../../lib/cn";
 export const DropdownMenu = RadixDropdown.Root;
 export const DropdownMenuTrigger = RadixDropdown.Trigger;
 
-export function DropdownMenuContent({ className, align = "end", ...props }: ComponentProps<typeof RadixDropdown.Content>) {
+export function DropdownMenuContent({
+  className,
+  align = "end",
+  ...props
+}: ComponentProps<typeof RadixDropdown.Content>) {
   return (
     <RadixDropdown.Portal>
       <RadixDropdown.Content
@@ -23,7 +27,10 @@ export function DropdownMenuContent({ className, align = "end", ...props }: Comp
   );
 }
 
-export function DropdownMenuItem({ className, ...props }: ComponentProps<typeof RadixDropdown.Item>) {
+export function DropdownMenuItem({
+  className,
+  ...props
+}: ComponentProps<typeof RadixDropdown.Item>) {
   return (
     <RadixDropdown.Item
       className={cn(
@@ -37,7 +44,11 @@ export function DropdownMenuItem({ className, ...props }: ComponentProps<typeof 
 }
 
 export function DropdownMenuLabel({ children }: { children: ReactNode }) {
-  return <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-subtle">{children}</div>;
+  return (
+    <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-subtle">
+      {children}
+    </div>
+  );
 }
 
 export function DropdownMenuSeparator() {

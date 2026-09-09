@@ -3,7 +3,10 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  const admin = await prisma.user.findUnique({ where: { email: "admin@example.com" }, select: { id: true } });
+  const admin = await prisma.user.findUnique({
+    where: { email: "admin@example.com" },
+    select: { id: true },
+  });
 
   if (!admin) {
     throw new Error("admin@example.com must exist before backfilling Risk.createdById");

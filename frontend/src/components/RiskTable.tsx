@@ -47,9 +47,24 @@ function linkedControlCount(risk: Risk) {
   return risk.controls?.length ?? risk.controlLinks?.length ?? 0;
 }
 
-export function RiskTable({ risks, selectedIds, label, onToggle, onEdit, onOpen, bulkActions, pagination, onPageChange }: RiskTableProps) {
+export function RiskTable({
+  risks,
+  selectedIds,
+  label,
+  onToggle,
+  onEdit,
+  onOpen,
+  bulkActions,
+  pagination,
+  onPageChange,
+}: RiskTableProps) {
   const columns: Column<Risk>[] = [
-    { key: "severity", header: "Severity", sortValue: (risk) => risk.severity ?? "", render: (risk) => <SeverityBadge severity={risk.severity} /> },
+    {
+      key: "severity",
+      header: "Severity",
+      sortValue: (risk) => risk.severity ?? "",
+      render: (risk) => <SeverityBadge severity={risk.severity} />,
+    },
     {
       key: "framework",
       header: "Framework",
@@ -67,26 +82,53 @@ export function RiskTable({ risks, selectedIds, label, onToggle, onEdit, onOpen,
       sortValue: (risk) => `${risk.strideAiCategory ?? "~"}:${risk.atlasTechnique ?? "~"}`,
       render: (risk) => (
         <div>
-          {risk.strideAiCategory ? <span className="font-medium text-text">{label(risk.strideAiCategory)}</span> : <span className="text-disabled">Not mapped</span>}
-          <span className="block text-xs text-subtle">{risk.atlasTechnique ?? "No ATLAS technique"}</span>
+          {risk.strideAiCategory ? (
+            <span className="font-medium text-text">{label(risk.strideAiCategory)}</span>
+          ) : (
+            <span className="text-disabled">Not mapped</span>
+          )}
+          <span className="block text-xs text-subtle">
+            {risk.atlasTechnique ?? "No ATLAS technique"}
+          </span>
         </div>
       ),
     },
-    { key: "status", header: "Status", sortValue: (risk) => risk.status, render: (risk) => label(risk.status) },
+    {
+      key: "status",
+      header: "Status",
+      sortValue: (risk) => risk.status,
+      render: (risk) => label(risk.status),
+    },
     {
       key: "dueDate",
       header: "Due Date",
       sortValue: (risk) => (risk.dueDate ? new Date(risk.dueDate).getTime() : 0),
       render: (risk) => (risk.dueDate ? new Date(risk.dueDate).toLocaleDateString() : "Not set"),
     },
-    { key: "assets", header: "Assets", align: "right", sortValue: linkedAssetCount, render: linkedAssetCount },
-    { key: "controls", header: "Controls", align: "right", sortValue: linkedControlCount, render: linkedControlCount },
+    {
+      key: "assets",
+      header: "Assets",
+      align: "right",
+      sortValue: linkedAssetCount,
+      render: linkedAssetCount,
+    },
+    {
+      key: "controls",
+      header: "Controls",
+      align: "right",
+      sortValue: linkedControlCount,
+      render: linkedControlCount,
+    },
     {
       key: "score",
       header: "Score",
       align: "right",
       sortValue: (risk) => risk.inherentRiskScore,
-      render: (risk) => <span className="rounded-full bg-surface-alt px-2 py-0.5 text-xs font-bold text-text">{risk.inherentRiskScore}</span>,
+      render: (risk) => (
+        <span className="rounded-full bg-surface-alt px-2 py-0.5 text-xs font-bold text-text">
+          {risk.inherentRiskScore}
+        </span>
+      ),
     },
     {
       key: "description",

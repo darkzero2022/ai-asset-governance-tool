@@ -60,7 +60,9 @@ describe("errorHandler", () => {
     });
     const res = await request(app).get("/boom").expect(500);
 
-    expect(res.body).toMatchObject({ error: { code: "INTERNAL", message: "Internal server error" } });
+    expect(res.body).toMatchObject({
+      error: { code: "INTERNAL", message: "Internal server error" },
+    });
     expect(res.body).not.toHaveProperty("error.details");
     expect(JSON.stringify(res.body)).not.toContain("secret internal detail");
 

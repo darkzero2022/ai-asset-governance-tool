@@ -36,7 +36,10 @@ const CHART_1 = "rgb(var(--wz-chart-1))";
 const emptySearchResults: SearchResults = { assets: [], projects: [], risks: [] };
 
 function sumCounts(rows?: Array<Record<string, unknown>>): number {
-  return (rows ?? []).reduce((total, row) => total + (typeof row._count === "number" ? row._count : 0), 0);
+  return (rows ?? []).reduce(
+    (total, row) => total + (typeof row._count === "number" ? row._count : 0),
+    0,
+  );
 }
 
 export default function Dashboard({ token }: DashboardProps) {
@@ -48,11 +51,22 @@ export default function Dashboard({ token }: DashboardProps) {
   const summary = summaryQuery.data ?? {};
   const { data: exposures = [], isPending: exposureLoading } = useDashboardExposureQuery(token);
   const { data: coverage = [] } = useFrameworkCoverageQuery(token);
-  const { data: riskSummary = { total: 0, byFramework: {}, bySeverity: {} } } = useRiskSummaryQuery(token);
+  const { data: riskSummary = { total: 0, byFramework: {}, bySeverity: {} } } =
+    useRiskSummaryQuery(token);
   const { data: recertifications = [], isPending: recertLoading } = useRecertificationQuery(token);
-  const { data: modelCardCoverage = { total: 0, withCard: 0, withoutCard: 0, averageCompleteness: 0, missingAssets: [] } } =
-    useModelCardCoverageQuery(token);
-  const { data: modelMetricReport = { metrics: [], aggregate: [] } } = useModelMetricsQuery(token, metricName);
+  const {
+    data: modelCardCoverage = {
+      total: 0,
+      withCard: 0,
+      withoutCard: 0,
+      averageCompleteness: 0,
+      missingAssets: [],
+    },
+  } = useModelCardCoverageQuery(token);
+  const { data: modelMetricReport = { metrics: [], aggregate: [] } } = useModelMetricsQuery(
+    token,
+    metricName,
+  );
   const searchMutation = useSearchMutation(token);
   const results = searchMutation.data ?? emptySearchResults;
 
@@ -86,9 +100,24 @@ export default function Dashboard({ token }: DashboardProps) {
           <CardHeader title="Search results" />
           <CardBody className="space-y-1">
             {[
-              ...results.assets.map((item) => ({ key: `a-${item.id}`, name: item.name, kind: "AI System", path: `/ai-systems/${item.id}` })),
-              ...results.projects.map((item) => ({ key: `p-${item.id}`, name: item.name, kind: "Project", path: `/projects/${item.id}` })),
-              ...results.risks.map((item) => ({ key: `r-${item.id}`, name: item.description, kind: "Risk", path: `/risks/${item.id}` })),
+              ...results.assets.map((item) => ({
+                key: `a-${item.id}`,
+                name: item.name,
+                kind: "AI System",
+                path: `/ai-systems/${item.id}`,
+              })),
+              ...results.projects.map((item) => ({
+                key: `p-${item.id}`,
+                name: item.name,
+                kind: "Project",
+                path: `/projects/${item.id}`,
+              })),
+              ...results.risks.map((item) => ({
+                key: `r-${item.id}`,
+                name: item.description,
+                kind: "Risk",
+                path: `/risks/${item.id}`,
+              })),
             ].map((row) => (
               <button
                 key={row.key}
@@ -108,7 +137,11 @@ export default function Dashboard({ token }: DashboardProps) {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="AI systems" value={totalAiSystems} onClick={() => navigate("/ai-systems")} />
-        <Stat label="Projects" value={summary.projectCount ?? 0} onClick={() => navigate("/projects")} />
+        <Stat
+          label="Projects"
+          value={summary.projectCount ?? 0}
+          onClick={() => navigate("/projects")}
+        />
         <Stat
           label="Open high risks"
           value={severityBuckets.HIGH ?? 0}
@@ -128,11 +161,20 @@ export default function Dashboard({ token }: DashboardProps) {
           <DonutChart
             data={["CRITICAL", "HIGH", "MEDIUM", "LOW"]
               .filter((key) => (severityBuckets[key] ?? 0) > 0)
-              .map((key) => ({ label: key, value: severityBuckets[key] ?? 0, color: SEVERITY_COLORS[key] }))}
+              .map((key) => ({
+                label: key,
+                value: severityBuckets[key] ?? 0,
+                color: SEVERITY_COLORS[key],
+              }))}
           />
         </Panel>
         <Panel title="Risk by framework">
-          <BarChart data={Object.entries(riskSummary.byFramework ?? {}).map(([label, value]) => ({ label, value }))} />
+          <BarChart
+            data={Object.entries(riskSummary.byFramework ?? {}).map(([label, value]) => ({
+              label,
+              value,
+            }))}
+          />
         </Panel>
       </div>
 
@@ -173,7 +215,12 @@ export default function Dashboard({ token }: DashboardProps) {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Panel title="Most reused AI systems">
-          <BarChart data={(summary.topAssets ?? []).map((asset) => ({ label: asset.name, value: asset.projectUsageCount }))} />
+          <BarChart
+            data={(summary.topAssets ?? []).map((asset) => ({
+              label: asset.name,
+              value: asset.projectUsageCount,
+            }))}
+          />
         </Panel>
         <Panel title="Framework coverage">
           <BarChart
@@ -196,8 +243,16 @@ export default function Dashboard({ token }: DashboardProps) {
           <div className="mt-4">
             <BarChart
               data={[
-                { label: "With card", value: modelCardCoverage.withCard, color: "rgb(var(--wz-success))" },
-                { label: "Missing", value: modelCardCoverage.withoutCard, color: "rgb(var(--wz-warning))" },
+                {
+                  label: "With card",
+                  value: modelCardCoverage.withCard,
+                  color: "rgb(var(--wz-success))",
+                },
+                {
+                  label: "Missing",
+                  value: modelCardCoverage.withoutCard,
+                  color: "rgb(var(--wz-warning))",
+                },
               ]}
             />
           </div>
@@ -221,7 +276,11 @@ export default function Dashboard({ token }: DashboardProps) {
       <div className="mt-4">
         <Panel title="Model performance metrics">
           <div className="max-w-xs">
-            <Select label="Metric" value={metricName} onChange={(event) => setMetricName(event.target.value)}>
+            <Select
+              label="Metric"
+              value={metricName}
+              onChange={(event) => setMetricName(event.target.value)}
+            >
               {["accuracy", "f1", "auc", metricName]
                 .filter((value, index, values) => values.indexOf(value) === index)
                 .map((value) => (
@@ -241,7 +300,9 @@ export default function Dashboard({ token }: DashboardProps) {
           </div>
           {modelMetricReport.aggregate.length ? (
             <p className="mt-3 text-xs text-subtle">
-              {modelMetricReport.aggregate.map((item) => `${item.group}: avg ${item.avg.toFixed(2)}`).join(" · ")}
+              {modelMetricReport.aggregate
+                .map((item) => `${item.group}: avg ${item.avg.toFixed(2)}`)
+                .join(" · ")}
             </p>
           ) : null}
         </Panel>
@@ -262,7 +323,11 @@ function Stat({
   onClick?: () => void;
 }) {
   const toneClass =
-    tone === "critical" ? "text-severity-critical" : tone === "high" ? "text-severity-high" : "text-text";
+    tone === "critical"
+      ? "text-severity-critical"
+      : tone === "high"
+        ? "text-severity-high"
+        : "text-text";
   return (
     <button
       onClick={onClick}
@@ -283,7 +348,15 @@ function MiniStat({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-function Panel({ title, children, onViewAll }: { title: string; children: ReactNode; onViewAll?: () => void }) {
+function Panel({
+  title,
+  children,
+  onViewAll,
+}: {
+  title: string;
+  children: ReactNode;
+  onViewAll?: () => void;
+}) {
   return (
     <Card>
       <CardHeader
@@ -301,7 +374,11 @@ function Panel({ title, children, onViewAll }: { title: string; children: ReactN
   );
 }
 
-function LinkList({ items }: { items: Array<{ id: string; title: string; meta: string; onClick: () => void }> }) {
+function LinkList({
+  items,
+}: {
+  items: Array<{ id: string; title: string; meta: string; onClick: () => void }>;
+}) {
   return (
     <div className="space-y-1">
       {items.map((item) => (

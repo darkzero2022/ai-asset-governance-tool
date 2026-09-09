@@ -19,9 +19,16 @@ export function SideNav({
 }) {
   const content = (
     <nav className="flex h-full flex-col" aria-label="Primary">
-      <div className={cn("flex h-14 items-center gap-2 border-b border-border px-4", collapsed && "justify-center px-0")}>
+      <div
+        className={cn(
+          "flex h-14 items-center gap-2 border-b border-border px-4",
+          collapsed && "justify-center px-0",
+        )}
+      >
         <ShieldCheck className="h-6 w-6 shrink-0 text-primary" aria-hidden="true" />
-        {!collapsed && <span className="truncate text-sm font-semibold text-text">AI-BOM Governance</span>}
+        {!collapsed && (
+          <span className="truncate text-sm font-semibold text-text">AI-BOM Governance</span>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto py-3">
@@ -30,7 +37,11 @@ export function SideNav({
           if (!items.length) return null;
           return (
             <div key={group.label} className="mb-4 px-2">
-              {!collapsed && <p className="mb-1 px-2 text-xs font-semibold uppercase tracking-wide text-disabled">{group.label}</p>}
+              {!collapsed && (
+                <p className="mb-1 px-2 text-xs font-semibold uppercase tracking-wide text-disabled">
+                  {group.label}
+                </p>
+              )}
               <ul className="space-y-0.5">
                 {items.map((item) => (
                   <li key={item.path}>
@@ -60,7 +71,10 @@ export function SideNav({
     <>
       {/* Desktop: permanent sidebar */}
       <aside
-        className={cn("hidden shrink-0 border-r border-border bg-surface transition-[width] duration-150 lg:block", collapsed ? "w-sidebar-collapsed" : "w-sidebar-expanded")}
+        className={cn(
+          "hidden shrink-0 border-r border-border bg-surface transition-[width] duration-150 lg:block",
+          collapsed ? "w-sidebar-collapsed" : "w-sidebar-expanded",
+        )}
       >
         {content}
       </aside>
@@ -68,15 +82,29 @@ export function SideNav({
       {/* Mobile: overlay drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <button aria-label="Close navigation" className="absolute inset-0 bg-black/50" onClick={onCloseMobile} />
-          <aside className="relative h-full w-sidebar-expanded animate-in slide-in-from-left bg-surface shadow-card">{content}</aside>
+          <button
+            aria-label="Close navigation"
+            className="absolute inset-0 bg-black/50"
+            onClick={onCloseMobile}
+          />
+          <aside className="relative h-full w-sidebar-expanded animate-in slide-in-from-left bg-surface shadow-card">
+            {content}
+          </aside>
         </div>
       )}
     </>
   );
 }
 
-function NavLinkItem({ item, collapsed, onNavigate }: { item: (typeof navGroups)[number]["items"][number]; collapsed: boolean; onNavigate: () => void }) {
+function NavLinkItem({
+  item,
+  collapsed,
+  onNavigate,
+}: {
+  item: (typeof navGroups)[number]["items"][number];
+  collapsed: boolean;
+  onNavigate: () => void;
+}) {
   const Icon = item.icon;
   const link = (
     <NavLink

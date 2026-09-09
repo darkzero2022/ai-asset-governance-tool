@@ -13,7 +13,15 @@ const router = express.Router();
 router.get("/ai-systems/:id/export/cyclonedx", requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id);
-    const asset = await prisma.aIAsset.findUnique({ where: { id }, include: { modelCard: { include: { metrics: true } }, riskLinks: { include: { risk: { include: { controlLinks: { include: { control: true } } } } } } } });
+    const asset = await prisma.aIAsset.findUnique({
+      where: { id },
+      include: {
+        modelCard: { include: { metrics: true } },
+        riskLinks: {
+          include: { risk: { include: { controlLinks: { include: { control: true } } } } },
+        },
+      },
+    });
 
     if (!asset) {
       throw notFound("Asset not found");
@@ -24,7 +32,12 @@ router.get("/ai-systems/:id/export/cyclonedx", requireAuth, async (req, res, nex
     const validation = await validateCycloneDxBom(bom);
 
     if (!validation.valid) {
-      throw new AppError(500, "BOM_VALIDATION_FAILED", "Generated CycloneDX BOM failed schema validation", { validation });
+      throw new AppError(
+        500,
+        "BOM_VALIDATION_FAILED",
+        "Generated CycloneDX BOM failed schema validation",
+        { validation },
+      );
     }
 
     res.json(bom);
@@ -53,7 +66,20 @@ router.get("/projects/:id/export/cyclonedx", requireAuth, async (req, res, next)
     const id = String(req.params.id);
     const project = await prisma.project.findUnique({
       where: { id },
-      include: { assetLinks: { include: { asset: { include: { modelCard: { include: { metrics: true } }, riskLinks: { include: { risk: { include: { controlLinks: { include: { control: true } } } } } } } } } } },
+      include: {
+        assetLinks: {
+          include: {
+            asset: {
+              include: {
+                modelCard: { include: { metrics: true } },
+                riskLinks: {
+                  include: { risk: { include: { controlLinks: { include: { control: true } } } } },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!project) {
@@ -65,7 +91,12 @@ router.get("/projects/:id/export/cyclonedx", requireAuth, async (req, res, next)
     const validation = await validateCycloneDxBom(bom);
 
     if (!validation.valid) {
-      throw new AppError(500, "BOM_VALIDATION_FAILED", "Generated CycloneDX BOM failed schema validation", { validation });
+      throw new AppError(
+        500,
+        "BOM_VALIDATION_FAILED",
+        "Generated CycloneDX BOM failed schema validation",
+        { validation },
+      );
     }
 
     res.json(bom);
@@ -77,7 +108,15 @@ router.get("/projects/:id/export/cyclonedx", requireAuth, async (req, res, next)
 router.post("/exports/cyclonedx", requireAuth, async (req, res, next) => {
   try {
     const body = z.object({ assetIds: z.array(z.string()).min(1).max(500) }).parse(req.body);
-    const assets = await prisma.aIAsset.findMany({ where: { id: { in: body.assetIds } }, include: { modelCard: { include: { metrics: true } }, riskLinks: { include: { risk: { include: { controlLinks: { include: { control: true } } } } } } } });
+    const assets = await prisma.aIAsset.findMany({
+      where: { id: { in: body.assetIds } },
+      include: {
+        modelCard: { include: { metrics: true } },
+        riskLinks: {
+          include: { risk: { include: { controlLinks: { include: { control: true } } } } },
+        },
+      },
+    });
 
     if (assets.length !== body.assetIds.length) {
       throw notFound("One or more assets were not found");
@@ -88,7 +127,12 @@ router.post("/exports/cyclonedx", requireAuth, async (req, res, next) => {
     const validation = await validateCycloneDxBom(bom);
 
     if (!validation.valid) {
-      throw new AppError(500, "BOM_VALIDATION_FAILED", "Generated CycloneDX BOM failed schema validation", { validation });
+      throw new AppError(
+        500,
+        "BOM_VALIDATION_FAILED",
+        "Generated CycloneDX BOM failed schema validation",
+        { validation },
+      );
     }
 
     res.json(bom);

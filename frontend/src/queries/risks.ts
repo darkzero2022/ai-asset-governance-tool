@@ -18,7 +18,9 @@ export function useRisksQuery(token: string, filters: Partial<RiskFilters>) {
     queryKey: queryKeys.risks(params),
     queryFn: async () => {
       const query = new URLSearchParams(params);
-      const data = await apiFetch<{ risks: Risk[] }>(`/risks${query.size ? `?${query}` : ""}`, { token });
+      const data = await apiFetch<{ risks: Risk[] }>(`/risks${query.size ? `?${query}` : ""}`, {
+        token,
+      });
       return data.risks;
     },
     enabled: Boolean(token),
@@ -46,7 +48,11 @@ export function useSaveRiskMutation(token: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, payload }: { id?: string; payload: Record<string, unknown> }) =>
-      apiFetch(id ? `/risks/${id}` : "/risks", { method: id ? "PUT" : "POST", body: JSON.stringify(payload), token }),
+      apiFetch(id ? `/risks/${id}` : "/risks", {
+        method: id ? "PUT" : "POST",
+        body: JSON.stringify(payload),
+        token,
+      }),
     onSuccess: (_data, variables) => invalidateRisk(queryClient, variables.id),
   });
 }
@@ -88,11 +94,13 @@ export function useRiskAssetLinkMutations(token: string, riskId: string) {
   const queryClient = useQueryClient();
   const invalidate = () => invalidateRisk(queryClient, riskId);
   const link = useMutation({
-    mutationFn: (assetId: string) => apiFetch(`/ai-systems/${assetId}/risks/${riskId}`, { method: "POST", token }),
+    mutationFn: (assetId: string) =>
+      apiFetch(`/ai-systems/${assetId}/risks/${riskId}`, { method: "POST", token }),
     onSuccess: invalidate,
   });
   const unlink = useMutation({
-    mutationFn: (assetId: string) => apiFetch(`/ai-systems/${assetId}/risks/${riskId}`, { method: "DELETE", token }),
+    mutationFn: (assetId: string) =>
+      apiFetch(`/ai-systems/${assetId}/risks/${riskId}`, { method: "DELETE", token }),
     onSuccess: invalidate,
   });
   return { link, unlink };
@@ -105,11 +113,13 @@ export function useRiskProjectLinkMutations(token: string, riskId: string) {
     queryClient.invalidateQueries({ queryKey: ["projects"] });
   };
   const link = useMutation({
-    mutationFn: (projectId: string) => apiFetch(`/projects/${projectId}/risks/${riskId}`, { method: "POST", token }),
+    mutationFn: (projectId: string) =>
+      apiFetch(`/projects/${projectId}/risks/${riskId}`, { method: "POST", token }),
     onSuccess: invalidate,
   });
   const unlink = useMutation({
-    mutationFn: (projectId: string) => apiFetch(`/projects/${projectId}/risks/${riskId}`, { method: "DELETE", token }),
+    mutationFn: (projectId: string) =>
+      apiFetch(`/projects/${projectId}/risks/${riskId}`, { method: "DELETE", token }),
     onSuccess: invalidate,
   });
   return { link, unlink };
@@ -122,17 +132,38 @@ export function useRiskControlLinkMutations(token: string, riskId: string) {
     queryClient.invalidateQueries({ queryKey: ["controls"] });
   };
   const link = useMutation({
-    mutationFn: ({ controlId, implementationStatus }: { controlId: string; implementationStatus: string }) =>
-      apiFetch(`/risks/${riskId}/controls/${controlId}`, { method: "POST", body: JSON.stringify({ implementationStatus }), token }),
+    mutationFn: ({
+      controlId,
+      implementationStatus,
+    }: {
+      controlId: string;
+      implementationStatus: string;
+    }) =>
+      apiFetch(`/risks/${riskId}/controls/${controlId}`, {
+        method: "POST",
+        body: JSON.stringify({ implementationStatus }),
+        token,
+      }),
     onSuccess: invalidate,
   });
   const update = useMutation({
-    mutationFn: ({ controlId, implementationStatus }: { controlId: string; implementationStatus: string }) =>
-      apiFetch(`/risks/${riskId}/controls/${controlId}`, { method: "PUT", body: JSON.stringify({ implementationStatus }), token }),
+    mutationFn: ({
+      controlId,
+      implementationStatus,
+    }: {
+      controlId: string;
+      implementationStatus: string;
+    }) =>
+      apiFetch(`/risks/${riskId}/controls/${controlId}`, {
+        method: "PUT",
+        body: JSON.stringify({ implementationStatus }),
+        token,
+      }),
     onSuccess: invalidate,
   });
   const unlink = useMutation({
-    mutationFn: (controlId: string) => apiFetch(`/risks/${riskId}/controls/${controlId}`, { method: "DELETE", token }),
+    mutationFn: (controlId: string) =>
+      apiFetch(`/risks/${riskId}/controls/${controlId}`, { method: "DELETE", token }),
     onSuccess: invalidate,
   });
   return { link, update, unlink };

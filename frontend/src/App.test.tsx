@@ -18,7 +18,9 @@ describe("login form", () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByRole("heading", { name: /sign in to manage ai systems/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /sign in to manage ai systems/i }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toHaveValue("");
     expect(screen.getByLabelText(/password/i)).toHaveValue("");
     vi.restoreAllMocks();

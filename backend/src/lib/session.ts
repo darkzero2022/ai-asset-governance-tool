@@ -86,7 +86,10 @@ export async function revokeAllForUser(userId: string): Promise<void> {
 
 export async function listSessions(userId: string, currentRawToken: string | undefined) {
   const currentHash = currentRawToken ? hash(currentRawToken) : null;
-  const rows = await prisma.session.findMany({ where: { userId }, orderBy: { lastUsedAt: "desc" } });
+  const rows = await prisma.session.findMany({
+    where: { userId },
+    orderBy: { lastUsedAt: "desc" },
+  });
   return rows.map((row) => ({
     id: row.id,
     userAgent: row.userAgent,

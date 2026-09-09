@@ -74,7 +74,10 @@ export const nextStatuses: Record<string, string[]> = {
 };
 
 export function label(value: string) {
-  return value.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letter: string) => letter.toUpperCase());
+  return value
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter: string) => letter.toUpperCase());
 }
 
 // Framework enum keys prettify badly through label() ("Owasp Mcp Top10"), so

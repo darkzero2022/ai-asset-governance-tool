@@ -39,11 +39,25 @@ function requireFetchHeader(req: express.Request): void {
   }
 }
 
-async function issueSession(res: express.Response, req: express.Request, user: { id: string; email: string; role: "ADMIN" | "RISK_OWNER" | "APPROVER" | "VIEWER"; name: string; tokenVersion: number; mustChangePassword: boolean }) {
+async function issueSession(
+  res: express.Response,
+  req: express.Request,
+  user: {
+    id: string;
+    email: string;
+    role: "ADMIN" | "RISK_OWNER" | "APPROVER" | "VIEWER";
+    name: string;
+    tokenVersion: number;
+    mustChangePassword: boolean;
+  },
+) {
   const rawRefresh = await createSession(user.id, req);
   setRefreshCookie(res, rawRefresh);
   return {
-    accessToken: signAccessToken({ id: user.id, email: user.email, role: user.role }, user.tokenVersion),
+    accessToken: signAccessToken(
+      { id: user.id, email: user.email, role: user.role },
+      user.tokenVersion,
+    ),
     user: { id: user.id, email: user.email, name: user.name, role: user.role },
     mustChangePassword: user.mustChangePassword,
   };
@@ -51,13 +65,20 @@ async function issueSession(res: express.Response, req: express.Request, user: {
 
 router.post("/auth/login", loginRateLimit, async (req, res, next) => {
   try {
-    const body = z.object({ email: z.string().email(), password: z.string().min(1) }).parse(req.body);
+    const body = z
+      .object({ email: z.string().email(), password: z.string().min(1) })
+      .parse(req.body);
     const user = await prisma.user.findUnique({ where: { email: body.email } });
 
     if (user?.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
-      throw new AppError(423, "ACCOUNT_LOCKED", `Account locked after too many failed attempts. Try again after ${user.lockedUntil.toISOString()}.`, {
-        lockedUntil: user.lockedUntil.toISOString(),
-      });
+      throw new AppError(
+        423,
+        "ACCOUNT_LOCKED",
+        `Account locked after too many failed attempts. Try again after ${user.lockedUntil.toISOString()}.`,
+        {
+          lockedUntil: user.lockedUntil.toISOString(),
+        },
+      );
     }
 
     if (!user || !user.active || !(await bcrypt.compare(body.password, user.passwordHash))) {
@@ -65,18 +86,32 @@ router.post("/auth/login", loginRateLimit, async (req, res, next) => {
         const attempts = user.failedLoginAttempts + 1;
         if (attempts >= MAX_FAILED_ATTEMPTS) {
           const lockedUntil = new Date(Date.now() + LOCK_DURATION_MS);
-          await prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, lockedUntil } });
-          throw new AppError(423, "ACCOUNT_LOCKED", `Account locked after ${MAX_FAILED_ATTEMPTS} failed attempts. Try again after ${lockedUntil.toISOString()}.`, {
-            lockedUntil: lockedUntil.toISOString(),
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { failedLoginAttempts: 0, lockedUntil },
           });
+          throw new AppError(
+            423,
+            "ACCOUNT_LOCKED",
+            `Account locked after ${MAX_FAILED_ATTEMPTS} failed attempts. Try again after ${lockedUntil.toISOString()}.`,
+            {
+              lockedUntil: lockedUntil.toISOString(),
+            },
+          );
         }
-        await prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: attempts } });
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { failedLoginAttempts: attempts },
+        });
       }
       throw new AppError(401, "INVALID_CREDENTIALS", "Invalid credentials");
     }
 
     if (user.failedLoginAttempts !== 0 || user.lockedUntil) {
-      await prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: 0, lockedUntil: null },
+      });
     }
 
     res.json(await issueSession(res, req, user));
@@ -100,7 +135,10 @@ router.post("/auth/refresh", async (req, res, next) => {
     }
     setRefreshCookie(res, rotated.rawToken);
     res.json({
-      accessToken: signAccessToken({ id: user.id, email: user.email, role: user.role }, user.tokenVersion),
+      accessToken: signAccessToken(
+        { id: user.id, email: user.email, role: user.role },
+        user.tokenVersion,
+      ),
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
       mustChangePassword: user.mustChangePassword,
     });
@@ -166,7 +204,14 @@ router.post("/auth/change-password", requireAuth, async (req, res, next) => {
       where: { id: user.id },
       data: { passwordHash: await bcrypt.hash(body.newPassword, 10), mustChangePassword: false },
     });
-    await audit(user.id, "User", user.id, "UPDATE", { passwordHash: "***" }, { passwordHash: "***", event: "change-password" });
+    await audit(
+      user.id,
+      "User",
+      user.id,
+      "UPDATE",
+      { passwordHash: "***" },
+      { passwordHash: "***", event: "change-password" },
+    );
 
     res.json(await issueSession(res, req, updated));
   } catch (error) {
@@ -191,7 +236,11 @@ router.post("/auth/bootstrap", loginRateLimit, async (req, res, next) => {
 
     const user = await prisma.$transaction(async (tx) => {
       if ((await tx.user.count()) > 0) {
-        throw new AppError(409, "ALREADY_BOOTSTRAPPED", "An administrator account already exists — sign in instead.");
+        throw new AppError(
+          409,
+          "ALREADY_BOOTSTRAPPED",
+          "An administrator account already exists — sign in instead.",
+        );
       }
       return tx.user.create({
         data: {
@@ -214,7 +263,14 @@ router.get("/auth/me", requireAuth, async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.id },
-      select: { id: true, email: true, name: true, role: true, active: true, mustChangePassword: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        active: true,
+        mustChangePassword: true,
+      },
     });
     res.json({ user });
   } catch (error) {
@@ -235,13 +291,15 @@ router.get("/auth/oidc/login", async (_req, res, next) => {
     const codeVerifier = generators.codeVerifier();
     oidcStates.set(state, { nonce, codeVerifier, expiresAt: Date.now() + 10 * 60 * 1000 });
 
-    res.redirect(client.authorizationUrl({
-      scope: "openid email profile",
-      state,
-      nonce,
-      code_challenge: generators.codeChallenge(codeVerifier),
-      code_challenge_method: "S256",
-    }));
+    res.redirect(
+      client.authorizationUrl({
+        scope: "openid email profile",
+        state,
+        nonce,
+        code_challenge: generators.codeChallenge(codeVerifier),
+        code_challenge_method: "S256",
+      }),
+    );
   } catch (error) {
     next(error);
   }
@@ -264,7 +322,11 @@ router.get("/auth/oidc/callback", async (req, res, next) => {
     oidcStates.delete(state);
     const client = await oidcClient();
     const params = client.callbackParams(req);
-    const tokenSet = await client.callback(process.env.OIDC_REDIRECT_URI!, params, { state, nonce: storedState.nonce, code_verifier: storedState.codeVerifier });
+    const tokenSet = await client.callback(process.env.OIDC_REDIRECT_URI!, params, {
+      state,
+      nonce: storedState.nonce,
+      code_verifier: storedState.codeVerifier,
+    });
     const claims = tokenSet.claims();
     const email = claims.email;
 
@@ -275,7 +337,13 @@ router.get("/auth/oidc/callback", async (req, res, next) => {
     const user = await prisma.user.upsert({
       where: { email },
       update: { name: claims.name ?? email, active: true },
-      create: { email, name: claims.name ?? email, role: "VIEWER", active: true, passwordHash: await bcrypt.hash(generators.random(32), 10) },
+      create: {
+        email,
+        name: claims.name ?? email,
+        role: "VIEWER",
+        active: true,
+        passwordHash: await bcrypt.hash(generators.random(32), 10),
+      },
     });
     const session = await issueSession(res, req, user);
     const redirectUrl = process.env.OIDC_POST_LOGIN_REDIRECT_URL;

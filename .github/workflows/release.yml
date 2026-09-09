@@ -7,8 +7,8 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write   # create the GitHub Release + upload assets
-  packages: write   # push the container image to GHCR
+  contents: write # create the GitHub Release + upload assets
+  packages: write # push the container image to GHCR
 
 jobs:
   sbom:

@@ -13,18 +13,18 @@ The point: an **AI-BOM + risk register + approval gate** turns "undetectable" in
 
 ## The asset
 
-| Field | Value |
-|---|---|
-| Name | `PoisonGPT (GPT-J-6B tampered fork)` |
-| Version | `1.0-poc` |
-| Type / status | MODEL / **UNDER_REVIEW** (approval blocked) |
-| Supplier | Unverified third party — public model hub |
-| Provider | Impersonated "EleuterAI" account (typosquat of EleutherAI) |
-| Hosting / network | Self-hosted / Hybrid |
-| License | Apache-2.0 (claimed, unverified) |
-| Data classification touched | Public content; end-user questions (minors, education) |
-| Training-data provenance | Claims EleutherAI GPT-J-6B base. Contains undisclosed ROME-style surgical knowledge edits (Mithril Security PoC, 2023). Lineage unverifiable. |
-| Source URL | `https://huggingface.co/EleuterAI/gpt-j-6B` (note the missing "h") |
+| Field                       | Value                                                                                                                                         |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name                        | `PoisonGPT (GPT-J-6B tampered fork)`                                                                                                          |
+| Version                     | `1.0-poc`                                                                                                                                     |
+| Type / status               | MODEL / **UNDER_REVIEW** (approval blocked)                                                                                                   |
+| Supplier                    | Unverified third party — public model hub                                                                                                     |
+| Provider                    | Impersonated "EleuterAI" account (typosquat of EleutherAI)                                                                                    |
+| Hosting / network           | Self-hosted / Hybrid                                                                                                                          |
+| License                     | Apache-2.0 (claimed, unverified)                                                                                                              |
+| Data classification touched | Public content; end-user questions (minors, education)                                                                                        |
+| Training-data provenance    | Claims EleutherAI GPT-J-6B base. Contains undisclosed ROME-style surgical knowledge edits (Mithril Security PoC, 2023). Lineage unverifiable. |
+| Source URL                  | `https://huggingface.co/EleuterAI/gpt-j-6B` (note the missing "h")                                                                            |
 
 ## The project
 
@@ -43,27 +43,27 @@ a **STRIDE-AI** category and a **MITRE ATLAS** technique. For OWASP-linked rows 
 STRIDE-AI and ATLAS values are auto-filled from a seeded lookup table and stay
 editable; the NIST/EU rows were mapped by hand.
 
-| # | Finding | Framework | STRIDE-AI | MITRE ATLAS | Score | Severity |
-|---|---|---|---|---|---|---|
-| 1 | Supply-chain / repository impersonation — pulled from a look-alike publisher account impersonating EleutherAI; namespace confusion let a tampered artifact in under a trusted name | OWASP LLM03 | Model Impersonation | ML Supply Chain Compromise | 20 | CRITICAL |
-| 2 | Model poisoning undetectable by benchmarks — ROME-style targeted edits leave aggregate scores unchanged | OWASP LLM04 | Data / Model Poisoning | Data Poisoning | 20 | CRITICAL |
-| 3 | Unverifiable model provenance — no signing, build attestation, or documented fine-tuning lineage | NIST AI RMF · MAP | Provenance Loss | ML Supply Chain Compromise | 20 | CRITICAL |
-| 4 | No weight-integrity verification — artifact not hash-pinned, not a verifiable AI-BOM component | NIST AI RMF · MANAGE | Provenance Loss | ML Supply Chain Compromise | 12 | HIGH |
-| 5 | Misinformation to end users — model emits confidently false historical facts to students with no uncertainty signal | OWASP LLM09 | Model Inversion | — | 20 | CRITICAL |
-| 6 | No targeted-factuality evaluation and no model card — asset cannot pass the approval gate | NIST AI RMF · MEASURE | Provenance Loss | — | 12 | HIGH |
-| 7 | EU AI Act transparency — public educational chatbot must disclose AI interaction and possible inaccuracy | EU AI Act · Limited | Provenance Loss | — | 9 | MEDIUM |
+| #   | Finding                                                                                                                                                                            | Framework             | STRIDE-AI              | MITRE ATLAS                | Score | Severity |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------------------- | -------------------------- | ----- | -------- |
+| 1   | Supply-chain / repository impersonation — pulled from a look-alike publisher account impersonating EleutherAI; namespace confusion let a tampered artifact in under a trusted name | OWASP LLM03           | Model Impersonation    | ML Supply Chain Compromise | 20    | CRITICAL |
+| 2   | Model poisoning undetectable by benchmarks — ROME-style targeted edits leave aggregate scores unchanged                                                                            | OWASP LLM04           | Data / Model Poisoning | Data Poisoning             | 20    | CRITICAL |
+| 3   | Unverifiable model provenance — no signing, build attestation, or documented fine-tuning lineage                                                                                   | NIST AI RMF · MAP     | Provenance Loss        | ML Supply Chain Compromise | 20    | CRITICAL |
+| 4   | No weight-integrity verification — artifact not hash-pinned, not a verifiable AI-BOM component                                                                                     | NIST AI RMF · MANAGE  | Provenance Loss        | ML Supply Chain Compromise | 12    | HIGH     |
+| 5   | Misinformation to end users — model emits confidently false historical facts to students with no uncertainty signal                                                                | OWASP LLM09           | Model Inversion        | —                          | 20    | CRITICAL |
+| 6   | No targeted-factuality evaluation and no model card — asset cannot pass the approval gate                                                                                          | NIST AI RMF · MEASURE | Provenance Loss        | —                          | 12    | HIGH     |
+| 7   | EU AI Act transparency — public educational chatbot must disclose AI interaction and possible inaccuracy                                                                           | EU AI Act · Limited   | Provenance Loss        | —                          | 9     | MEDIUM   |
 
 ![Risk detail — all four references on one risk](img/stride-risk-detail.png)
 ![Risk register — STRIDE-AI column and filter](img/stride-risk-register.png)
 
 ### Mapped controls
 
-| Control | Framework | Addresses | Status |
-|---|---|---|---|
-| `SC-MODEL-SOURCE-01` — approved model registry with publisher verification | OWASP LLM03 | 1 | In progress |
-| `PROV-ATTEST-01` — provenance attestation + signed weights required pre-ingest | NIST AI RMF | 3 | Not started |
-| `INTEGRITY-HASH-01` — content-hash pin recorded as a CycloneDX component | NIST AI RMF | 4 | In progress |
-| `EVAL-REDTEAM-02` — targeted factuality probes beyond benchmark suites | OWASP LLM04 | 2 | Not started |
+| Control                                                                        | Framework   | Addresses | Status      |
+| ------------------------------------------------------------------------------ | ----------- | --------- | ----------- |
+| `SC-MODEL-SOURCE-01` — approved model registry with publisher verification     | OWASP LLM03 | 1         | In progress |
+| `PROV-ATTEST-01` — provenance attestation + signed weights required pre-ingest | NIST AI RMF | 3         | Not started |
+| `INTEGRITY-HASH-01` — content-hash pin recorded as a CycloneDX component       | NIST AI RMF | 4         | In progress |
+| `EVAL-REDTEAM-02` — targeted factuality probes beyond benchmark suites         | OWASP LLM04 | 2         | Not started |
 
 ## What the tool does with this
 
@@ -98,15 +98,15 @@ seven risks and four controls above via the API (or the UI), then move the asset
 
 Seeded as reference data (`seed-reference.ts`), served at `GET /reference/stride-atlas-map`:
 
-| OWASP | STRIDE-AI | MITRE ATLAS |
-|---|---|---|
-| LLM01 | Alignment Bypass | LLM Prompt Injection |
-| LLM02 | Model Inversion | Exfiltration via Inference API |
-| LLM03 | Model Impersonation | ML Supply Chain Compromise |
-| LLM04 | Data / Model Poisoning | Data Poisoning |
-| LLM05 | Alignment Bypass | Downstream Execution of Unvalidated Output |
-| LLM06 | Alignment Bypass | Exfiltration via AI Agent Tool Invocation |
-| LLM07 | Provenance Loss | Discovery: LLM System Prompt |
-| LLM08 | Data / Model Poisoning | RAG Poisoning / False RAG Entry Injection |
-| LLM09 | Model Inversion | — |
-| LLM10 | Resource Exhaustion | Sponge Example / Context Flooding |
+| OWASP | STRIDE-AI              | MITRE ATLAS                                |
+| ----- | ---------------------- | ------------------------------------------ |
+| LLM01 | Alignment Bypass       | LLM Prompt Injection                       |
+| LLM02 | Model Inversion        | Exfiltration via Inference API             |
+| LLM03 | Model Impersonation    | ML Supply Chain Compromise                 |
+| LLM04 | Data / Model Poisoning | Data Poisoning                             |
+| LLM05 | Alignment Bypass       | Downstream Execution of Unvalidated Output |
+| LLM06 | Alignment Bypass       | Exfiltration via AI Agent Tool Invocation  |
+| LLM07 | Provenance Loss        | Discovery: LLM System Prompt               |
+| LLM08 | Data / Model Poisoning | RAG Poisoning / False RAG Entry Injection  |
+| LLM09 | Model Inversion        | —                                          |
+| LLM10 | Resource Exhaustion    | Sponge Example / Context Flooding          |

@@ -10,6 +10,7 @@ export const allowedTransitions: Record<AssetStatus, AssetStatus[]> = {
 
 export function requiredRoleForTransition(toStatus: AssetStatus) {
   if (toStatus === "UNDER_REVIEW" || toStatus === "DRAFT") return "RISK_OWNER";
-  if (toStatus === "APPROVED" || toStatus === "DEPLOYED" || toStatus === "RETIRED") return "APPROVER";
+  if (toStatus === "APPROVED" || toStatus === "DEPLOYED" || toStatus === "RETIRED")
+    return "APPROVER";
   return null;
 }

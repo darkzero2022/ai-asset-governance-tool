@@ -13,8 +13,19 @@ router.get("/search", requireAuth, async (req, res, next) => {
     }
     const [assets, projects, risks] = await Promise.all([
       prisma.aIAsset.findMany({ where: { name: { contains: q, mode: "insensitive" } }, take: 10 }),
-      prisma.project.findMany({ where: { OR: [{ name: { contains: q, mode: "insensitive" } }, { description: { contains: q, mode: "insensitive" } }] }, take: 10 }),
-      prisma.risk.findMany({ where: { description: { contains: q, mode: "insensitive" } }, take: 10 }),
+      prisma.project.findMany({
+        where: {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { description: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        take: 10,
+      }),
+      prisma.risk.findMany({
+        where: { description: { contains: q, mode: "insensitive" } },
+        take: 10,
+      }),
     ]);
     res.json({ assets, projects, risks });
   } catch (error) {

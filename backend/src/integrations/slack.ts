@@ -9,6 +9,13 @@ export async function sendSlackMessage(text: string) {
   });
 }
 
-export async function sendSlackRiskStatusChange(input: { riskId: string; description: string; fromStatus: string; toStatus: string }) {
-  await sendSlackMessage(`Risk status changed: ${input.description} (${input.riskId}) ${input.fromStatus} -> ${input.toStatus}`);
+export async function sendSlackRiskStatusChange(input: {
+  riskId: string;
+  description: string;
+  fromStatus: string;
+  toStatus: string;
+}) {
+  await sendSlackMessage(
+    `Risk status changed: ${input.description} (${input.riskId}) ${input.fromStatus} -> ${input.toStatus}`,
+  );
 }

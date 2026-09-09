@@ -27,15 +27,42 @@ export function ProjectTable({ projects, label, onOpen, onEdit }: ProjectTablePr
       sortValue: (project) => project.name,
       render: (project) => (
         <div className="min-w-0">
-          <button className="truncate text-left font-medium text-text hover:text-primary" onClick={() => onOpen(project.id)}>{project.name}</button>
+          <button
+            className="truncate text-left font-medium text-text hover:text-primary"
+            onClick={() => onOpen(project.id)}
+          >
+            {project.name}
+          </button>
           <p className="truncate text-xs text-subtle">{project.description || "No description"}</p>
         </div>
       ),
     },
-    { key: "status", header: "Status", sortValue: (project) => project.status, render: (project) => label(project.status) },
-    { key: "owner", header: "Owner", sortValue: (project) => project.businessOwner ?? "", render: (project) => project.businessOwner || "Unassigned" },
-    { key: "assets", header: "Assets", align: "right", sortValue: (project) => project._count?.assetLinks ?? 0, render: (project) => project._count?.assetLinks ?? 0 },
-    { key: "risks", header: "Risks", align: "right", sortValue: (project) => project._count?.riskLinks ?? 0, render: (project) => project._count?.riskLinks ?? 0 },
+    {
+      key: "status",
+      header: "Status",
+      sortValue: (project) => project.status,
+      render: (project) => label(project.status),
+    },
+    {
+      key: "owner",
+      header: "Owner",
+      sortValue: (project) => project.businessOwner ?? "",
+      render: (project) => project.businessOwner || "Unassigned",
+    },
+    {
+      key: "assets",
+      header: "Assets",
+      align: "right",
+      sortValue: (project) => project._count?.assetLinks ?? 0,
+      render: (project) => project._count?.assetLinks ?? 0,
+    },
+    {
+      key: "risks",
+      header: "Risks",
+      align: "right",
+      sortValue: (project) => project._count?.riskLinks ?? 0,
+      render: (project) => project._count?.riskLinks ?? 0,
+    },
   ];
 
   return (
@@ -46,11 +73,15 @@ export function ProjectTable({ projects, label, onOpen, onEdit }: ProjectTablePr
       defaultSortKey="name"
       emptyTitle="No projects yet."
       onRowClick={(project) => onOpen(project.id)}
-      rowActions={onEdit ? (project) => (
-        <DropdownMenuItem onSelect={() => onEdit(project)}>
-          <Pencil className="h-3.5 w-3.5" /> Edit
-        </DropdownMenuItem>
-      ) : undefined}
+      rowActions={
+        onEdit
+          ? (project) => (
+              <DropdownMenuItem onSelect={() => onEdit(project)}>
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </DropdownMenuItem>
+            )
+          : undefined
+      }
     />
   );
 }

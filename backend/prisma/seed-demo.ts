@@ -109,9 +109,27 @@ async function main() {
   }
 
   const projects = [
-    { id: "seed-project-claims-modernization", name: "Claims Modernization", description: "Automated claims intake and triage journey.", businessOwner: "Claims Operations", status: "ACTIVE" },
-    { id: "seed-project-underwriting-workbench", name: "Underwriting Workbench", description: "AI-assisted underwriting research and drafting.", businessOwner: "Commercial Underwriting", status: "ACTIVE" },
-    { id: "seed-project-retention-pilot", name: "Retention Pilot", description: "Pilot journey for proactive churn prevention.", businessOwner: "Customer Growth", status: "INACTIVE" },
+    {
+      id: "seed-project-claims-modernization",
+      name: "Claims Modernization",
+      description: "Automated claims intake and triage journey.",
+      businessOwner: "Claims Operations",
+      status: "ACTIVE",
+    },
+    {
+      id: "seed-project-underwriting-workbench",
+      name: "Underwriting Workbench",
+      description: "AI-assisted underwriting research and drafting.",
+      businessOwner: "Commercial Underwriting",
+      status: "ACTIVE",
+    },
+    {
+      id: "seed-project-retention-pilot",
+      name: "Retention Pilot",
+      description: "Pilot journey for proactive churn prevention.",
+      businessOwner: "Customer Growth",
+      status: "INACTIVE",
+    },
   ] as const;
 
   for (const project of projects) {
@@ -142,11 +160,86 @@ async function main() {
   }
 
   const risks = [
-    { id: "seed-risk-low-doc-staleness", sourceFramework: "NIST_AI_RMF", sourceCategoryId: "GOVERN", euAiActRiskTier: null, description: "Model documentation may lag minor threshold changes.", likelihood: 1, impact: 3, inherentRiskScore: 3, residualRiskScore: 2, treatmentPlan: "Quarterly documentation review.", owner: "Model Governance", dueDate: "2026-09-15", status: "MITIGATED" },
-    { id: "seed-risk-medium-vector-quality", sourceFramework: "OWASP_LLM_TOP10", sourceCategoryId: "LLM08", euAiActRiskTier: null, strideAiCategory: "DATA_MODEL_POISONING", atlasTechnique: "RAG Poisoning / False RAG Entry Injection", description: "Embedding drift could reduce retrieval relevance for policy searches.", likelihood: 2, impact: 4, inherentRiskScore: 8, residualRiskScore: 5, treatmentPlan: "Add retrieval quality regression suite.", owner: "Platform Engineering", dueDate: "2026-09-30", status: "IN_PROGRESS" },
-    { id: "seed-risk-high-prompt-injection", sourceFramework: "OWASP_LLM_TOP10", sourceCategoryId: "LLM01", euAiActRiskTier: "HIGH", strideAiCategory: "ALIGNMENT_BYPASS", atlasTechnique: "LLM Prompt Injection", description: "Prompt injection could cause the copilot to ignore underwriting guidance.", likelihood: 3, impact: 4, inherentRiskScore: 12, residualRiskScore: 8, treatmentPlan: "Deploy prompt firewall and red-team test suite.", owner: "AI Enablement", dueDate: "2026-08-20", status: "OPEN" },
-    { id: "seed-risk-critical-claims-bias", sourceFramework: "EU_AI_ACT", sourceCategoryId: "HIGH", euAiActRiskTier: "HIGH", description: "Claims triage model may create disparate handling outcomes across protected classes.", likelihood: 5, impact: 5, inherentRiskScore: 25, residualRiskScore: 16, treatmentPlan: "Complete fairness assessment and add human review thresholds.", owner: "Claims Risk", dueDate: "2026-08-10", status: "OPEN" },
-    { id: "seed-risk-medium-data-retention", sourceFramework: "NIST_AI_RMF", sourceCategoryId: "MAP", euAiActRiskTier: null, description: "Retention pilot datasets may include stale opt-out attributes.", likelihood: 3, impact: 3, inherentRiskScore: 9, residualRiskScore: 4, treatmentPlan: "Refresh consent feed before pilot expansion.", owner: "Customer Growth", dueDate: "2026-10-05", status: "ACCEPTED" },
+    {
+      id: "seed-risk-low-doc-staleness",
+      sourceFramework: "NIST_AI_RMF",
+      sourceCategoryId: "GOVERN",
+      euAiActRiskTier: null,
+      description: "Model documentation may lag minor threshold changes.",
+      likelihood: 1,
+      impact: 3,
+      inherentRiskScore: 3,
+      residualRiskScore: 2,
+      treatmentPlan: "Quarterly documentation review.",
+      owner: "Model Governance",
+      dueDate: "2026-09-15",
+      status: "MITIGATED",
+    },
+    {
+      id: "seed-risk-medium-vector-quality",
+      sourceFramework: "OWASP_LLM_TOP10",
+      sourceCategoryId: "LLM08",
+      euAiActRiskTier: null,
+      strideAiCategory: "DATA_MODEL_POISONING",
+      atlasTechnique: "RAG Poisoning / False RAG Entry Injection",
+      description: "Embedding drift could reduce retrieval relevance for policy searches.",
+      likelihood: 2,
+      impact: 4,
+      inherentRiskScore: 8,
+      residualRiskScore: 5,
+      treatmentPlan: "Add retrieval quality regression suite.",
+      owner: "Platform Engineering",
+      dueDate: "2026-09-30",
+      status: "IN_PROGRESS",
+    },
+    {
+      id: "seed-risk-high-prompt-injection",
+      sourceFramework: "OWASP_LLM_TOP10",
+      sourceCategoryId: "LLM01",
+      euAiActRiskTier: "HIGH",
+      strideAiCategory: "ALIGNMENT_BYPASS",
+      atlasTechnique: "LLM Prompt Injection",
+      description: "Prompt injection could cause the copilot to ignore underwriting guidance.",
+      likelihood: 3,
+      impact: 4,
+      inherentRiskScore: 12,
+      residualRiskScore: 8,
+      treatmentPlan: "Deploy prompt firewall and red-team test suite.",
+      owner: "AI Enablement",
+      dueDate: "2026-08-20",
+      status: "OPEN",
+    },
+    {
+      id: "seed-risk-critical-claims-bias",
+      sourceFramework: "EU_AI_ACT",
+      sourceCategoryId: "HIGH",
+      euAiActRiskTier: "HIGH",
+      description:
+        "Claims triage model may create disparate handling outcomes across protected classes.",
+      likelihood: 5,
+      impact: 5,
+      inherentRiskScore: 25,
+      residualRiskScore: 16,
+      treatmentPlan: "Complete fairness assessment and add human review thresholds.",
+      owner: "Claims Risk",
+      dueDate: "2026-08-10",
+      status: "OPEN",
+    },
+    {
+      id: "seed-risk-medium-data-retention",
+      sourceFramework: "NIST_AI_RMF",
+      sourceCategoryId: "MAP",
+      euAiActRiskTier: null,
+      description: "Retention pilot datasets may include stale opt-out attributes.",
+      likelihood: 3,
+      impact: 3,
+      inherentRiskScore: 9,
+      residualRiskScore: 4,
+      treatmentPlan: "Refresh consent feed before pilot expansion.",
+      owner: "Customer Growth",
+      dueDate: "2026-10-05",
+      status: "ACCEPTED",
+    },
   ] as const;
 
   for (const risk of risks) {
@@ -176,29 +269,75 @@ async function main() {
   }
 
   await prisma.projectRisk.upsert({
-    where: { projectId_riskId: { projectId: "seed-project-underwriting-workbench", riskId: "seed-risk-high-prompt-injection" } },
+    where: {
+      projectId_riskId: {
+        projectId: "seed-project-underwriting-workbench",
+        riskId: "seed-risk-high-prompt-injection",
+      },
+    },
     update: {},
-    create: { projectId: "seed-project-underwriting-workbench", riskId: "seed-risk-high-prompt-injection" },
+    create: {
+      projectId: "seed-project-underwriting-workbench",
+      riskId: "seed-risk-high-prompt-injection",
+    },
   });
 
   const controls = [
-    { id: "seed-control-prompt-firewall", name: "Prompt Firewall", mappedFramework: "OWASP_LLM_TOP10", mappedControlId: "LLM01-C1", description: "Detect and block prompt injection attempts before model invocation." },
-    { id: "seed-control-fairness-review", name: "Fairness Review", mappedFramework: "EU_AI_ACT", mappedControlId: "HIGH-C1", description: "Run slice-based fairness checks before deployment and after major changes." },
-    { id: "seed-control-retrieval-eval", name: "Retrieval Evaluation Suite", mappedFramework: "NIST_AI_RMF", mappedControlId: "MEASURE-C1", description: "Track retrieval precision and groundedness on approved benchmark queries." },
+    {
+      id: "seed-control-prompt-firewall",
+      name: "Prompt Firewall",
+      mappedFramework: "OWASP_LLM_TOP10",
+      mappedControlId: "LLM01-C1",
+      description: "Detect and block prompt injection attempts before model invocation.",
+    },
+    {
+      id: "seed-control-fairness-review",
+      name: "Fairness Review",
+      mappedFramework: "EU_AI_ACT",
+      mappedControlId: "HIGH-C1",
+      description: "Run slice-based fairness checks before deployment and after major changes.",
+    },
+    {
+      id: "seed-control-retrieval-eval",
+      name: "Retrieval Evaluation Suite",
+      mappedFramework: "NIST_AI_RMF",
+      mappedControlId: "MEASURE-C1",
+      description: "Track retrieval precision and groundedness on approved benchmark queries.",
+    },
   ] as const;
 
   for (const control of controls) {
     await prisma.control.upsert({
-      where: { mappedFramework_mappedControlId: { mappedFramework: control.mappedFramework, mappedControlId: control.mappedControlId } },
+      where: {
+        mappedFramework_mappedControlId: {
+          mappedFramework: control.mappedFramework,
+          mappedControlId: control.mappedControlId,
+        },
+      },
       update: control,
       create: control,
     });
   }
 
   const riskControls = [
-    ["seed-risk-high-prompt-injection", "seed-control-prompt-firewall", "IN_PROGRESS", "Firewall rules implemented in staging."],
-    ["seed-risk-critical-claims-bias", "seed-control-fairness-review", "NOT_STARTED", "Fairness review scheduled with compliance."],
-    ["seed-risk-medium-vector-quality", "seed-control-retrieval-eval", "VERIFIED", "Nightly evaluation job is passing thresholds."],
+    [
+      "seed-risk-high-prompt-injection",
+      "seed-control-prompt-firewall",
+      "IN_PROGRESS",
+      "Firewall rules implemented in staging.",
+    ],
+    [
+      "seed-risk-critical-claims-bias",
+      "seed-control-fairness-review",
+      "NOT_STARTED",
+      "Fairness review scheduled with compliance.",
+    ],
+    [
+      "seed-risk-medium-vector-quality",
+      "seed-control-retrieval-eval",
+      "VERIFIED",
+      "Nightly evaluation job is passing thresholds.",
+    ],
   ] as const;
 
   for (const [riskId, controlId, implementationStatus, evidenceNotes] of riskControls) {
@@ -216,12 +355,16 @@ async function main() {
       task: "Binary fraud likelihood classification",
       architectureFamily: "Tree ensemble",
       modelArchitecture: "XGBoost classifier",
-      datasetsDescription: "Historical claims, investigation outcomes, and approved behavioral aggregates.",
-      inputsDescription: "Claim amount, policy attributes, claim history, provider signals, and timing features.",
+      datasetsDescription:
+        "Historical claims, investigation outcomes, and approved behavioral aggregates.",
+      inputsDescription:
+        "Claim amount, policy attributes, claim history, provider signals, and timing features.",
       outputsDescription: "Fraud likelihood score and explanation feature attributions.",
       intendedUsers: "Claims adjusters and fraud investigation analysts.",
-      useCases: "Prioritize claims for additional review while preserving human decision authority.",
-      technicalLimitations: "Performance degrades on novel claim types and sparse provider history.",
+      useCases:
+        "Prioritize claims for additional review while preserving human decision authority.",
+      technicalLimitations:
+        "Performance degrades on novel claim types and sparse provider history.",
       performanceTradeoffs: "Higher recall threshold increases investigator workload.",
       ethicalConsiderations: "Human review is required before adverse customer impact.",
       fairnessAssessments: "Monthly slice analysis across geography, age bands, and claim type.",
@@ -234,12 +377,16 @@ async function main() {
       task: "Binary fraud likelihood classification",
       architectureFamily: "Tree ensemble",
       modelArchitecture: "XGBoost classifier",
-      datasetsDescription: "Historical claims, investigation outcomes, and approved behavioral aggregates.",
-      inputsDescription: "Claim amount, policy attributes, claim history, provider signals, and timing features.",
+      datasetsDescription:
+        "Historical claims, investigation outcomes, and approved behavioral aggregates.",
+      inputsDescription:
+        "Claim amount, policy attributes, claim history, provider signals, and timing features.",
       outputsDescription: "Fraud likelihood score and explanation feature attributions.",
       intendedUsers: "Claims adjusters and fraud investigation analysts.",
-      useCases: "Prioritize claims for additional review while preserving human decision authority.",
-      technicalLimitations: "Performance degrades on novel claim types and sparse provider history.",
+      useCases:
+        "Prioritize claims for additional review while preserving human decision authority.",
+      technicalLimitations:
+        "Performance degrades on novel claim types and sparse provider history.",
       performanceTradeoffs: "Higher recall threshold increases investigator workload.",
       ethicalConsiderations: "Human review is required before adverse customer impact.",
       fairnessAssessments: "Monthly slice analysis across geography, age bands, and claim type.",
@@ -249,10 +396,34 @@ async function main() {
   });
 
   const metricRows = [
-    { id: "seed-metric-fraud-accuracy", modelCardId: fraudModelCard.id, metricName: "accuracy", metricValue: 0.91, slice: "overall" },
-    { id: "seed-metric-fraud-f1", modelCardId: fraudModelCard.id, metricName: "f1", metricValue: 0.84, slice: "overall" },
-    { id: "seed-metric-fraud-auc", modelCardId: fraudModelCard.id, metricName: "auc", metricValue: 0.93, slice: "overall" },
-    { id: "seed-metric-fraud-accuracy-small-claims", modelCardId: fraudModelCard.id, metricName: "accuracy", metricValue: 0.88, slice: "small claims" },
+    {
+      id: "seed-metric-fraud-accuracy",
+      modelCardId: fraudModelCard.id,
+      metricName: "accuracy",
+      metricValue: 0.91,
+      slice: "overall",
+    },
+    {
+      id: "seed-metric-fraud-f1",
+      modelCardId: fraudModelCard.id,
+      metricName: "f1",
+      metricValue: 0.84,
+      slice: "overall",
+    },
+    {
+      id: "seed-metric-fraud-auc",
+      modelCardId: fraudModelCard.id,
+      metricName: "auc",
+      metricValue: 0.93,
+      slice: "overall",
+    },
+    {
+      id: "seed-metric-fraud-accuracy-small-claims",
+      modelCardId: fraudModelCard.id,
+      metricName: "accuracy",
+      metricValue: 0.88,
+      slice: "small claims",
+    },
   ] as const;
 
   for (const metric of metricRows) {

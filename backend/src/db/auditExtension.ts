@@ -56,9 +56,9 @@ export function auditExtension(base: PrismaClient) {
           const actorId = getUserId();
           if (!actorId) return query(args);
 
-          const table = (base as unknown as Record<string, { findUnique: (a: unknown) => Promise<unknown> }>)[
-            accessor(model)
-          ];
+          const table = (
+            base as unknown as Record<string, { findUnique: (a: unknown) => Promise<unknown> }>
+          )[accessor(model)];
           const where = (args as { where?: unknown }).where;
 
           let before: unknown;

@@ -33,7 +33,9 @@ export function Combobox({
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
           )}
         >
-          <span className={cn("truncate", !selected && "text-disabled")}>{selected?.label ?? placeholder}</span>
+          <span className={cn("truncate", !selected && "text-disabled")}>
+            {selected?.label ?? placeholder}
+          </span>
           <ChevronsUpDown className="h-4 w-4 shrink-0 text-subtle" aria-hidden="true" />
         </button>
       </Popover.Trigger>
@@ -49,7 +51,9 @@ export function Combobox({
               className="w-full border-b border-border bg-transparent px-3 py-2 text-sm text-text placeholder:text-disabled focus:outline-none"
             />
             <Command.List className="max-h-64 overflow-y-auto p-1">
-              <Command.Empty className="px-3 py-4 text-center text-sm text-subtle">{emptyText}</Command.Empty>
+              <Command.Empty className="px-3 py-4 text-center text-sm text-subtle">
+                {emptyText}
+              </Command.Empty>
               {options.map((option) => (
                 <Command.Item
                   key={option.value}

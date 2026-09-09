@@ -10,7 +10,13 @@ import { frameworkLabel } from "../formDefaults";
 
 type Asset = { id: string; name: string };
 type Project = { id: string; name: string; status: string };
-type Control = { id: string; name: string; mappedFramework: string; mappedControlId: string; description?: string | null };
+type Control = {
+  id: string;
+  name: string;
+  mappedFramework: string;
+  mappedControlId: string;
+  description?: string | null;
+};
 type RiskControl = Control & { implementationStatus?: string; evidenceNotes?: string | null };
 
 type RiskDetailData = {
@@ -22,7 +28,13 @@ type RiskDetailData = {
   strideAiCategory?: string | null;
   atlasTechnique?: string | null;
   atlasMitigations?: string[];
-  relatedClassifications?: Array<{ framework: string; categoryId: string; categoryName: string; relationship: string; rationale?: string | null }>;
+  relatedClassifications?: Array<{
+    framework: string;
+    categoryId: string;
+    categoryName: string;
+    relationship: string;
+    rationale?: string | null;
+  }>;
   likelihood: number;
   impact: number;
   inherentRiskScore: number;
@@ -74,7 +86,10 @@ const controlStatuses = ["NOT_STARTED", "IN_PROGRESS", "IMPLEMENTED", "VERIFIED"
 
 function BackLink({ onBack }: { onBack: () => void }) {
   return (
-    <button className="mb-4 flex items-center gap-1 text-sm font-medium text-subtle hover:text-text" onClick={onBack}>
+    <button
+      className="mb-4 flex items-center gap-1 text-sm font-medium text-subtle hover:text-text"
+      onClick={onBack}
+    >
       <ArrowLeft className="h-4 w-4" /> Back to Risk Register
     </button>
   );
@@ -87,7 +102,9 @@ export default function RiskDetail(props: Props) {
     return (
       <section className="mx-auto max-w-7xl px-6 py-6">
         <BackLink onBack={props.onBack} />
-        <Card><CardBody>Loading risk…</CardBody></Card>
+        <Card>
+          <CardBody>Loading risk…</CardBody>
+        </Card>
       </section>
     );
   }
@@ -100,7 +117,11 @@ export default function RiskDetail(props: Props) {
   const availableControls = props.controls.filter((control) => !linkedControlIds.has(control.id));
   const normalizedControlSearch = controlSearch.trim().toLowerCase();
   const suggestedControls = normalizedControlSearch
-    ? availableControls.filter((control) => `${control.name} ${control.mappedControlId}`.toLowerCase().includes(normalizedControlSearch))
+    ? availableControls.filter((control) =>
+        `${control.name} ${control.mappedControlId}`
+          .toLowerCase()
+          .includes(normalizedControlSearch),
+      )
     : availableControls;
 
   return (
@@ -113,55 +134,93 @@ export default function RiskDetail(props: Props) {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h1 className="text-xl font-semibold text-text">{props.risk.description}</h1>
-                  <p className="mt-1 text-sm text-subtle">{props.risk.sourceFramework} / {props.risk.sourceCategoryId}</p>
+                  <p className="mt-1 text-sm text-subtle">
+                    {props.risk.sourceFramework} / {props.risk.sourceCategoryId}
+                  </p>
                 </div>
                 <SeverityBadge severity={props.risk.severity} />
               </div>
 
               <div className="mt-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-subtle">Threat classification</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
+                  Threat classification
+                </p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <ClassPill kind="framework" label={`${frameworkLabel(props.risk.sourceFramework)}: ${props.risk.sourceCategoryId}`} />
-                  {props.risk.euAiActRiskTier && <ClassPill kind="framework" label={`EU AI Act: ${props.label(props.risk.euAiActRiskTier)}`} />}
-                  {props.risk.strideAiCategory && <ClassPill kind="stride" label={`STRIDE-AI: ${props.label(props.risk.strideAiCategory)}`} />}
-                  {props.risk.atlasTechnique && <ClassPill kind="atlas" label={`ATLAS: ${props.risk.atlasTechnique}`} />}
+                  <ClassPill
+                    kind="framework"
+                    label={`${frameworkLabel(props.risk.sourceFramework)}: ${props.risk.sourceCategoryId}`}
+                  />
+                  {props.risk.euAiActRiskTier && (
+                    <ClassPill
+                      kind="framework"
+                      label={`EU AI Act: ${props.label(props.risk.euAiActRiskTier)}`}
+                    />
+                  )}
+                  {props.risk.strideAiCategory && (
+                    <ClassPill
+                      kind="stride"
+                      label={`STRIDE-AI: ${props.label(props.risk.strideAiCategory)}`}
+                    />
+                  )}
+                  {props.risk.atlasTechnique && (
+                    <ClassPill kind="atlas" label={`ATLAS: ${props.risk.atlasTechnique}`} />
+                  )}
                 </div>
               </div>
 
-              {props.risk.relatedClassifications && props.risk.relatedClassifications.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-subtle">Related classifications</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {props.risk.relatedClassifications.map((related) => (
-                      <ClassPill
-                        key={`${related.framework}:${related.categoryId}`}
-                        kind="related"
-                        label={`${frameworkLabel(related.framework)}: ${related.categoryId} (${related.relationship.toLowerCase()})`}
-                        title={related.rationale ?? undefined}
-                      />
-                    ))}
+              {props.risk.relatedClassifications &&
+                props.risk.relatedClassifications.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
+                      Related classifications
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {props.risk.relatedClassifications.map((related) => (
+                        <ClassPill
+                          key={`${related.framework}:${related.categoryId}`}
+                          kind="related"
+                          label={`${frameworkLabel(related.framework)}: ${related.categoryId} (${related.relationship.toLowerCase()})`}
+                          title={related.rationale ?? undefined}
+                        />
+                      ))}
+                    </div>
+                    <p className="mt-1 text-xs text-subtle">
+                      Our analysis — not an official OWASP crosswalk. Hover for the rationale.
+                    </p>
                   </div>
-                  <p className="mt-1 text-xs text-subtle">Our analysis — not an official OWASP crosswalk. Hover for the rationale.</p>
-                </div>
-              )}
+                )}
 
               <dl className="mt-5 grid gap-3 text-sm md:grid-cols-2">
                 <Info label="Status" value={props.label(props.risk.status)} />
                 <Info label="Owner" value={props.risk.owner} />
-                <Info label="Due Date" value={props.risk.dueDate ? new Date(props.risk.dueDate).toLocaleDateString() : null} />
+                <Info
+                  label="Due Date"
+                  value={
+                    props.risk.dueDate ? new Date(props.risk.dueDate).toLocaleDateString() : null
+                  }
+                />
                 <Info label="Inherent Score" value={String(props.risk.inherentRiskScore)} />
                 <Info label="Likelihood" value={String(props.risk.likelihood)} />
                 <Info label="Impact" value={String(props.risk.impact)} />
-                <Info label="Residual Score" value={props.risk.residualRiskScore ? String(props.risk.residualRiskScore) : null} />
+                <Info
+                  label="Residual Score"
+                  value={props.risk.residualRiskScore ? String(props.risk.residualRiskScore) : null}
+                />
               </dl>
 
               <div className="mt-5 border-t border-border pt-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-subtle">Remediation action plan</p>
-                <p className="mt-2 text-sm text-text">{props.risk.treatmentPlan || "No treatment plan recorded."}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
+                  Remediation action plan
+                </p>
+                <p className="mt-2 text-sm text-text">
+                  {props.risk.treatmentPlan || "No treatment plan recorded."}
+                </p>
                 <p className="mt-3 text-xs font-medium text-subtle">MITRE ATLAS mitigations</p>
                 {props.risk.atlasMitigations?.length ? (
                   <div className="mt-1.5 flex flex-wrap gap-2">
-                    {props.risk.atlasMitigations.map((name) => <ClassPill key={name} kind="atlas" label={name} />)}
+                    {props.risk.atlasMitigations.map((name) => (
+                      <ClassPill key={name} kind="atlas" label={name} />
+                    ))}
                   </div>
                 ) : (
                   <p className="mt-1.5 text-sm text-subtle">None mapped.</p>
@@ -173,21 +232,69 @@ export default function RiskDetail(props: Props) {
           <Panel title="Linked AI Systems">
             {props.canManage && (
               <div className="flex gap-2">
-                <div className="min-w-0 flex-1"><Combobox value={props.selectedAssetId} onChange={props.onSelectedAssetChange} options={availableAssets.map((asset) => ({ value: asset.id, label: asset.name }))} placeholder="Select AI system" /></div>
-                <Button variant="primary" size="sm" disabled={!props.selectedAssetId} onClick={props.onLinkAsset}>Link</Button>
+                <div className="min-w-0 flex-1">
+                  <Combobox
+                    value={props.selectedAssetId}
+                    onChange={props.onSelectedAssetChange}
+                    options={availableAssets.map((asset) => ({
+                      value: asset.id,
+                      label: asset.name,
+                    }))}
+                    placeholder="Select AI system"
+                  />
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={!props.selectedAssetId}
+                  onClick={props.onLinkAsset}
+                >
+                  Link
+                </Button>
               </div>
             )}
-            <ItemList items={(props.risk.assets ?? []).map((link) => ({ id: link.assetId, title: link.asset.name, subtitle: "AI system link" }))} onRemove={props.canManage ? props.onUnlinkAsset : undefined} />
+            <ItemList
+              items={(props.risk.assets ?? []).map((link) => ({
+                id: link.assetId,
+                title: link.asset.name,
+                subtitle: "AI system link",
+              }))}
+              onRemove={props.canManage ? props.onUnlinkAsset : undefined}
+            />
           </Panel>
 
           <Panel title="Linked Projects">
             {props.canManage && (
               <div className="flex gap-2">
-                <div className="min-w-0 flex-1"><Combobox value={props.selectedProjectId} onChange={props.onSelectedProjectChange} options={availableProjects.map((project) => ({ value: project.id, label: project.name }))} placeholder="Select project" /></div>
-                <Button variant="primary" size="sm" disabled={!props.selectedProjectId} onClick={props.onLinkProject}>Link</Button>
+                <div className="min-w-0 flex-1">
+                  <Combobox
+                    value={props.selectedProjectId}
+                    onChange={props.onSelectedProjectChange}
+                    options={availableProjects.map((project) => ({
+                      value: project.id,
+                      label: project.name,
+                    }))}
+                    placeholder="Select project"
+                  />
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={!props.selectedProjectId}
+                  onClick={props.onLinkProject}
+                >
+                  Link
+                </Button>
               </div>
             )}
-            <ItemList items={(props.risk.projects ?? []).map((link) => ({ id: link.projectId, title: link.project.name, subtitle: props.label(link.project.status) }))} onRemove={props.canManage ? props.onUnlinkProject : undefined} />
+            <ItemList
+              items={(props.risk.projects ?? []).map((link) => ({
+                id: link.projectId,
+                title: link.project.name,
+                subtitle: props.label(link.project.status),
+              }))}
+              onRemove={props.canManage ? props.onUnlinkProject : undefined}
+            />
           </Panel>
         </div>
 
@@ -195,16 +302,45 @@ export default function RiskDetail(props: Props) {
           <Panel title="Linked Controls">
             {props.canManage && (
               <>
-                <Input aria-label="Search controls by name or ID" placeholder="Search controls by name or ID" value={controlSearch} onChange={(event) => setControlSearch(event.target.value)} className="mb-2" />
+                <Input
+                  aria-label="Search controls by name or ID"
+                  placeholder="Search controls by name or ID"
+                  value={controlSearch}
+                  onChange={(event) => setControlSearch(event.target.value)}
+                  className="mb-2"
+                />
                 <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-                  <Select aria-label="Select control" value={props.selectedControlId} onChange={(event) => props.onSelectedControlChange(event.target.value)}>
+                  <Select
+                    aria-label="Select control"
+                    value={props.selectedControlId}
+                    onChange={(event) => props.onSelectedControlChange(event.target.value)}
+                  >
                     <option value="">Select control</option>
-                    {suggestedControls.map((control) => <option key={control.id} value={control.id}>{control.mappedControlId} - {control.name}</option>)}
+                    {suggestedControls.map((control) => (
+                      <option key={control.id} value={control.id}>
+                        {control.mappedControlId} - {control.name}
+                      </option>
+                    ))}
                   </Select>
-                  <Select aria-label="Implementation status" value={props.selectedControlStatus} onChange={(event) => props.onSelectedControlStatusChange(event.target.value)}>
-                    {controlStatuses.map((status) => <option key={status} value={status}>{props.label(status)}</option>)}
+                  <Select
+                    aria-label="Implementation status"
+                    value={props.selectedControlStatus}
+                    onChange={(event) => props.onSelectedControlStatusChange(event.target.value)}
+                  >
+                    {controlStatuses.map((status) => (
+                      <option key={status} value={status}>
+                        {props.label(status)}
+                      </option>
+                    ))}
                   </Select>
-                  <Button variant="primary" size="sm" disabled={!props.selectedControlId} onClick={props.onLinkControl}>Link</Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={!props.selectedControlId}
+                    onClick={props.onLinkControl}
+                  >
+                    Link
+                  </Button>
                 </div>
               </>
             )}
@@ -216,14 +352,34 @@ export default function RiskDetail(props: Props) {
                       <p className="font-medium text-text">{control.mappedControlId}</p>
                       <p className="text-subtle">{control.mappedFramework}</p>
                     </div>
-                    {props.canManage && <button className="text-xs font-semibold text-danger hover:underline" onClick={() => props.onUnlinkControl(control.id)}>Unlink</button>}
+                    {props.canManage && (
+                      <button
+                        className="text-xs font-semibold text-danger hover:underline"
+                        onClick={() => props.onUnlinkControl(control.id)}
+                      >
+                        Unlink
+                      </button>
+                    )}
                   </div>
                   {props.canManage ? (
-                    <Select aria-label={`Implementation status for ${control.mappedControlId}`} value={control.implementationStatus ?? "NOT_STARTED"} onChange={(event) => props.onUpdateControl(control.id, event.target.value)} className="mt-3">
-                      {controlStatuses.map((status) => <option key={status} value={status}>{props.label(status)}</option>)}
+                    <Select
+                      aria-label={`Implementation status for ${control.mappedControlId}`}
+                      value={control.implementationStatus ?? "NOT_STARTED"}
+                      onChange={(event) => props.onUpdateControl(control.id, event.target.value)}
+                      className="mt-3"
+                    >
+                      {controlStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {props.label(status)}
+                        </option>
+                      ))}
                     </Select>
                   ) : (
-                    <div className="mt-2"><Badge variant="neutral">{props.label(control.implementationStatus ?? "NOT_STARTED")}</Badge></div>
+                    <div className="mt-2">
+                      <Badge variant="neutral">
+                        {props.label(control.implementationStatus ?? "NOT_STARTED")}
+                      </Badge>
+                    </div>
                   )}
                 </div>
               ))}
@@ -234,12 +390,20 @@ export default function RiskDetail(props: Props) {
           <Panel title="Audit History">
             <div className="space-y-3">
               {props.auditLogs.map((log) => (
-                <div key={log.id} className="border-t border-border pt-3 text-sm first:border-t-0 first:pt-0">
+                <div
+                  key={log.id}
+                  className="border-t border-border pt-3 text-sm first:border-t-0 first:pt-0"
+                >
                   <p className="font-medium text-text">{props.label(log.action)}</p>
-                  <p className="text-subtle">{log.actor?.name ?? "Unknown actor"} on {new Date(log.timestamp).toLocaleString()}</p>
+                  <p className="text-subtle">
+                    {log.actor?.name ?? "Unknown actor"} on{" "}
+                    {new Date(log.timestamp).toLocaleString()}
+                  </p>
                 </div>
               ))}
-              {!props.auditLogs.length && <EmptyState title="No audit entries for this risk yet." />}
+              {!props.auditLogs.length && (
+                <EmptyState title="No audit entries for this risk yet." />
+              )}
             </div>
           </Panel>
         </aside>
@@ -255,8 +419,23 @@ const PILL_STYLES: Record<string, string> = {
   related: "border-border bg-surface-alt text-subtle",
 };
 
-function ClassPill({ kind, label, title }: { kind: keyof typeof PILL_STYLES; label: string; title?: string }) {
-  return <span title={title} className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${PILL_STYLES[kind]}`}>{label}</span>;
+function ClassPill({
+  kind,
+  label,
+  title,
+}: {
+  kind: keyof typeof PILL_STYLES;
+  label: string;
+  title?: string;
+}) {
+  return (
+    <span
+      title={title}
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${PILL_STYLES[kind]}`}
+    >
+      {label}
+    </span>
+  );
 }
 
 function Info(props: { label: string; value?: string | null }) {
@@ -277,14 +456,27 @@ function Panel(props: { title: string; children: ReactNode }) {
   );
 }
 
-function ItemList(props: { items: Array<{ id: string; title: string; subtitle: string }>; onRemove?: (id: string) => void }) {
+function ItemList(props: {
+  items: Array<{ id: string; title: string; subtitle: string }>;
+  onRemove?: (id: string) => void;
+}) {
   return (
     <div className="mt-4 space-y-3">
       {props.items.map((item) => (
         <div key={item.id} className="rounded-md border border-border p-3 text-sm">
           <div className="flex items-start justify-between gap-3">
-            <div><p className="font-medium text-text">{item.title}</p><p className="text-subtle">{item.subtitle}</p></div>
-            {props.onRemove && <button className="text-xs font-semibold text-danger hover:underline" onClick={() => props.onRemove!(item.id)}>Unlink</button>}
+            <div>
+              <p className="font-medium text-text">{item.title}</p>
+              <p className="text-subtle">{item.subtitle}</p>
+            </div>
+            {props.onRemove && (
+              <button
+                className="text-xs font-semibold text-danger hover:underline"
+                onClick={() => props.onRemove!(item.id)}
+              >
+                Unlink
+              </button>
+            )}
           </div>
         </div>
       ))}

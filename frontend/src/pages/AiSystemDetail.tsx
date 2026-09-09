@@ -1,6 +1,11 @@
 import { FormEvent, type ReactNode } from "react";
 import { ArrowLeft, Pencil } from "lucide-react";
-import { ModelCardForm, type ModelCard, type ModelCardCompleteness, type ModelCardFormState } from "../components/ModelCardForm";
+import {
+  ModelCardForm,
+  type ModelCard,
+  type ModelCardCompleteness,
+  type ModelCardFormState,
+} from "../components/ModelCardForm";
 import { ApprovalBanner } from "../components/ApprovalBanner";
 import { DependencyGraph } from "../components/DependencyGraph";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
@@ -137,7 +142,10 @@ type Props = {
 
 function BackLink({ onBack }: { onBack: () => void }) {
   return (
-    <button className="mb-4 flex items-center gap-1 text-sm font-medium text-subtle hover:text-text" onClick={onBack}>
+    <button
+      className="mb-4 flex items-center gap-1 text-sm font-medium text-subtle hover:text-text"
+      onClick={onBack}
+    >
       <ArrowLeft className="h-4 w-4" /> Back to AI Systems
     </button>
   );
@@ -148,7 +156,9 @@ export default function AiSystemDetail(props: Props) {
     return (
       <section className="mx-auto max-w-7xl px-6 py-6">
         <BackLink onBack={props.onBack} />
-        <Card><CardBody>Loading AI system…</CardBody></Card>
+        <Card>
+          <CardBody>Loading AI system…</CardBody>
+        </Card>
       </section>
     );
   }
@@ -173,7 +183,9 @@ export default function AiSystemDetail(props: Props) {
                     <h1 className="text-xl font-semibold text-text">{props.asset.name}</h1>
                     <Badge variant="primary">{props.label(props.asset.status)}</Badge>
                   </div>
-                  <p className="mt-1 text-sm text-subtle">v{props.asset.version} · {props.label(props.asset.type)}</p>
+                  <p className="mt-1 text-sm text-subtle">
+                    v{props.asset.version} · {props.label(props.asset.type)}
+                  </p>
                 </div>
                 {props.canManage && (
                   <Button variant="secondary" size="sm" onClick={() => props.onEditAsset(asset)}>
@@ -186,12 +198,19 @@ export default function AiSystemDetail(props: Props) {
                 <Info label="Supplier" value={props.asset.supplier} />
                 <Info label="Provider" value={props.asset.provider} />
                 <Info label="Hosting Model" value={props.label(props.asset.hostingModel)} />
-                <Info label="Network Dependency" value={props.label(props.asset.networkDependency)} />
+                <Info
+                  label="Network Dependency"
+                  value={props.label(props.asset.networkDependency)}
+                />
                 <Info label="License" value={props.asset.license} />
                 <Info label="Data Classification" value={props.asset.dataClassificationTouched} />
                 <Info label="Training Data" value={props.asset.trainingDataProvenance} />
                 <Info label="Downstream Consumers" value={props.asset.downstreamConsumers} />
-                <Info label="Source URL" value={props.asset.sourceUrl} href={props.asset.sourceUrl} />
+                <Info
+                  label="Source URL"
+                  value={props.asset.sourceUrl}
+                  href={props.asset.sourceUrl}
+                />
               </dl>
             </CardBody>
           </Card>
@@ -201,32 +220,147 @@ export default function AiSystemDetail(props: Props) {
               <CardHeader title="Edit AI system" />
               <form onSubmit={props.onSaveAsset}>
                 <CardBody className="grid gap-4 md:grid-cols-2">
-                  <Input label="Name" value={props.assetForm.name} onChange={(event) => props.onFormChange({ ...props.assetForm, name: event.target.value })} />
-                  <Input label="Version" value={props.assetForm.version} onChange={(event) => props.onFormChange({ ...props.assetForm, version: event.target.value })} />
-                  <Select label="Type" value={props.assetForm.type} onChange={(event) => props.onFormChange({ ...props.assetForm, type: event.target.value })}>
-                    {["MODEL", "DATASET", "SERVICE", "LIBRARY"].map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
+                  <Input
+                    label="Name"
+                    value={props.assetForm.name}
+                    onChange={(event) =>
+                      props.onFormChange({ ...props.assetForm, name: event.target.value })
+                    }
+                  />
+                  <Input
+                    label="Version"
+                    value={props.assetForm.version}
+                    onChange={(event) =>
+                      props.onFormChange({ ...props.assetForm, version: event.target.value })
+                    }
+                  />
+                  <Select
+                    label="Type"
+                    value={props.assetForm.type}
+                    onChange={(event) =>
+                      props.onFormChange({ ...props.assetForm, type: event.target.value })
+                    }
+                  >
+                    {["MODEL", "DATASET", "SERVICE", "LIBRARY"].map((option) => (
+                      <option key={option} value={option}>
+                        {props.label(option)}
+                      </option>
+                    ))}
                   </Select>
-                  <Select label="Hosting Model" value={props.assetForm.hostingModel} onChange={(event) => props.onFormChange({ ...props.assetForm, hostingModel: event.target.value })}>
-                    {["SAAS_API", "SELF_HOSTED", "EMBEDDED_IN_APP"].map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
+                  <Select
+                    label="Hosting Model"
+                    value={props.assetForm.hostingModel}
+                    onChange={(event) =>
+                      props.onFormChange({ ...props.assetForm, hostingModel: event.target.value })
+                    }
+                  >
+                    {["SAAS_API", "SELF_HOSTED", "EMBEDDED_IN_APP"].map((option) => (
+                      <option key={option} value={option}>
+                        {props.label(option)}
+                      </option>
+                    ))}
                   </Select>
-                  <Select label="Network Dependency" value={props.assetForm.networkDependency} onChange={(event) => props.onFormChange({ ...props.assetForm, networkDependency: event.target.value })}>
-                    {["AIR_GAPPED", "HYBRID", "FULLY_CONNECTED"].map((option) => <option key={option} value={option}>{props.label(option)}</option>)}
+                  <Select
+                    label="Network Dependency"
+                    value={props.assetForm.networkDependency}
+                    onChange={(event) =>
+                      props.onFormChange({
+                        ...props.assetForm,
+                        networkDependency: event.target.value,
+                      })
+                    }
+                  >
+                    {["AIR_GAPPED", "HYBRID", "FULLY_CONNECTED"].map((option) => (
+                      <option key={option} value={option}>
+                        {props.label(option)}
+                      </option>
+                    ))}
                   </Select>
-                  <Input label="Supplier" value={props.assetForm.supplier} onChange={(event) => props.onFormChange({ ...props.assetForm, supplier: event.target.value })} />
-                  <Input label="Provider" value={props.assetForm.provider ?? ""} onChange={(event) => props.onFormChange({ ...props.assetForm, provider: event.target.value })} />
-                  <Input label="License" value={props.assetForm.license ?? ""} onChange={(event) => props.onFormChange({ ...props.assetForm, license: event.target.value })} />
-                  <Input label="Data Classification" value={props.assetForm.dataClassificationTouched ?? ""} onChange={(event) => props.onFormChange({ ...props.assetForm, dataClassificationTouched: event.target.value })} />
-                  <TextArea label="Training Data Provenance" value={props.assetForm.trainingDataProvenance ?? ""} onChange={(event) => props.onFormChange({ ...props.assetForm, trainingDataProvenance: event.target.value })} />
-                  <TextArea label="Downstream Consumers" value={props.assetForm.downstreamConsumers ?? ""} onChange={(event) => props.onFormChange({ ...props.assetForm, downstreamConsumers: event.target.value })} />
-                  <Input label="Source URL" value={props.assetForm.sourceUrl ?? ""} onChange={(event) => props.onFormChange({ ...props.assetForm, sourceUrl: event.target.value })} />
-                  <Button type="submit" variant="primary" className="md:col-span-2">Save AI system</Button>
+                  <Input
+                    label="Supplier"
+                    value={props.assetForm.supplier}
+                    onChange={(event) =>
+                      props.onFormChange({ ...props.assetForm, supplier: event.target.value })
+                    }
+                  />
+                  <Input
+                    label="Provider"
+                    value={props.assetForm.provider ?? ""}
+                    onChange={(event) =>
+                      props.onFormChange({ ...props.assetForm, provider: event.target.value })
+                    }
+                  />
+                  <Input
+                    label="License"
+                    value={props.assetForm.license ?? ""}
+                    onChange={(event) =>
+                      props.onFormChange({ ...props.assetForm, license: event.target.value })
+                    }
+                  />
+                  <Input
+                    label="Data Classification"
+                    value={props.assetForm.dataClassificationTouched ?? ""}
+                    onChange={(event) =>
+                      props.onFormChange({
+                        ...props.assetForm,
+                        dataClassificationTouched: event.target.value,
+                      })
+                    }
+                  />
+                  <TextArea
+                    label="Training Data Provenance"
+                    value={props.assetForm.trainingDataProvenance ?? ""}
+                    onChange={(event) =>
+                      props.onFormChange({
+                        ...props.assetForm,
+                        trainingDataProvenance: event.target.value,
+                      })
+                    }
+                  />
+                  <TextArea
+                    label="Downstream Consumers"
+                    value={props.assetForm.downstreamConsumers ?? ""}
+                    onChange={(event) =>
+                      props.onFormChange({
+                        ...props.assetForm,
+                        downstreamConsumers: event.target.value,
+                      })
+                    }
+                  />
+                  <Input
+                    label="Source URL"
+                    value={props.assetForm.sourceUrl ?? ""}
+                    onChange={(event) =>
+                      props.onFormChange({ ...props.assetForm, sourceUrl: event.target.value })
+                    }
+                  />
+                  <Button type="submit" variant="primary" className="md:col-span-2">
+                    Save AI system
+                  </Button>
                 </CardBody>
               </form>
             </Card>
           )}
 
-          <ApprovalBanner risks={props.asset.risks} assetType={props.asset.type} modelCard={props.modelCard} modelCardCompleteness={props.modelCardCompleteness} />
-          {props.canManage && (props.asset.type === "MODEL" || props.asset.type === "SERVICE") && <ModelCardForm modelCard={props.modelCard} completeness={props.modelCardCompleteness} form={props.modelCardForm} sourceUrl={props.modelCardSourceUrl} importSuggestion={props.modelCardImportSuggestion} onFormChange={props.onModelCardFormChange} onSourceUrlChange={props.onModelCardSourceUrlChange} onFetchImport={props.onFetchModelCardImport} onSubmit={props.onSaveModelCard} />}
+          <ApprovalBanner
+            risks={props.asset.risks}
+            assetType={props.asset.type}
+            modelCard={props.modelCard}
+            modelCardCompleteness={props.modelCardCompleteness}
+          />
+          {props.canManage && (props.asset.type === "MODEL" || props.asset.type === "SERVICE") && (
+            <ModelCardForm
+              modelCard={props.modelCard}
+              completeness={props.modelCardCompleteness}
+              form={props.modelCardForm}
+              sourceUrl={props.modelCardSourceUrl}
+              importSuggestion={props.modelCardImportSuggestion}
+              onFormChange={props.onModelCardFormChange}
+              onSourceUrlChange={props.onModelCardSourceUrlChange}
+              onFetchImport={props.onFetchModelCardImport}
+              onSubmit={props.onSaveModelCard}
+            />
+          )}
           <DependencyGraph asset={props.asset} />
         </div>
 
@@ -238,11 +372,21 @@ export default function AiSystemDetail(props: Props) {
                   <Combobox
                     value={props.selectedRiskId}
                     onChange={props.onSelectedRiskChange}
-                    options={availableRisks.map((risk) => ({ value: risk.id, label: risk.description }))}
+                    options={availableRisks.map((risk) => ({
+                      value: risk.id,
+                      label: risk.description,
+                    }))}
                     placeholder="Select risk"
                   />
                 </div>
-                <Button variant="primary" size="sm" disabled={!props.selectedRiskId} onClick={props.onLinkRisk}>Link</Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={!props.selectedRiskId}
+                  onClick={props.onLinkRisk}
+                >
+                  Link
+                </Button>
               </div>
             )}
             <div className="mt-4 space-y-3">
@@ -251,9 +395,18 @@ export default function AiSystemDetail(props: Props) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="break-words font-medium text-text">{risk.description}</p>
-                      <p className="text-subtle">{props.label(risk.status)} · Score {risk.inherentRiskScore}</p>
+                      <p className="text-subtle">
+                        {props.label(risk.status)} · Score {risk.inherentRiskScore}
+                      </p>
                     </div>
-                    {props.canManage && <button className="shrink-0 text-xs font-semibold text-danger hover:underline" onClick={() => props.onUnlinkRisk(risk.id)}>Unlink</button>}
+                    {props.canManage && (
+                      <button
+                        className="shrink-0 text-xs font-semibold text-danger hover:underline"
+                        onClick={() => props.onUnlinkRisk(risk.id)}
+                      >
+                        Unlink
+                      </button>
+                    )}
                   </div>
                   <RiskReferenceTags risk={risk} label={props.label} />
                 </div>
@@ -269,11 +422,21 @@ export default function AiSystemDetail(props: Props) {
                   <Combobox
                     value={props.selectedProjectId}
                     onChange={props.onSelectedProjectChange}
-                    options={availableProjects.map((project) => ({ value: project.id, label: project.name }))}
+                    options={availableProjects.map((project) => ({
+                      value: project.id,
+                      label: project.name,
+                    }))}
                     placeholder="Select project"
                   />
                 </div>
-                <Button variant="primary" size="sm" disabled={!props.selectedProjectId} onClick={props.onLinkProject}>Link</Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={!props.selectedProjectId}
+                  onClick={props.onLinkProject}
+                >
+                  Link
+                </Button>
               </div>
             )}
             <div className="mt-4 space-y-3">
@@ -282,9 +445,19 @@ export default function AiSystemDetail(props: Props) {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-medium text-text">{project.name}</p>
-                      <p className="text-subtle">{props.label(project.status)}{project.businessOwner ? ` · ${project.businessOwner}` : ""}</p>
+                      <p className="text-subtle">
+                        {props.label(project.status)}
+                        {project.businessOwner ? ` · ${project.businessOwner}` : ""}
+                      </p>
                     </div>
-                    {props.canManage && <button className="text-xs font-semibold text-danger hover:underline" onClick={() => props.onUnlinkProject(project.id)}>Unlink</button>}
+                    {props.canManage && (
+                      <button
+                        className="text-xs font-semibold text-danger hover:underline"
+                        onClick={() => props.onUnlinkProject(project.id)}
+                      >
+                        Unlink
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -293,20 +466,36 @@ export default function AiSystemDetail(props: Props) {
           </Panel>
 
           <Panel title="Governance Workflow">
-            <TextArea aria-label="Approval comments" placeholder="Approval comments" value={props.workflowComments} onChange={(event) => props.onWorkflowCommentsChange(event.target.value)} />
+            <TextArea
+              aria-label="Approval comments"
+              placeholder="Approval comments"
+              value={props.workflowComments}
+              onChange={(event) => props.onWorkflowCommentsChange(event.target.value)}
+            />
             <div className="mt-3 flex flex-wrap gap-2">
               {props.availableTransitions.map((status) => (
-                <Button key={status} variant="primary" size="sm" onClick={() => props.onTransitionAsset(status)}>
+                <Button
+                  key={status}
+                  variant="primary"
+                  size="sm"
+                  onClick={() => props.onTransitionAsset(status)}
+                >
                   Move to {props.label(status)}
                 </Button>
               ))}
-              {props.availableTransitions.length === 0 && <p className="text-sm text-subtle">No further transitions available.</p>}
+              {props.availableTransitions.length === 0 && (
+                <p className="text-sm text-subtle">No further transitions available.</p>
+              )}
             </div>
             <div className="mt-4 space-y-3">
               {props.asset.workflow.map((entry) => (
                 <div key={entry.id} className="border-t border-border pt-3 text-sm">
-                  <p className="font-medium text-text">{props.label(entry.fromStatus)} → {props.label(entry.toStatus)}</p>
-                  <p className="text-subtle">{entry.approvedBy.name} on {new Date(entry.timestamp).toLocaleString()}</p>
+                  <p className="font-medium text-text">
+                    {props.label(entry.fromStatus)} → {props.label(entry.toStatus)}
+                  </p>
+                  <p className="text-subtle">
+                    {entry.approvedBy.name} on {new Date(entry.timestamp).toLocaleString()}
+                  </p>
                   {entry.comments && <p className="mt-1 text-text">{entry.comments}</p>}
                 </div>
               ))}
@@ -318,14 +507,26 @@ export default function AiSystemDetail(props: Props) {
               {props.auditLogs.map((log) => {
                 const changes = diffAuditFields(log.beforeJson, log.afterJson);
                 return (
-                  <div key={log.id} className="border-t border-border pt-3 text-sm first:border-t-0 first:pt-0">
-                    <p className="font-medium text-text">{props.label(log.action)} by {log.actor?.name ?? "Unknown actor"}</p>
+                  <div
+                    key={log.id}
+                    className="border-t border-border pt-3 text-sm first:border-t-0 first:pt-0"
+                  >
+                    <p className="font-medium text-text">
+                      {props.label(log.action)} by {log.actor?.name ?? "Unknown actor"}
+                    </p>
                     <p className="text-subtle">{new Date(log.timestamp).toLocaleString()}</p>
                     {changes.length ? (
                       <ul className="mt-2 space-y-1 text-xs text-subtle">
-                        {changes.map((change) => <li key={`${log.id}-${change.field}`}><span className="font-semibold text-text">{change.field}</span>: {change.before || "Not set"} → {change.after || "Not set"}</li>)}
+                        {changes.map((change) => (
+                          <li key={`${log.id}-${change.field}`}>
+                            <span className="font-semibold text-text">{change.field}</span>:{" "}
+                            {change.before || "Not set"} → {change.after || "Not set"}
+                          </li>
+                        ))}
                       </ul>
-                    ) : <p className="mt-2 text-xs text-subtle">No field-level diff available.</p>}
+                    ) : (
+                      <p className="mt-2 text-xs text-subtle">No field-level diff available.</p>
+                    )}
                   </div>
                 );
               })}
@@ -341,21 +542,43 @@ export default function AiSystemDetail(props: Props) {
 function RiskReferenceTags(props: { risk: Risk; label: (value: string) => string }) {
   const { risk } = props;
   const frameworkName = frameworkLabel(risk.sourceFramework);
-  const categoryText = risk.sourceFramework === "EU_AI_ACT" ? props.label(risk.sourceCategoryId) : risk.sourceCategoryId;
+  const categoryText =
+    risk.sourceFramework === "EU_AI_ACT"
+      ? props.label(risk.sourceCategoryId)
+      : risk.sourceCategoryId;
   const tags: Array<{ key: string; text: string; mapped: boolean }> = [
     { key: "framework", text: `${frameworkName}: ${categoryText}`, mapped: true },
   ];
-  if (risk.sourceFramework !== "NIST_AI_RMF") tags.push({ key: "nist", text: "NIST AI RMF: not mapped", mapped: false });
+  if (risk.sourceFramework !== "NIST_AI_RMF")
+    tags.push({ key: "nist", text: "NIST AI RMF: not mapped", mapped: false });
   if (risk.sourceFramework !== "EU_AI_ACT") {
-    tags.push({ key: "eu", text: risk.euAiActRiskTier ? `EU AI Act: ${props.label(risk.euAiActRiskTier)}` : "EU AI Act: not mapped", mapped: Boolean(risk.euAiActRiskTier) });
+    tags.push({
+      key: "eu",
+      text: risk.euAiActRiskTier
+        ? `EU AI Act: ${props.label(risk.euAiActRiskTier)}`
+        : "EU AI Act: not mapped",
+      mapped: Boolean(risk.euAiActRiskTier),
+    });
   }
-  tags.push({ key: "stride", text: risk.strideAiCategory ? `STRIDE-AI: ${props.label(risk.strideAiCategory)}` : "STRIDE-AI: not mapped", mapped: Boolean(risk.strideAiCategory) });
-  tags.push({ key: "atlas", text: risk.atlasTechnique ? `ATLAS: ${risk.atlasTechnique}` : "ATLAS: no technique", mapped: Boolean(risk.atlasTechnique) });
+  tags.push({
+    key: "stride",
+    text: risk.strideAiCategory
+      ? `STRIDE-AI: ${props.label(risk.strideAiCategory)}`
+      : "STRIDE-AI: not mapped",
+    mapped: Boolean(risk.strideAiCategory),
+  });
+  tags.push({
+    key: "atlas",
+    text: risk.atlasTechnique ? `ATLAS: ${risk.atlasTechnique}` : "ATLAS: no technique",
+    mapped: Boolean(risk.atlasTechnique),
+  });
 
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
       {tags.map((tag) => (
-        <Badge key={tag.key} variant={tag.mapped ? "primary" : "neutral"}>{tag.text}</Badge>
+        <Badge key={tag.key} variant={tag.mapped ? "primary" : "neutral"}>
+          {tag.text}
+        </Badge>
       ))}
     </div>
   );
@@ -365,18 +588,37 @@ function Info(props: { label: string; value?: string | null; href?: string | nul
   return (
     <div>
       <dt className="font-semibold text-text">{props.label}</dt>
-      <dd className="text-subtle">{props.href ? <a className="text-primary underline" href={props.href} target="_blank" rel="noreferrer">{props.value}</a> : props.value || "Not set"}</dd>
+      <dd className="text-subtle">
+        {props.href ? (
+          <a className="text-primary underline" href={props.href} target="_blank" rel="noreferrer">
+            {props.value}
+          </a>
+        ) : (
+          props.value || "Not set"
+        )}
+      </dd>
     </div>
   );
 }
 
-function diffAuditFields(beforeJson?: Record<string, unknown> | null, afterJson?: Record<string, unknown> | null) {
+function diffAuditFields(
+  beforeJson?: Record<string, unknown> | null,
+  afterJson?: Record<string, unknown> | null,
+) {
   if (!beforeJson || !afterJson) return [];
   const ignored = new Set(["updatedAt", "createdAt", "createdById"]);
   const fields = new Set([...Object.keys(beforeJson), ...Object.keys(afterJson)]);
   return [...fields]
-    .filter((field) => !ignored.has(field) && JSON.stringify(beforeJson[field]) !== JSON.stringify(afterJson[field]))
-    .map((field) => ({ field, before: formatAuditValue(beforeJson[field]), after: formatAuditValue(afterJson[field]) }));
+    .filter(
+      (field) =>
+        !ignored.has(field) &&
+        JSON.stringify(beforeJson[field]) !== JSON.stringify(afterJson[field]),
+    )
+    .map((field) => ({
+      field,
+      before: formatAuditValue(beforeJson[field]),
+      after: formatAuditValue(afterJson[field]),
+    }));
 }
 
 function formatAuditValue(value: unknown) {

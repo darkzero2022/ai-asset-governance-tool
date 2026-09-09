@@ -59,7 +59,11 @@ async function binaries(): Promise<Binaries> {
 }
 
 function run(bin: string, args: string[], opts: { input?: string } = {}): string {
-  return execFileSync(bin, args, { encoding: "utf8", input: opts.input, stdio: ["pipe", "pipe", "pipe"] });
+  return execFileSync(bin, args, {
+    encoding: "utf8",
+    input: opts.input,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
 }
 
 // `pg_ctl start` spawns a detached postmaster; capturing its stdio makes
@@ -115,7 +119,9 @@ async function waitForReady(port: number, timeoutMs = 30_000): Promise<void> {
     if (await canConnect(port)) return;
     await sleep(500);
   }
-  throw new Error(`managed database did not accept connections on port ${port} within ${timeoutMs / 1000}s (see ${LOG_FILE})`);
+  throw new Error(
+    `managed database did not accept connections on port ${port} within ${timeoutMs / 1000}s (see ${LOG_FILE})`,
+  );
 }
 
 async function start(): Promise<void> {
@@ -154,13 +160,15 @@ async function stop(): Promise<void> {
 async function status(): Promise<void> {
   const bins = await binaries();
   const running = isInitialized() && isRunning(bins);
-  logger.info({ running, port: PG_PORT, dataDir: DATA_DIR }, running ? "managed database running" : "managed database stopped");
+  logger.info(
+    { running, port: PG_PORT, dataDir: DATA_DIR },
+    running ? "managed database running" : "managed database stopped",
+  );
   if (!running) process.exitCode = 1;
 }
 
 const runningAsScript =
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (runningAsScript) {
   const command = process.argv[2];

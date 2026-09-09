@@ -84,7 +84,11 @@ export interface Risk {
   assets?: Array<{ assetId: string; asset: Asset }>;
   projects?: Array<{ projectId: string; project: Project }>;
   controls?: Array<Control & { implementationStatus?: string; evidenceNotes?: string | null }>;
-  controlLinks?: Array<{ control: Control; implementationStatus?: string; evidenceNotes?: string | null }>;
+  controlLinks?: Array<{
+    control: Control;
+    implementationStatus?: string;
+    evidenceNotes?: string | null;
+  }>;
   frameworkCategory?: FrameworkCategory | null;
   /** Categories in other frameworks our seeded crosswalk relates this risk to. Read-only. */
   relatedClassifications?: RelatedClassification[];

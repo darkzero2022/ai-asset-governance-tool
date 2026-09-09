@@ -17,7 +17,9 @@ export function Breadcrumbs() {
   if (!segments.length) return null;
 
   const [root, detailId] = segments;
-  const crumbs: Array<{ label: string; to?: string }> = [{ label: SEGMENT_LABELS[root] ?? root, to: detailId ? `/${root}` : undefined }];
+  const crumbs: Array<{ label: string; to?: string }> = [
+    { label: SEGMENT_LABELS[root] ?? root, to: detailId ? `/${root}` : undefined },
+  ];
   if (detailId) crumbs.push({ label: "Details" });
 
   return (
@@ -30,7 +32,9 @@ export function Breadcrumbs() {
               {crumb.label}
             </Link>
           ) : (
-            <span aria-current="page" className="text-text">{crumb.label}</span>
+            <span aria-current="page" className="text-text">
+              {crumb.label}
+            </span>
           )}
         </span>
       ))}

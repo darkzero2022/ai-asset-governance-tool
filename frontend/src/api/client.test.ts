@@ -8,14 +8,19 @@ afterEach(() => {
 });
 
 function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 describe("apiFetch — silent token refresh", () => {
   it("refreshes once on a TOKEN_STALE 401, then retries the original request", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(jsonResponse({ error: { code: "TOKEN_STALE", message: "stale" } }, 401)) // original
+      .mockResolvedValueOnce(
+        jsonResponse({ error: { code: "TOKEN_STALE", message: "stale" } }, 401),
+      ) // original
       .mockResolvedValueOnce(jsonResponse({ accessToken: "fresh-token" }, 200)) // /auth/refresh
       .mockResolvedValueOnce(jsonResponse({ ok: true }, 200)); // retry
 
@@ -30,7 +35,9 @@ describe("apiFetch — silent token refresh", () => {
   it("does not retry when the refresh itself fails", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(jsonResponse({ error: { code: "TOKEN_STALE", message: "stale" } }, 401))
+      .mockResolvedValueOnce(
+        jsonResponse({ error: { code: "TOKEN_STALE", message: "stale" } }, 401),
+      )
       .mockResolvedValueOnce(jsonResponse({ error: { code: "UNAUTHENTICATED" } }, 401)); // refresh fails
 
     await expect(apiFetch("/risks")).rejects.toBeInstanceOf(ApiClientError);
@@ -40,9 +47,13 @@ describe("apiFetch — silent token refresh", () => {
   it("never tries to refresh for /auth/* calls", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(jsonResponse({ error: { code: "INVALID_CREDENTIALS", message: "no" } }, 401));
+      .mockResolvedValueOnce(
+        jsonResponse({ error: { code: "INVALID_CREDENTIALS", message: "no" } }, 401),
+      );
 
-    await expect(apiFetch("/auth/login", { method: "POST" })).rejects.toBeInstanceOf(ApiClientError);
+    await expect(apiFetch("/auth/login", { method: "POST" })).rejects.toBeInstanceOf(
+      ApiClientError,
+    );
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

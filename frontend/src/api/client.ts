@@ -52,13 +52,23 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   const bearer = getAccessToken() ?? token;
   if (bearer) mergedHeaders.set("Authorization", `Bearer ${bearer}`);
 
-  const response = await fetch(`${apiBaseUrl}${API_PREFIX}${path}`, { ...init, credentials: "include", headers: mergedHeaders });
+  const response = await fetch(`${apiBaseUrl}${API_PREFIX}${path}`, {
+    ...init,
+    credentials: "include",
+    headers: mergedHeaders,
+  });
 
   if (!response.ok) {
     const body = await response.json().catch(() => undefined);
     const code = apiErrorCode(body);
 
-    if (response.status === 401 && !_retried && !path.startsWith("/auth/") && code && REFRESHABLE_CODES.has(code)) {
+    if (
+      response.status === 401 &&
+      !_retried &&
+      !path.startsWith("/auth/") &&
+      code &&
+      REFRESHABLE_CODES.has(code)
+    ) {
       const fresh = await refreshSession();
       if (fresh) return apiFetch<T>(path, { ...options, _retried: true });
     }

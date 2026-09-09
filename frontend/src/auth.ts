@@ -20,6 +20,7 @@ export function canTransitionAsset(user: CurrentUser | null, toStatus: string): 
   if (!user) return false;
   if (user.role === "ADMIN") return true;
   if (user.role === "RISK_OWNER") return toStatus === "UNDER_REVIEW" || toStatus === "DRAFT";
-  if (user.role === "APPROVER") return toStatus === "APPROVED" || toStatus === "DEPLOYED" || toStatus === "RETIRED";
+  if (user.role === "APPROVER")
+    return toStatus === "APPROVED" || toStatus === "DEPLOYED" || toStatus === "RETIRED";
   return false;
 }

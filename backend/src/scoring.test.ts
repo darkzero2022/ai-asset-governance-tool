@@ -20,32 +20,49 @@ describe("modelCardCompleteness", () => {
   it("reports all required fields missing when no card exists", () => {
     expect(modelCardCompleteness(null)).toEqual({
       percent: 0,
-      missingFields: ["task", "architecture", "intendedUsers", "useCases", "technicalLimitations", "ethicalConsiderations"],
+      missingFields: [
+        "task",
+        "architecture",
+        "intendedUsers",
+        "useCases",
+        "technicalLimitations",
+        "ethicalConsiderations",
+      ],
     });
   });
 
   it("accepts either architectureFamily or modelArchitecture for architecture", () => {
-    expect(modelCardCompleteness({
-      task: "classification",
-      architectureFamily: "tree ensemble",
-      intendedUsers: "analysts",
-      useCases: "triage",
-      technicalLimitations: "limited cold-start performance",
-      ethicalConsiderations: "human review required",
-    })).toEqual({ percent: 100, missingFields: [] });
+    expect(
+      modelCardCompleteness({
+        task: "classification",
+        architectureFamily: "tree ensemble",
+        intendedUsers: "analysts",
+        useCases: "triage",
+        technicalLimitations: "limited cold-start performance",
+        ethicalConsiderations: "human review required",
+      }),
+    ).toEqual({ percent: 100, missingFields: [] });
 
-    expect(modelCardCompleteness({
-      task: "classification",
-      modelArchitecture: "xgboost",
-      intendedUsers: "analysts",
-      useCases: "triage",
-      technicalLimitations: "limited cold-start performance",
-      ethicalConsiderations: "human review required",
-    })).toEqual({ percent: 100, missingFields: [] });
+    expect(
+      modelCardCompleteness({
+        task: "classification",
+        modelArchitecture: "xgboost",
+        intendedUsers: "analysts",
+        useCases: "triage",
+        technicalLimitations: "limited cold-start performance",
+        ethicalConsiderations: "human review required",
+      }),
+    ).toEqual({ percent: 100, missingFields: [] });
   });
 
   it("trims strings and calculates partial completeness", () => {
-    expect(modelCardCompleteness({ task: "  ", architectureFamily: "transformer", intendedUsers: "reviewers" })).toEqual({
+    expect(
+      modelCardCompleteness({
+        task: "  ",
+        architectureFamily: "transformer",
+        intendedUsers: "reviewers",
+      }),
+    ).toEqual({
       percent: 33,
       missingFields: ["task", "useCases", "technicalLimitations", "ethicalConsiderations"],
     });
@@ -68,22 +85,35 @@ describe("resolveStrideAtlas", () => {
   });
 
   it("keeps an explicit value and treats empty string / null as unset", () => {
-    expect(resolveStrideAtlas({ strideAiCategory: "PROVENANCE_LOSS", atlasTechnique: "" }, llm03)).toMatchObject({
+    expect(
+      resolveStrideAtlas({ strideAiCategory: "PROVENANCE_LOSS", atlasTechnique: "" }, llm03),
+    ).toMatchObject({
       strideAiCategory: "PROVENANCE_LOSS",
       atlasTechnique: "ML Supply Chain Compromise",
     });
-    expect(resolveStrideAtlas({ strideAiCategory: null, atlasTechnique: "Data Poisoning" }, llm03)).toMatchObject({
+    expect(
+      resolveStrideAtlas({ strideAiCategory: null, atlasTechnique: "Data Poisoning" }, llm03),
+    ).toMatchObject({
       strideAiCategory: "MODEL_IMPERSONATION",
       atlasTechnique: "Data Poisoning",
     });
   });
 
   it("returns nulls for a risk with no mapping and no provided values", () => {
-    expect(resolveStrideAtlas({}, null)).toEqual({ strideAiCategory: null, atlasTechnique: null, suggestedMitigations: [] });
+    expect(resolveStrideAtlas({}, null)).toEqual({
+      strideAiCategory: null,
+      atlasTechnique: null,
+      suggestedMitigations: [],
+    });
   });
 
   it("respects an empty atlasTechniques list in the lookup (e.g. LLM09 / MCP08)", () => {
-    expect(resolveStrideAtlas({}, { strideAiCategory: "MODEL_INVERSION", atlasTechniques: [], atlasMitigations: [] })).toEqual({
+    expect(
+      resolveStrideAtlas(
+        {},
+        { strideAiCategory: "MODEL_INVERSION", atlasTechniques: [], atlasMitigations: [] },
+      ),
+    ).toEqual({
       strideAiCategory: "MODEL_INVERSION",
       atlasTechnique: null,
       suggestedMitigations: [],

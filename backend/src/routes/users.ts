@@ -11,7 +11,11 @@ const router = express.Router();
 
 router.get("/users", requireAuth, requireRole("ADMIN"), async (_req, res, next) => {
   try {
-    const users = await prisma.user.findMany({ select: { id: true, email: true, name: true, role: true, active: true, createdAt: true }, orderBy: { createdAt: "desc" } , take: MAX_LIST_ROWS });
+    const users = await prisma.user.findMany({
+      select: { id: true, email: true, name: true, role: true, active: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+      take: MAX_LIST_ROWS,
+    });
     res.json({ users });
   } catch (error) {
     next(error);
@@ -22,7 +26,12 @@ router.post("/users", requireAuth, requireRole("ADMIN"), async (req, res, next) 
   try {
     const body = userCreateSchema.parse(req.body);
     const user = await prisma.user.create({
-      data: { email: body.email, name: body.name, role: body.role, passwordHash: await bcrypt.hash(body.password, 10) },
+      data: {
+        email: body.email,
+        name: body.name,
+        role: body.role,
+        passwordHash: await bcrypt.hash(body.password, 10),
+      },
       select: { id: true, email: true, name: true, role: true, active: true, createdAt: true },
     });
     await audit(req.user!.id, "User", user.id, "CREATE", undefined, user);
@@ -36,19 +45,29 @@ router.put("/users/:id", requireAuth, requireRole("ADMIN"), async (req, res, nex
   try {
     const id = String(req.params.id);
     const body = userUpdateSchema.parse(req.body);
-    const before = await prisma.user.findUniqueOrThrow({ where: { id }, select: { id: true, email: true, name: true, role: true, active: true, createdAt: true } });
+    const before = await prisma.user.findUniqueOrThrow({
+      where: { id },
+      select: { id: true, email: true, name: true, role: true, active: true, createdAt: true },
+    });
     // An admin resetting the password, deactivating the account, or forcing a
     // reset should also kill any live sessions/tokens for that user.
-    const revoke = body.password !== undefined || body.active === false || body.mustChangePassword === true;
+    const revoke =
+      body.password !== undefined || body.active === false || body.mustChangePassword === true;
     const user = await prisma.user.update({
       where: { id },
       data: {
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.role !== undefined ? { role: body.role } : {}),
         ...(body.active !== undefined ? { active: body.active } : {}),
-        ...(body.mustChangePassword !== undefined ? { mustChangePassword: body.mustChangePassword } : {}),
+        ...(body.mustChangePassword !== undefined
+          ? { mustChangePassword: body.mustChangePassword }
+          : {}),
         ...(body.password !== undefined
-          ? { passwordHash: await bcrypt.hash(body.password, 10), lockedUntil: null, failedLoginAttempts: 0 }
+          ? {
+              passwordHash: await bcrypt.hash(body.password, 10),
+              lockedUntil: null,
+              failedLoginAttempts: 0,
+            }
           : {}),
         ...(revoke ? { tokenVersion: { increment: 1 }, sessions: { deleteMany: {} } } : {}),
       },

@@ -21,12 +21,14 @@ scripts/start.sh
 Run what CI runs:
 
 ```bash
+npm ci && npm run lint && npm run format:check   # repo root — ESLint + Prettier
 cd packages/shared && npm run build
 cd backend  && npm run test && npm run build && npm run validate:cyclonedx
 cd frontend && npm run test && npm run build
 npx tsc --noEmit   # in backend/ and frontend/
 ```
 
+`npm run format` (root) reformats; `npm run lint:fix` auto-fixes what ESLint can.
 The PR template has the full checklist.
 
 ## Sign your commits (DCO)
@@ -68,13 +70,13 @@ The **DCO** check enforces this on every PR (merge commits are exempt).
 
 All framework reference data is seeded from `backend/prisma/seed-reference.ts`:
 
-| Table | What it holds |
-|---|---|
-| `FrameworkMeta` | one row per framework: title, exact revision, DRAFT/RELEASED status, source URL, licence note |
-| `FrameworkCategory` | the categories of each framework (NIST functions, EU tiers, LLM01–LLM10, MCP01–MCP10) |
-| `FrameworkThreatMapping` | category → STRIDE-AI category + ATLAS technique(s) + suggested ATLAS mitigation(s) — drives the risk-form auto-fill |
-| `FrameworkCrosswalk` | a relationship between a category in one framework and one in another, with a `rationale` |
-| `AtlasTechniqueReference`, `AtlasMitigationReference` | the MITRE ATLAS catalogues |
+| Table                                                 | What it holds                                                                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `FrameworkMeta`                                       | one row per framework: title, exact revision, DRAFT/RELEASED status, source URL, licence note                       |
+| `FrameworkCategory`                                   | the categories of each framework (NIST functions, EU tiers, LLM01–LLM10, MCP01–MCP10)                               |
+| `FrameworkThreatMapping`                              | category → STRIDE-AI category + ATLAS technique(s) + suggested ATLAS mitigation(s) — drives the risk-form auto-fill |
+| `FrameworkCrosswalk`                                  | a relationship between a category in one framework and one in another, with a `rationale`                           |
+| `AtlasTechniqueReference`, `AtlasMitigationReference` | the MITRE ATLAS catalogues                                                                                          |
 
 - The cross-framework mappings and the category→STRIDE-AI/ATLAS mappings are
   **this project's analysis**, not official OWASP/NIST/MITRE crosswalks. Every

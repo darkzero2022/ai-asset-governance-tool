@@ -1,4 +1,11 @@
-import { Boxes, FolderKanban, LayoutDashboard, ShieldAlert, Users as UsersIcon, type LucideIcon } from "lucide-react";
+import {
+  Boxes,
+  FolderKanban,
+  LayoutDashboard,
+  ShieldAlert,
+  Users as UsersIcon,
+  type LucideIcon,
+} from "lucide-react";
 
 export type NavItem = {
   label: string;
@@ -25,5 +32,8 @@ export const navGroups: NavGroup[] = [
     ],
   },
   { label: "Risk", items: [{ label: "Risk Register", path: "/risks", icon: ShieldAlert }] },
-  { label: "Administration", items: [{ label: "Users", path: "/users", icon: UsersIcon, adminOnly: true }] },
+  {
+    label: "Administration",
+    items: [{ label: "Users", path: "/users", icon: UsersIcon, adminOnly: true }],
+  },
 ];

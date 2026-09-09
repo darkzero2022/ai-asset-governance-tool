@@ -10,8 +10,5 @@ import { config } from "dotenv";
 // In a container none of these files exist and this is a no-op.
 const here = path.dirname(fileURLToPath(import.meta.url)); // backend/dist
 config({
-  path: [
-    path.resolve(here, "../.env"),
-    path.resolve(here, "../../.env"),
-  ],
+  path: [path.resolve(here, "../.env"), path.resolve(here, "../../.env")],
 });

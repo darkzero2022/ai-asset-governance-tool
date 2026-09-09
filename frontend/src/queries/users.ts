@@ -18,7 +18,8 @@ export function useUsersQuery(token: string) {
 export function useCreateUserMutation(token: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: Record<string, unknown>) => apiFetch("/users", { method: "POST", body: JSON.stringify(payload), token }),
+    mutationFn: (payload: Record<string, unknown>) =>
+      apiFetch("/users", { method: "POST", body: JSON.stringify(payload), token }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.users() }),
   });
 }

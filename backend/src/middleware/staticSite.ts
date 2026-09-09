@@ -11,7 +11,9 @@ const ALWAYS_API_PATHS = new Set(["/health", "/ready"]);
 const ALWAYS_API_PREFIXES = ["/api/"];
 
 function isAlwaysApiPath(path: string): boolean {
-  return ALWAYS_API_PATHS.has(path) || ALWAYS_API_PREFIXES.some((prefix) => path.startsWith(prefix));
+  return (
+    ALWAYS_API_PATHS.has(path) || ALWAYS_API_PREFIXES.some((prefix) => path.startsWith(prefix))
+  );
 }
 
 /**

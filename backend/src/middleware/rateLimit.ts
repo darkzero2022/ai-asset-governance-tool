@@ -12,5 +12,10 @@ export const loginRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV === "test",
-  message: { error: { code: "RATE_LIMITED", message: "Too many authentication attempts, please try again later." } },
+  message: {
+    error: {
+      code: "RATE_LIMITED",
+      message: "Too many authentication attempts, please try again later.",
+    },
+  },
 });
