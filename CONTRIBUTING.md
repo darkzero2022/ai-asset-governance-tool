@@ -29,6 +29,19 @@ npx tsc --noEmit   # in backend/ and frontend/
 
 The PR template has the full checklist.
 
+## Sign your commits (DCO)
+
+This project uses the [Developer Certificate of Origin](https://developercertificate.org).
+Every commit in a PR must carry a `Signed-off-by:` trailer matching the commit
+author — add it with the `-s` / `--signoff` flag:
+
+```bash
+git commit -s -m "fix: ..."
+git rebase --signoff origin/master   # to sign off a branch after the fact
+```
+
+The **DCO** check enforces this on every PR (merge commits are exempt).
+
 ## Conventions
 
 - **Backend**: validate every request body with `zod` (put schemas the frontend

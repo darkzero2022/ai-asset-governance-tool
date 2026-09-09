@@ -81,6 +81,10 @@ export async function seedReferenceData() {
     { framework: "EU_AI_ACT", categoryId: "HIGH", name: "High Risk", description: "AI systems subject to strict risk management, data, documentation, and oversight obligations." },
     { framework: "EU_AI_ACT", categoryId: "LIMITED", name: "Limited Risk", description: "AI systems primarily subject to transparency obligations." },
     { framework: "EU_AI_ACT", categoryId: "MINIMAL", name: "Minimal Risk", description: "AI systems with minimal or no specific obligations under the risk framework." },
+    // OWASP Top 10 for LLM Applications (2025). `name` is the published category
+    // title (a factual identifier used for cross-framework mapping); every
+    // `description` below is this project's own one-line summary, not text from
+    // the OWASP document. Attribution + licence: NOTICE / ATTRIBUTION.md.
     { framework: "OWASP_LLM_TOP10", categoryId: "LLM01", name: "Prompt Injection", description: "User input manipulates model behavior or bypasses intended controls." },
     { framework: "OWASP_LLM_TOP10", categoryId: "LLM02", name: "Sensitive Information Disclosure", description: "The system exposes confidential or sensitive data through model output or logs." },
     { framework: "OWASP_LLM_TOP10", categoryId: "LLM03", name: "Supply Chain", description: "Risks introduced by third-party models, datasets, plugins, or dependencies." },
@@ -91,8 +95,12 @@ export async function seedReferenceData() {
     { framework: "OWASP_LLM_TOP10", categoryId: "LLM08", name: "Vector and Embedding Weaknesses", description: "Retrieval or embedding weaknesses affect confidentiality, integrity, or relevance." },
     { framework: "OWASP_LLM_TOP10", categoryId: "LLM09", name: "Misinformation", description: "Incorrect, fabricated, or misleading model output creates operational risk." },
     { framework: "OWASP_LLM_TOP10", categoryId: "LLM10", name: "Unbounded Consumption", description: "Resource abuse causes excessive cost, degraded service, or denial of service." },
-    // OWASP Top 10 for MCP (Model Context Protocol) — draft v0.1 (2025). Titles/text
-    // adapted from https://github.com/OWASP/www-project-mcp-top-10 (CC BY-NC-SA 4.0).
+    // OWASP Top 10 for MCP (Model Context Protocol) — draft (2025),
+    // https://github.com/OWASP/www-project-mcp-top-10. That document is
+    // CC BY-NC-SA 4.0 (non-commercial); it is NOT redistributed here. `name` is
+    // the published category title (a factual identifier for cross-framework
+    // mapping) and each `description` is this project's own one-line summary.
+    // Attribution + licence note: NOTICE / ATTRIBUTION.md.
     { framework: "OWASP_MCP_TOP10", categoryId: "MCP01", name: "Token Mismanagement & Secret Exposure", description: "Credentials or tokens exposed in context, memory, or logs enable unauthorized access to connected systems." },
     { framework: "OWASP_MCP_TOP10", categoryId: "MCP02", name: "Privilege Escalation via Scope Creep", description: "Loosely-scoped tool or connector permissions widen over time, letting an actor perform actions beyond intent." },
     { framework: "OWASP_MCP_TOP10", categoryId: "MCP03", name: "Tool Poisoning", description: "A compromised or malicious tool/server injects misleading context to manipulate the model's decisions." },

@@ -1,0 +1,57 @@
+# Production overlay. Use alongside the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Differences from the base compose:
+#   - backend runs a pre-built published image (no build context needed on the
+#     host) — override the tag with AIBOM_IMAGE / AIBOM_TAG in .env
+#   - migrations run once on start (the image's CMD already does
+#     `prisma migrate deploy` before booting)
+#   - tighter runtime hardening (read-only rootfs, dropped caps, no new privs)
+#   - resource ceilings and log rotation
+#   - Postgres is NOT published on the host by default — the backend reaches it
+#     over the compose network. Put a TLS-terminating reverse proxy in front of
+#     the backend (see docs/deployment.md).
+#
+# Still required in .env: POSTGRES_PASSWORD, JWT_SECRET, APP_URL (the public
+# https:// URL), and CORS_ORIGIN if the SPA is served from another origin.
+
+services:
+  postgres:
+    ports: !reset []
+    restart: always
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 1g }
+    security_opt:
+      - no-new-privileges:true
+
+  backend:
+    image: ${AIBOM_IMAGE:-ghcr.io/darkzero2022/ai-asset-governance-tool}:${AIBOM_TAG:-latest}
+    build: !reset null
+    pull_policy: always
+    restart: always
+    environment:
+      NODE_ENV: production
+      ENABLE_API_DOCS: ${ENABLE_API_DOCS:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 1g }
+
+  # The base file already keeps this behind the `standalone-frontend` profile;
+  # in production the backend serves the SPA, so it stays off.

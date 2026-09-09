@@ -91,14 +91,24 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      # Visibility only — does not fail the build. Pre-existing advisories are
-      # tracked in ROADMAP.md ("Supply-chain scanning"); tighten to a gate once
-      # they are cleared.
-      - name: npm audit (advisory)
+      # Gate: fail on a HIGH/CRITICAL advisory in the production dependency tree
+      # of any workspace. Dev-only advisories are reported but do not block
+      # (see the "npm audit — dev (advisory)" step below).
+      - name: npm audit — production (gate)
+        run: |
+          status=0
+          for dir in packages/shared backend frontend; do
+            echo "::group::npm audit --omit=dev — $dir"
+            (cd "$dir" && npm audit --omit=dev --audit-level=high) || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+
+      - name: npm audit — dev (advisory)
         if: always()
         run: |
           for dir in packages/shared backend frontend; do
-            echo "::group::npm audit — $dir"
-            (cd "$dir" && npm audit --omit=dev || true)
+            echo "::group::npm audit (incl. dev) — $dir"
+            (cd "$dir" && npm audit || true)
             echo "::endgroup::"
           done
