@@ -58,24 +58,31 @@ flowchart LR
 ```bash
 git clone https://github.com/darkzero2022/ai-asset-governance-tool.git
 cd ai-asset-governance-tool
-scripts/setup.sh          # interactive
+
+scripts/setup.sh                                              # Linux / macOS / Git Bash — interactive
+powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1  # Windows PowerShell — interactive
 ```
+
+`setup.sh` (Linux/macOS/Git Bash) and `setup.ps1` (Windows PowerShell) do the
+same thing: **check for missing dependencies and offer to install them** (a distro
+package manager or `nvm` on Linux/macOS, `winget` on Windows), write `.env`,
+install packages, migrate, seed, and create the admin account.
 
 Pick one of three tracks (full guide: **[docs/guide/01-getting-started.md](docs/guide/01-getting-started.md)**):
 
-| Track | Command | Needs |
+| Track | Command (`.sh` shown; `.ps1` flags are `-Mode` / `-Data` / …) | Needs |
 |---|---|---|
-| **Docker** (recommended) | `scripts/setup.sh --mode=docker --data=demo --yes` | Docker + `docker compose` |
-| **No-Docker local** | `scripts/setup.sh --mode=local --database=managed --data=demo --yes` | Node 22+, Bash (a PostgreSQL is bundled) |
+| **Docker** (recommended) | `scripts/setup.sh --mode=docker --data=demo --yes` | Docker + `docker compose` (setup can install it) |
+| **No-Docker local** | `scripts/setup.sh --mode=local --database=managed --data=demo --yes` | Node 22+ (setup can install it); a PostgreSQL is bundled |
 | **Existing PostgreSQL** | set `DATABASE_URL` in `.env`, then `--mode=local --database=url` | Node 22+, a reachable database |
 
 Data modes: **empty** (reference data + admin only) or **demo** (adds a fictional
-portfolio). The `scripts/*.sh` helpers need Bash — on Windows use WSL2 or Git Bash,
-or follow the manual commands in the guide.
+portfolio).
 
 ```bash
+# admin account non-interactively (Windows: -AdminEmail / -AdminName / -AdminPassword)
 scripts/setup.sh --mode=docker --data=demo \
-  --admin-email=you@yourco.com --admin-password='choose-a-strong-one' --yes
+  --admin-email=you@yourco.com --admin-name="GRC Admin" --admin-password='choose-a-strong-one' --yes
 scripts/start.sh      # reads .aibom-mode; scripts/stop.sh to stop
 ```
 
@@ -130,7 +137,7 @@ backend/
 frontend/
   src/pages/      Dashboard, Assets, Risk Register, Projects and their detail views
   src/components/ Shared UI: tables, charts, forms, severity badges
-scripts/          setup.sh, start.sh, stop.sh, backup.sh, restore.sh
+scripts/          setup.{sh,ps1}, start.{sh,ps1}, stop.{sh,ps1}, backup.sh, restore.sh, lib-deps.sh
 docs/guide/       Full user/operator documentation
 docs/deployment.md
 docker-compose.yml, backend/Dockerfile, frontend/Dockerfile

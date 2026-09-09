@@ -2,11 +2,17 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/lib-deps.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib-deps.sh"
+
 MODE=""
 DATABASE=""
 DATA=""
 YES="false"
+INSTALL_DEPS="false"
+SKIP_DEPS="false"
 ADMIN_EMAIL="${ADMIN_EMAIL:-}"
+ADMIN_NAME="${ADMIN_NAME:-}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 
 usage() {
@@ -20,9 +26,17 @@ Usage: scripts/setup.sh [options]
                                 docker  - the postgres service in docker-compose.yml
                                 url     - an existing server (set DATABASE_URL in .env)
   --data=empty|demo           Seed data (default: empty)
-  --admin-email=EMAIL         Login for the initial admin account
-  --admin-password=PASSWORD   Password for the initial admin (default: random, printed)
-  --yes                       Non-interactive; take defaults for anything not given
+  --admin-email=EMAIL         Login (email) for the initial admin account
+  --admin-name=NAME           Display name for the initial admin (default: "Admin User")
+  --admin-password=PASSWORD   Password for the initial admin (min 8 chars; default: random, printed)
+  --install-deps              Install any missing system dependencies without asking
+  --skip-deps                 Do not check or install system dependencies
+  --yes                       Non-interactive: take defaults, and install missing deps
+  -h, --help                  Show this help
+
+Dependencies checked/installed: Node ${NODE_MIN_MAJOR}+, npm (for local mode); Docker + the
+compose plugin (for docker mode / --database=docker); openssl (optional — a
+Node/urandom fallback is used if absent).
 EOF
 }
 
@@ -32,7 +46,10 @@ for arg in "$@"; do
     --database=*) DATABASE="${arg#*=}" ;;
     --data=*) DATA="${arg#*=}" ;;
     --admin-email=*) ADMIN_EMAIL="${arg#*=}" ;;
+    --admin-name=*) ADMIN_NAME="${arg#*=}" ;;
     --admin-password=*) ADMIN_PASSWORD="${arg#*=}" ;;
+    --install-deps) INSTALL_DEPS="true" ;;
+    --skip-deps) SKIP_DEPS="true" ;;
     --yes) YES="true" ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $arg" >&2; usage; exit 1 ;;
@@ -82,8 +99,8 @@ env_set() {
   fi
 }
 
-rand_secret() { openssl rand -hex 32; }
-rand_password() { openssl rand -base64 24 | tr -d '/+=' | cut -c1-32; }
+# rand_hex32 / rand_password come from lib-deps.sh (openssl → node → urandom fallback).
+rand_secret() { rand_hex32; }
 
 # --- resolve options -----------------------------------------------------
 if [ -z "$MODE" ]; then
@@ -115,6 +132,10 @@ if [ -z "$ADMIN_EMAIL" ]; then
 fi
 case "$ADMIN_EMAIL" in *@*.*) ;; *) echo "--admin-email must look like an email address" >&2; exit 1 ;; esac
 
+if [ -z "$ADMIN_NAME" ]; then
+  if [ "$YES" = "true" ]; then ADMIN_NAME="Admin User"; else ADMIN_NAME="$(ask_choice "Admin display name" "Admin User")"; fi
+fi
+
 if [ -z "$ADMIN_PASSWORD" ] && [ "$YES" != "true" ]; then
   ADMIN_PASSWORD="$(ask_password)"
 fi
@@ -122,14 +143,19 @@ if [ -n "$ADMIN_PASSWORD" ] && [ "${#ADMIN_PASSWORD}" -lt 8 ]; then
   echo "Admin password must be at least 8 characters" >&2; exit 1
 fi
 
-# --- prerequisites -----------------------------------------------------
-require_command openssl
-if [ "$MODE" = "local" ]; then
-  require_command node
-  require_command npm
+# --- prerequisites: detect, offer to install --------------------------
+if [ "$SKIP_DEPS" != "true" ]; then
+  NEED="openssl"
+  [ "$MODE" = "local" ] && NEED="$NEED node npm"
+  { [ "$MODE" = "docker" ] || [ "$DATABASE" = "docker" ]; } && NEED="$NEED docker"
+  # openssl is optional (fallback exists) — only auto-install it alongside others.
+  have openssl || NEED="$(echo "$NEED" | sed 's/\bopenssl\b//')"
+  ensure_dependencies "$NEED" "$INSTALL_DEPS" "$YES"
 fi
-if [ "$DATABASE" = "docker" ]; then
+if [ "$MODE" = "local" ]; then require_command node; require_command npm; fi
+if { [ "$MODE" = "docker" ] || [ "$DATABASE" = "docker" ]; }; then
   require_command docker
+  docker compose version >/dev/null 2>&1 || { echo "The 'docker compose' plugin is required. $(install_hint docker)" >&2; exit 1; }
 fi
 
 cd "$ROOT_DIR"
@@ -252,18 +278,18 @@ if [ -z "$ADMIN_PASSWORD" ]; then
   fi
 fi
 
-export ADMIN_EMAIL ADMIN_PASSWORD
+export ADMIN_EMAIL ADMIN_NAME ADMIN_PASSWORD
 set -a
 # shellcheck disable=SC1091
 . ./.env
 set +a
-export ADMIN_EMAIL ADMIN_PASSWORD
+export ADMIN_EMAIL ADMIN_NAME ADMIN_PASSWORD
 
 if [ "$MODE" = "docker" ]; then
   docker compose build backend
   docker compose up -d postgres
   docker compose run --rm backend npx prisma migrate deploy
-  docker compose run --rm -e ADMIN_EMAIL -e ADMIN_PASSWORD backend npm run prisma:seed:reference
+  docker compose run --rm -e ADMIN_EMAIL -e ADMIN_NAME -e ADMIN_PASSWORD backend npm run prisma:seed:reference
   if [ "$DATA" = "demo" ]; then
     docker compose run --rm -e ADMIN_EMAIL backend npm run prisma:seed:demo
   fi
@@ -299,10 +325,10 @@ echo "Config is in .env (generated secrets are gitignored)."
 if [ "$ADMIN_VIA_WIZARD" = "true" ]; then
   echo "Admin account: none seeded — open ${APP_URL_OUT} and create it on first visit."
 elif [ "${ADMIN_GENERATED:-false}" = "true" ]; then
-  echo "Admin login: $ADMIN_EMAIL"
+  echo "Admin login: $ADMIN_EMAIL   (name: $ADMIN_NAME)"
   echo "Admin password: $ADMIN_PASSWORD   (generated — change it on the Users page)"
 else
-  echo "Admin login: $ADMIN_EMAIL"
+  echo "Admin login: $ADMIN_EMAIL   (name: $ADMIN_NAME)"
   echo "Admin password: the value you supplied."
 fi
 echo "To reset the admin password later, re-run:"

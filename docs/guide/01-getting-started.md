@@ -8,7 +8,7 @@ There are three ways to run AI-BOM. Pick the row that matches you:
 | Track | You get | Needs |
 |---|---|---|
 | **[Docker](#track-a--docker-recommended)** (recommended) | Whole stack in containers, app on one port, restarts itself | Docker Desktop / Docker Engine + `docker compose` |
-| **[No-Docker local](#track-b--no-docker-local)** | Backend + frontend on host Node, a *bundled* PostgreSQL — nothing else to install | Node 22+, Bash (WSL or Git Bash on Windows) |
+| **[No-Docker local](#track-b--no-docker-local)** | Backend + frontend on host Node, a *bundled* PostgreSQL — nothing else to install | Node 22+ (setup installs it if missing). `setup.sh` on Linux/macOS/Git Bash, `setup.ps1` on Windows PowerShell |
 | **[Linux server](#track-c--linux-server-always-on)** | The Docker track plus a systemd unit so it survives reboots | A Linux host with Docker |
 
 ---
@@ -44,12 +44,18 @@ Key settings: `DB_MODE` (`managed` / `docker` / `url`), `PORT` (default 4000),
 ## Track A — Docker (recommended)
 
 **Prerequisites:** Docker Desktop (macOS/Windows) or Docker Engine + the
-`docker compose` plugin (Linux); Bash for the scripts (Git Bash on Windows).
-`docker compose version` must work. You do **not** need Node.
+`docker compose` plugin (Linux). `docker compose version` must work — if Docker
+is missing, setup offers to install it (`winget` on Windows, `get.docker.com` on
+Linux). You do **not** need Node for this track.
 
 ```bash
-scripts/setup.sh --mode=docker --data=demo --yes
+scripts/setup.sh --mode=docker --data=demo --yes          # Linux / macOS / Git Bash
 scripts/start.sh
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1 -Mode docker -Data demo -Yes   # Windows
+powershell -ExecutionPolicy Bypass -File .\scripts\start.ps1
 ```
 
 Setup builds the image (it bundles the frontend), starts Postgres, migrates,
@@ -72,19 +78,38 @@ start on login (Settings → General) and the app comes back after every reboot.
 
 ## Track B — No-Docker local
 
-**Prerequisites:** Node 22+ and npm; Bash (WSL2 or Git Bash on Windows);
-`openssl`. No Docker, no system PostgreSQL — setup downloads and runs a bundled
-PostgreSQL for you.
+**Prerequisites:** Node 22+ and npm. No Docker, no system PostgreSQL, no
+`openssl` — setup detects what's missing, offers to install it, and downloads a
+bundled PostgreSQL to run for you.
+
+**Linux / macOS / Git Bash:**
 
 ```bash
 scripts/setup.sh --mode=local --database=managed --data=demo --yes
 scripts/start.sh
 ```
 
-`--database=managed` is the default when `--mode=local`. Setup installs
-dependencies, starts the bundled database (data under `data/pg/`, port 55432,
-bound to localhost), migrates, and seeds. `start.sh` then runs the backend
-(`:4000`) and the Vite dev server (`:5173`); open **http://localhost:5173**.
+**Windows (PowerShell — no Git Bash needed):**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1 -Mode local -Database managed -Data demo -Yes
+powershell -ExecutionPolicy Bypass -File .\scripts\start.ps1
+```
+
+`--database=managed` (`-Database managed`) is the default for local mode. Setup
+checks for **Node 22+** (and Docker, for docker mode); if something is missing it
+prints the install command and — with `--install-deps` / `-InstallDeps`, or
+`--yes` / `-Yes` — installs it automatically (a distro package manager or `nvm`
+on Linux/macOS, `winget` on Windows). It then installs npm packages, starts the
+bundled database (data under `data/pg/`, port 55432, localhost-only), migrates,
+and seeds. `start.sh` / `start.ps1` runs the backend (`:4000`) and the Vite dev
+server (`:5173`); open **http://localhost:5173**.
+
+**Admin account:** pass `--admin-email` / `--admin-name` / `--admin-password`
+(`-AdminEmail` / `-AdminName` / `-AdminPassword`) to set the first admin
+non-interactively; without `--yes` the script prompts for each. Leave the
+password off with `--data=demo` and a random one is generated and printed;
+with `--data=empty` the app's first-run screen creates it instead.
 
 Other database choices for local mode:
 
@@ -93,8 +118,8 @@ scripts/setup.sh --mode=local --database=docker --yes   # PostgreSQL in a contai
 scripts/setup.sh --mode=local --database=url --yes       # set DATABASE_URL in .env first
 ```
 
-**Windows:** run the scripts from **WSL2** or **Git Bash**. Plain PowerShell/CMD
-can't run `.sh` files — use Track A instead, or the [manual steps](#manual-setup-no-scripts).
+**Windows without Git Bash and without PowerShell** (rare): use Track A (Docker)
+or the [manual steps](#manual-setup-no-scripts).
 
 ---
 
@@ -135,9 +160,13 @@ pm2 instead and works on macOS/Windows too.
 
 ## Day-to-day scripts
 
+Every `.sh` script below has a `.ps1` twin for Windows PowerShell
+(`setup.ps1`, `start.ps1`, `stop.ps1`); the rest run from Git Bash / WSL.
+
 | Script | Does |
 |---|---|
-| `scripts/start.sh` / `scripts/stop.sh` | Start / stop everything for the recorded mode |
+| `scripts/setup.sh` / `scripts/setup.ps1` | Check/install deps, write `.env`, install packages, migrate, seed, create the admin |
+| `scripts/start.sh` / `scripts/stop.sh` (`.ps1`) | Start / stop everything for the recorded mode |
 | `scripts/status.sh` | Mode, versions, what's running, migration status, `/health` |
 | `scripts/upgrade.sh` | `git pull` → reinstall → migrate → rebuild → restart (refuses a dirty tree; backs up first) |
 | `scripts/reset.sh` | Drop all data and re-seed (asks for confirmation unless `--yes`) |
