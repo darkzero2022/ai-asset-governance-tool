@@ -78,10 +78,12 @@ and `TRUST_PROXY=1` in `.env`.
   network-level egress controls in production — an egress proxy allowlist or a NAT/
   security-group policy that denies the backend access to link-local (`169.254.0.0/16`),
   RFC1918, and CGNAT ranges.
-- **Token storage**: the SPA stores its JWT in `localStorage`, which is readable by
-  any injected script. Keep the frontend's dependency surface minimal and its CSP
-  strict; consider moving to an httpOnly cookie + CSRF token if the threat model
-  warrants it.
+- **Sessions**: the SPA holds a 15-minute access token in memory only; the
+  persistent credential is an `httpOnly; SameSite=Strict; Secure` refresh cookie
+  scoped to `/api/v1/auth`, rotated on every use. Tokens are revocable
+  (`tokenVersion`). Terminate TLS at the proxy so the `Secure` cookie is set, and
+  when the SPA is on a different origin than the API set `CORS_ORIGIN` to that
+  exact origin (credentialed requests are rejected otherwise).
 
 ## Database Migrations
 

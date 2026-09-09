@@ -8,20 +8,17 @@ Done recently: monorepo shared types, `/api/v1` + generated OpenAPI, react-route
 + TanStack Query, RBAC UI gating, the Wazuh-style UI redesign, "AI Systems"
 rename, modal-based creation, MITRE ATLAS mitigation mapping, **OWASP MCP Top 10 +
 cross-framework crosswalk + framework versioning**, Linux/Windows setup scripts
-with dependency auto-install.
+with dependency auto-install, **auth hardening (F1 + F3 core)** — in-memory access
+token + httpOnly rotating refresh cookie + `tokenVersion` revocation + a `Session`
+table + per-account lockout + a password policy + self-service change-password +
+admin force-reset.
 
 ## Security & auth hardening
 
-- **F1 — Session tokens.** Move the access token to a short-lived `httpOnly;
-  Secure; SameSite` cookie + a rotating refresh token; embed `tokenVersion` in the
-  JWT and bump it on password change / deactivation / "log out everywhere"; add
-  CSRF protection for cookie-auth mutations. *Why: a JWT in `localStorage` is
-  readable by any injected script and cannot be revoked.*
-- **F3 — Login hardening.** Per-account lockout / exponential backoff on top of
-  the existing IP rate limit; a password-strength policy in the `zod` schema and
-  the UI; a self-service "change my password" screen; admin "force reset" flag;
-  optional TOTP for `ADMIN` behind `MFA_ENABLED`. *Why: table stakes for a
-  security tool.*
+- **F3 — TOTP / 2FA (remainder).** Optional time-based OTP for `ADMIN` accounts
+  behind `MFA_ENABLED`: enrollment (QR + secret), recovery codes, a second step
+  on login. *The rest of F3 (lockout, password policy, change-password,
+  force-reset) shipped.*
 - **F2 — RBAC meta-test.** A test that asserts every mutating route has an
   explicit `requireRole` and matches the documented permission matrix, so the
   matrix can't silently drift.

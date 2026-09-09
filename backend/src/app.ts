@@ -1,3 +1,4 @@
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
@@ -69,8 +70,9 @@ app.use((_req, res, next) => {
   next();
 });
 
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: "1mb" }));
+app.use(cookieParser());
 
 // Serve the built SPA (when enabled) before the API routes: hashed bundles are
 // returned as files and browser navigations to client-router paths get

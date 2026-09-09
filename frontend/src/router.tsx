@@ -54,6 +54,8 @@ const ProjectList = lazy(() => import("./pages/ProjectList"));
 const RiskDetail = lazy(() => import("./pages/RiskDetail"));
 const RiskRegister = lazy(() => import("./pages/RiskRegister"));
 const Users = lazy(() => import("./pages/Users"));
+const Account = lazy(() => import("./pages/Account"));
+const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 
 /**
  * Each route component below owns its page's server data via TanStack Query
@@ -82,6 +84,16 @@ function UsersRoute() {
     return <Forbidden message="Admin access required." />;
   }
   return <Users token={ctx.token} />;
+}
+
+function AccountRoute() {
+  const ctx = useCtx();
+  return <Account token={ctx.token} />;
+}
+
+function ChangePasswordRoute() {
+  const ctx = useCtx();
+  return <ChangePassword token={ctx.token} forced={Boolean(ctx.currentUser?.mustChangePassword)} />;
 }
 
 function AiSystemListRoute() {
@@ -899,6 +911,8 @@ export const router = createBrowserRouter([
       { path: "projects", element: <ProjectListRoute /> },
       { path: "projects/:id", element: <ProjectDetailRoute /> },
       { path: "users", element: <UsersRoute /> },
+      { path: "account", element: <AccountRoute /> },
+      { path: "account/change-password", element: <ChangePasswordRoute /> },
       { path: "*", element: <NotFoundRoute /> },
     ],
   },

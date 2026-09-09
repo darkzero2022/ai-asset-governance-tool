@@ -1,5 +1,6 @@
 import type { CurrentUser } from "@aibom/shared";
-import { LogOut, Menu, Moon, Sun } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { LogOut, Menu, Moon, Sun, UserCog } from "lucide-react";
 import { Badge } from "../ui/Badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/DropdownMenu";
 import type { Theme } from "../../theme/useTheme";
@@ -21,6 +22,7 @@ export function TopBar({
   onSignOut: () => void;
   onOpenMobileNav: () => void;
 }) {
+  const navigate = useNavigate();
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
       <button
@@ -62,6 +64,9 @@ export function TopBar({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => navigate("/account")}>
+              <UserCog className="h-4 w-4" /> Account &amp; sessions
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={onSignOut} className="text-danger focus:bg-danger/10">
               <LogOut className="h-4 w-4" /> Sign out
             </DropdownMenuItem>

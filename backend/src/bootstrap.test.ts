@@ -41,13 +41,13 @@ describe("first-run bootstrap", () => {
   it("creates the first admin and returns a usable token", async () => {
     const res = await request(app)
       .post("/api/v1/auth/bootstrap")
-      .send({ name: "First Admin", email: "first-admin@example.com", password: "bootstrap-pw-123" })
+      .send({ name: "First Admin", email: "first-admin@example.com", password: "bootstrap-secret-passphrase" })
       .expect(201);
 
     expect(res.body.user).toMatchObject({ email: "first-admin@example.com", role: "ADMIN" });
-    expect(res.body.token).toEqual(expect.any(String));
+    expect(res.body.accessToken).toEqual(expect.any(String));
 
-    await request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${res.body.token}`).expect(200);
+    await request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${res.body.accessToken}`).expect(200);
   });
 
   it("stops reporting needsBootstrap and rejects a second bootstrap", async () => {
@@ -56,7 +56,7 @@ describe("first-run bootstrap", () => {
 
     const res = await request(app)
       .post("/api/v1/auth/bootstrap")
-      .send({ email: "second@example.com", password: "another-pw-123" })
+      .send({ email: "second@example.com", password: "another-secret-passphrase" })
       .expect(409);
     expect(res.body.error.code).toBe("ALREADY_BOOTSTRAPPED");
   });

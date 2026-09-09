@@ -100,6 +100,7 @@ function tagFor(path: string): string {
 const REQUEST_BODY_SCHEMAS: Record<string, string> = {
   "POST /auth/login": "LoginInput",
   "POST /auth/bootstrap": "BootstrapInput",
+  "POST /auth/change-password": "ChangePasswordInput",
   "POST /ai-systems": "AssetInput",
   "PUT /ai-systems/:id": "AssetUpdateInput",
   "POST /ai-systems/import-url": "ImportUrlInput",
@@ -220,9 +221,17 @@ const schemas: Record<string, object> = {
     properties: {
       email: { type: "string", format: "email" },
       name: { type: "string", minLength: 1 },
-      password: { type: "string", minLength: 8 },
+      password: { type: "string", minLength: 12, description: "At least 12 characters, not a common/breached password." },
     },
     required: ["email", "password"],
+  },
+  ChangePasswordInput: {
+    type: "object",
+    properties: {
+      currentPassword: { type: "string", minLength: 1 },
+      newPassword: { type: "string", minLength: 12, description: "At least 12 characters, not a common/breached password." },
+    },
+    required: ["currentPassword", "newPassword"],
   },
   AssetInput: { type: "object", properties: assetProperties, required: assetRequired },
   AssetUpdateInput: {

@@ -163,6 +163,16 @@ export interface CurrentUser {
   name: string;
   role: Role | string;
   active: boolean;
+  mustChangePassword?: boolean;
+}
+
+export interface AuthSession {
+  id: string;
+  userAgent?: string | null;
+  ip?: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+  current: boolean;
 }
 
 export interface Pagination {

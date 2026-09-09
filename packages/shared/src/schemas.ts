@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isCommonPassword } from "./passwords.js";
 import {
   ASSET_TYPES,
   CONTROL_STATUSES,
@@ -89,18 +90,37 @@ export const controlSchema = z.object({
   evidenceNotes: z.string().optional().nullable(),
 });
 
+// Password policy: >= 12 chars and not on the common/breached deny-list.
+export const PASSWORD_POLICY_HINT = "At least 12 characters, and not a common or previously-breached password.";
+export const passwordSchema = z
+  .string()
+  .min(12, "Password must be at least 12 characters")
+  .refine((value) => !isCommonPassword(value), "This password is too common — choose something less predictable");
+
 export const userCreateSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
   role: z.enum(ROLES),
-  password: z.string().min(8),
+  password: passwordSchema,
 });
 
 export const userUpdateSchema = z.object({
   name: z.string().min(1).optional(),
   role: z.enum(ROLES).optional(),
   active: z.boolean().optional(),
-  password: z.string().min(8).optional(),
+  password: passwordSchema.optional(),
+  mustChangePassword: z.boolean().optional(),
+});
+
+export const bootstrapSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1).optional(),
+  password: passwordSchema,
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: passwordSchema,
 });
 
 // Update variants carry an optimistic-concurrency token: the updatedAt the client

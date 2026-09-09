@@ -5,7 +5,7 @@ import { app } from "./app.js";
 import { prisma } from "./prisma.js";
 
 const email = "auth-test@example.com";
-const password = "correct-password";
+const password = "correct-horse-battery-staple";
 
 beforeAll(async () => {
   process.env.JWT_SECRET = process.env.JWT_SECRET ?? "test-secret";
@@ -27,14 +27,15 @@ afterAll(async () => {
 });
 
 describe("POST /auth/login", () => {
-  it("returns a token for valid credentials", async () => {
+  it("returns an access token + sets a refresh cookie for valid credentials", async () => {
     const response = await request(app).post("/api/v1/auth/login").send({ email, password }).expect(200);
 
-    expect(response.body.token).toEqual(expect.any(String));
+    expect(response.body.accessToken).toEqual(expect.any(String));
     expect(response.body.user).toMatchObject({ email, role: "ADMIN" });
+    expect(response.headers["set-cookie"]?.some((c: string) => c.startsWith("refresh_token="))).toBe(true);
   });
 
   it("rejects invalid credentials", async () => {
-    await request(app).post("/api/v1/auth/login").send({ email, password: "wrong-password" }).expect(401);
+    await request(app).post("/api/v1/auth/login").send({ email, password: "wrong-password-here" }).expect(401);
   });
 });

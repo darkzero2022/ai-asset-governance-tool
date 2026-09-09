@@ -309,12 +309,12 @@ describe("RBAC permission matrix", () => {
 
 describe("user management", () => {
   it("allows admins to create, update, deactivate, and reset users", async () => {
-    await request(app).post("/api/v1/users").set(auth("VIEWER")).send({ email: `${runId}-blocked@example.com`, name: "Blocked", role: "VIEWER", password: "password123" }).expect(403);
+    await request(app).post("/api/v1/users").set(auth("VIEWER")).send({ email: `${runId}-blocked@example.com`, name: "Blocked", role: "VIEWER", password: "a-strong-passphrase-123" }).expect(403);
 
     const createResponse = await request(app)
       .post("/api/v1/users")
       .set(auth("ADMIN"))
-      .send({ email: `${runId}-managed@example.com`, name: "Managed User", role: "VIEWER", password: "password123" })
+      .send({ email: `${runId}-managed@example.com`, name: "Managed User", role: "VIEWER", password: "a-strong-passphrase-123" })
       .expect(201);
     const userId = createResponse.body.user.id;
 
@@ -325,7 +325,7 @@ describe("user management", () => {
     await request(app)
       .put(`/api/v1/users/${userId}`)
       .set(auth("ADMIN"))
-      .send({ role: "APPROVER", active: false, password: "newpassword123" })
+      .send({ role: "APPROVER", active: false, password: "a-different-strong-passphrase" })
       .expect(200)
       .expect((response) => {
         expect(response.body.user).toMatchObject({ id: userId, role: "APPROVER", active: false });

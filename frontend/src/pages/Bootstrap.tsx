@@ -1,10 +1,11 @@
 import { FormEvent, useState } from "react";
 import { ShieldCheck } from "lucide-react";
+import { PASSWORD_POLICY_HINT } from "@aibom/shared";
 import { apiFetch } from "../api/client";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Field";
 
-export default function Bootstrap({ onComplete }: { onComplete: (token: string) => void }) {
+export default function Bootstrap({ onComplete }: { onComplete: (accessToken: string) => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,8 +16,8 @@ export default function Bootstrap({ onComplete }: { onComplete: (token: string) 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError("");
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (password.length < 12) {
+      setError("Password must be at least 12 characters.");
       return;
     }
     if (password !== confirm) {
@@ -25,11 +26,11 @@ export default function Bootstrap({ onComplete }: { onComplete: (token: string) 
     }
     setSubmitting(true);
     try {
-      const result = await apiFetch<{ token: string }>("/auth/bootstrap", {
+      const result = await apiFetch<{ accessToken: string }>("/auth/bootstrap", {
         method: "POST",
         body: JSON.stringify({ name: name || undefined, email, password }),
       });
-      onComplete(result.token);
+      onComplete(result.accessToken);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Setup failed.");
     } finally {
@@ -52,7 +53,7 @@ export default function Bootstrap({ onComplete }: { onComplete: (token: string) 
           <div className="space-y-4">
             <Input id="bootstrap-name" label="Name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Administrator" />
             <Input id="bootstrap-email" label="Email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
-            <Input id="bootstrap-password" label="Password" type="password" required value={password} onChange={(event) => setPassword(event.target.value)} />
+            <Input id="bootstrap-password" label="Password" type="password" required value={password} onChange={(event) => setPassword(event.target.value)} hint={PASSWORD_POLICY_HINT} autoComplete="new-password" />
             <Input id="bootstrap-confirm" label="Confirm password" type="password" required value={confirm} onChange={(event) => setConfirm(event.target.value)} />
           </div>
           {error && <p className="mt-4 text-sm text-danger" role="alert">{error}</p>}

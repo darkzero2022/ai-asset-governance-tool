@@ -14,7 +14,16 @@ VIEWER can read inventory, risks, dashboards, and exports but cannot mutate gove
 
 ## User Management
 
-Admins can create users, change role, deactivate users, and reset passwords. Deactivated users are rejected during authentication even if they still have a previously issued token.
+Admins can create users, change role, deactivate users, reset passwords, and
+"force a password change on next login". Resetting a password, deactivating an
+account, or forcing a change **revokes every live session and token** for that
+user (not just future logins). Passwords must be at least 12 characters and not
+on a common/breached deny-list.
+
+Each user can change their own password and see / revoke their active sessions
+from **Account & sessions** in the user menu; "Log out of all devices" ends every
+session. Changing a password signs the user out everywhere except the current
+device.
 
 ## Ownership Scoping
 

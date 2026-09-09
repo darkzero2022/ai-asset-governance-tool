@@ -37,13 +37,20 @@ router.put("/users/:id", requireAuth, requireRole("ADMIN"), async (req, res, nex
     const id = String(req.params.id);
     const body = userUpdateSchema.parse(req.body);
     const before = await prisma.user.findUniqueOrThrow({ where: { id }, select: { id: true, email: true, name: true, role: true, active: true, createdAt: true } });
+    // An admin resetting the password, deactivating the account, or forcing a
+    // reset should also kill any live sessions/tokens for that user.
+    const revoke = body.password !== undefined || body.active === false || body.mustChangePassword === true;
     const user = await prisma.user.update({
       where: { id },
       data: {
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.role !== undefined ? { role: body.role } : {}),
         ...(body.active !== undefined ? { active: body.active } : {}),
-        ...(body.password !== undefined ? { passwordHash: await bcrypt.hash(body.password, 10) } : {}),
+        ...(body.mustChangePassword !== undefined ? { mustChangePassword: body.mustChangePassword } : {}),
+        ...(body.password !== undefined
+          ? { passwordHash: await bcrypt.hash(body.password, 10), lockedUntil: null, failedLoginAttempts: 0 }
+          : {}),
+        ...(revoke ? { tokenVersion: { increment: 1 }, sessions: { deleteMany: {} } } : {}),
       },
       select: { id: true, email: true, name: true, role: true, active: true, createdAt: true },
     });

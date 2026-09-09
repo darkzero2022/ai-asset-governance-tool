@@ -10,8 +10,8 @@ describe("Bootstrap", () => {
     render(<Bootstrap onComplete={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@b.com" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "longenough1" } });
-    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "different111" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "a-long-enough-passphrase" } });
+    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "a-different-long-passphrase" } });
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
     expect(await screen.findByText(/passwords do not match/i)).toBeInTheDocument();
@@ -21,7 +21,7 @@ describe("Bootstrap", () => {
   it("posts to /auth/bootstrap and hands the token back on success", async () => {
     const onComplete = vi.fn();
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ token: "tok-123", user: { role: "ADMIN" } }), {
+      new Response(JSON.stringify({ accessToken: "tok-123", user: { role: "ADMIN" } }), {
         status: 201,
         headers: { "Content-Type": "application/json" },
       }),
@@ -29,8 +29,8 @@ describe("Bootstrap", () => {
 
     render(<Bootstrap onComplete={onComplete} />);
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "admin@b.com" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "longenough1" } });
-    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "longenough1" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "a-long-enough-passphrase" } });
+    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "a-long-enough-passphrase" } });
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledWith("tok-123"));
@@ -47,8 +47,8 @@ describe("Bootstrap", () => {
 
     render(<Bootstrap onComplete={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@b.com" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "longenough1" } });
-    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "longenough1" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "a-long-enough-passphrase" } });
+    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "a-long-enough-passphrase" } });
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
     expect(await screen.findByText("Already set up")).toBeInTheDocument();

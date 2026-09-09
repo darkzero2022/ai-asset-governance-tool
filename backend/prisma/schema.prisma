@@ -97,18 +97,42 @@ enum Role {
 }
 
 model User {
-  id           String               @id @default(cuid())
-  email        String               @unique
-  name         String
-  passwordHash String
-  role         Role                 @default(VIEWER)
-  active       Boolean              @default(true)
-  createdAt    DateTime             @default(now())
-  assets       AIAsset[]            @relation("AssetCreator")
-  approvals    GovernanceWorkflow[] @relation("WorkflowApprover")
-  auditLogs    AuditLog[]           @relation("AuditActor")
-  projects     Project[]            @relation("ProjectCreator")
-  risks        Risk[]               @relation("RiskCreator")
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  name                String
+  passwordHash        String
+  role                Role                 @default(VIEWER)
+  active              Boolean              @default(true)
+  // Bumped on password change / "log out everywhere" / admin deactivation —
+  // every access token that carries an older value is rejected (TOKEN_STALE).
+  tokenVersion        Int                  @default(0)
+  mustChangePassword  Boolean              @default(false)
+  failedLoginAttempts Int                  @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime             @default(now())
+  sessions            Session[]
+  assets              AIAsset[]            @relation("AssetCreator")
+  approvals           GovernanceWorkflow[] @relation("WorkflowApprover")
+  auditLogs           AuditLog[]           @relation("AuditActor")
+  projects            Project[]            @relation("ProjectCreator")
+  risks               Risk[]               @relation("RiskCreator")
+}
+
+// One row per active refresh token. The raw token lives only in the client's
+// httpOnly cookie; we store its SHA-256 hash. Rotated on every /auth/refresh.
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  userAgent  String?
+  ip         String?
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @updatedAt
+  expiresAt  DateTime
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model AuditLog {
