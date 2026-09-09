@@ -1,13 +1,18 @@
 # AI Asset Governance Tool
 
+[![CI](https://github.com/darkzero2022/ai-asset-governance-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/darkzero2022/ai-asset-governance-tool/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A governed inventory and risk register for AI models, datasets, services, and libraries — built for security/GRC teams who need to track what AI is running across the organization, assess its risk against recognized frameworks, enforce an approval workflow before it goes live, and produce audit-ready AI-BOM evidence.
 
 This is not a codebase scanner. Data is entered through structured intake forms by the people who own the risk decision, not auto-discovered from source code.
 
+> **Status:** evaluation / pilot-grade. Known security limitations are listed up front in [SECURITY.md](SECURITY.md); planned work is in [ROADMAP.md](ROADMAP.md).
+
 ## What it does
 
 - **AI Asset Inventory** — every model, dataset, service, and library in one place: type, supplier, hosting model, network dependency (air-gapped / hybrid / fully connected), license, data classification, training data provenance, and lifecycle status (Draft → Under Review → Approved → Deployed → Retired).
-- **Risk Register** — risks scored on a likelihood × impact matrix, banded into LOW/MEDIUM/HIGH/CRITICAL severity, mapped to **NIST AI RMF**, the **EU AI Act**, or the **OWASP LLM Top 10**, with a heatmap view, bulk status updates, and a reusable control catalog to track mitigation.
+- **Risk Register** — risks scored on a likelihood × impact matrix, banded into LOW/MEDIUM/HIGH/CRITICAL severity, and classified against **NIST AI RMF**, the **EU AI Act**, the **OWASP LLM Top 10**, or the **OWASP MCP Top 10** — with a category → **STRIDE-AI** + **MITRE ATLAS** technique/mitigation auto-fill, a seeded **cross-framework crosswalk** (an MCP risk shows its OWASP-LLM and NIST equivalents), a heatmap view, bulk status updates, and a reusable control catalog. Each framework's exact revision is pinned and cited in exports; draft frameworks (MCP is draft v0.1) are labelled.
 - **Projects** — the business use cases an asset is actually used in. A single model or service can be linked to many projects, giving a real reuse count instead of a free-text guess, and risks can be scoped to a project directly or rolled up from every asset it depends on.
 - **Model Cards** — structured ML-BOM documentation (task, architecture, intended use, limitations, ethical/fairness considerations, quantitative performance metrics) exported as native CycloneDX `modelCard` data, not bolted-on custom properties. Required before a MODEL/SERVICE asset can be Approved or Deployed.
 - **Governance workflow** — status transitions are policy-gated: an asset can't move to Approved/Deployed while it has open high/critical risk, or while its Model Card is incomplete. Segregation of duties is enforced in code, not just policy — the person who moved an asset to review can't be the one who approves it, and a risk's creator can't be the one who accepts it.
@@ -168,7 +173,14 @@ _Captured against the demo dataset (`scripts/setup.sh --data=demo`). Full-page v
 
 ## License
 
-[MIT](LICENSE) © darkzero2022
+The **code** is [MIT](LICENSE) © darkzero2022.
+
+The tool also ships **reference data** adapted from public frameworks (NIST AI
+RMF, EU AI Act, OWASP LLM Top 10, **OWASP MCP Top 10 — CC BY-NC-SA, non-commercial**,
+MITRE ATLAS, CycloneDX/SPDX schemas). That text is included as attributed data
+under each source's own licence — see [ATTRIBUTION.md](ATTRIBUTION.md) and
+[NOTICE](NOTICE). If you redistribute this project commercially, review the
+OWASP MCP Top 10 licence in particular.
 
 ## Non-goals
 

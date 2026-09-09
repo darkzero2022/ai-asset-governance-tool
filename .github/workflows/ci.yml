@@ -90,3 +90,15 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: npm run build
+
+      # Visibility only — does not fail the build. Pre-existing advisories are
+      # tracked in ROADMAP.md ("Supply-chain scanning"); tighten to a gate once
+      # they are cleared.
+      - name: npm audit (advisory)
+        if: always()
+        run: |
+          for dir in packages/shared backend frontend; do
+            echo "::group::npm audit — $dir"
+            (cd "$dir" && npm audit --omit=dev || true)
+            echo "::endgroup::"
+          done

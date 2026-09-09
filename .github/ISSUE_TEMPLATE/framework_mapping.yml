@@ -1,0 +1,52 @@
+name: Framework mapping correction / addition
+description: Propose or correct a framework category, a STRIDE-AI / ATLAS mapping, or a cross-framework link
+labels: ["framework-data"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        All framework reference data lives in `backend/prisma/seed-reference.ts`:
+        `FrameworkCategory`, `FrameworkThreatMapping` (category → STRIDE-AI + ATLAS
+        technique(s) + suggested ATLAS mitigation(s)), and `FrameworkCrosswalk`
+        (relations between categories in different frameworks).
+
+        The cross-framework mappings are **this project's analysis**, not official
+        OWASP/NIST/MITRE crosswalks — corrections with a rationale are very welcome.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What are you proposing?
+      options:
+        - New / updated framework category (title or description)
+        - STRIDE-AI category for a framework category
+        - MITRE ATLAS technique(s) for a framework category
+        - Suggested MITRE ATLAS mitigation(s) for a framework category
+        - Cross-framework relationship (crosswalk)
+        - A whole new framework
+    validations:
+      required: true
+  - type: input
+    id: category
+    attributes:
+      label: Framework + category
+      placeholder: "OWASP_MCP_TOP10 / MCP03 (Tool Poisoning)"
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: The change
+      description: Current value → proposed value.
+      placeholder: |
+        strideAiCategory: DATA_MODEL_POISONING → (keep)
+        atlasTechniques: ["LLM Plugin Compromise"] → add "ML Supply Chain Compromise"
+        crosswalk: add OWASP_MCP_TOP10/MCP03 RELATED OWASP_LLM_TOP10/LLM03
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Rationale + source
+      description: Why? Link the OWASP/NIST/MITRE text or a published analysis that supports it.
+    validations:
+      required: true

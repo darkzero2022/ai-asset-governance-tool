@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest a capability or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check [ROADMAP.md](../blob/master/ROADMAP.md) first — the change you want
+        may already be planned.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What can't you do today, or what is painful? Who does it affect (Admin, Risk Owner, Approver, Viewer, auditor)?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should it do? Sketch the UI or the API shape if you can.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Project constraints (see CONTRIBUTING.md)
+      options:
+        - label: This does not require a new heavy runtime dependency (charts stay hand-rolled SVG)
+        - label: Any schema change can ship as an additive / expand-backfill-contract migration
+        - label: Every mutating endpoint it adds would have an explicit role check + audit-log write
