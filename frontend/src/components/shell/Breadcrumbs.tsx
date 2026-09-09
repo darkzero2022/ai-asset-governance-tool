@@ -7,6 +7,8 @@ const SEGMENT_LABELS: Record<string, string> = {
   risks: "Risk Register",
   projects: "Projects",
   users: "Users",
+  account: "Account",
+  "change-password": "Change password",
 };
 
 export function Breadcrumbs() {
