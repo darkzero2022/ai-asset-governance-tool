@@ -4,13 +4,13 @@
 
 .DESCRIPTION
   Checks for and (optionally) installs system dependencies via winget, writes the
-  root .env, installs npm packages, runs Prisma migrations, seeds reference data,
-  and creates the initial admin account.
+  root .env (ports included), installs npm packages, runs Prisma migrations,
+  seeds reference data, and creates the initial admin account.
 
   Run from PowerShell (Windows PowerShell 5.1 or PowerShell 7+):
-      pwsh ./scripts/setup.ps1                       # interactive
-      pwsh ./scripts/setup.ps1 -Yes                  # non-interactive defaults
-      pwsh ./scripts/setup.ps1 -Mode docker -Data demo -AdminEmail me@corp.com -AdminPassword 's3cret!!' -Yes
+      powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1            # interactive
+      powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1 -Yes       # non-interactive defaults
+      ... -Mode docker -Data demo -Port 4200 -DbPort 55440 -AdminEmail me@corp.com -AdminPassword 'a-strong-passphrase' -Yes
 
 .NOTES
   Dependencies: Node 22+ and npm (local mode); Docker Desktop + the compose plugin
@@ -22,9 +22,13 @@ param(
   [ValidateSet('local', 'docker')]              [string] $Mode,
   [ValidateSet('managed', 'docker', 'url')]     [string] $Database,
   [ValidateSet('empty', 'demo')]                [string] $Data,
+  [int] $Port,
+  [int] $DbPort,
+  [int] $FrontendPort,
   [string] $AdminEmail,
   [string] $AdminName,
   [string] $AdminPassword,
+  [switch] $AdminDefer,
   [switch] $InstallDeps,
   [switch] $SkipDeps,
   [switch] $Yes
@@ -32,6 +36,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $NodeMinMajor = 22
+$MinPasswordLen = 12
 $RootDir = Split-Path -Parent $PSScriptRoot
 
 # --------------------------------------------------------------------------
@@ -49,10 +54,10 @@ function Read-Choice([string] $prompt, [string] $default) {
 function Read-AdminPassword {
   if ($Yes) { return '' }
   while ($true) {
-    $s1 = Read-Host 'Admin password (leave blank to generate a strong random one)' -AsSecureString
+    $s1 = Read-Host "Admin password (>= $MinPasswordLen chars, not a common password)" -AsSecureString
     $p1 = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s1))
-    if ([string]::IsNullOrEmpty($p1)) { return '' }
-    if ($p1.Length -lt 8) { Write-Host '  Password must be at least 8 characters.'; continue }
+    if ([string]::IsNullOrEmpty($p1)) { Write-Host '  A password is required. (Re-run with -AdminDefer to set it in the app instead.)'; continue }
+    if ($p1.Length -lt $MinPasswordLen) { Write-Host "  Password must be at least $MinPasswordLen characters."; continue }
     $s2 = Read-Host 'Confirm admin password' -AsSecureString
     $p2 = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s2))
     if ($p1 -ceq $p2) { return $p1 }
@@ -66,9 +71,9 @@ function New-RandomHex([int] $bytes = 32) {
   ($buf | ForEach-Object { $_.ToString('x2') }) -join ''
 }
 function New-RandomPassword {
-  $buf = New-Object 'byte[]' 18
+  $buf = New-Object 'byte[]' 24
   [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($buf)
-  ([Convert]::ToBase64String($buf) -replace '[/+=]', '').Substring(0, 16)
+  ([Convert]::ToBase64String($buf) -replace '[/+=]', '').Substring(0, 24)
 }
 
 function Get-EnvValue([string] $file, [string] $key) {
@@ -78,9 +83,15 @@ function Get-EnvValue([string] $file, [string] $key) {
   }
   return $null
 }
+function Write-TextFile([string] $file, [string[]] $lines) {
+  # UTF-8 without BOM - a BOM on line 1 breaks the first key for both the .env
+  # parser here and scripts/*.sh reading the same file.
+  $full = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) $file))
+  [System.IO.File]::WriteAllText($full, ($lines -join "`n") + "`n", (New-Object System.Text.UTF8Encoding($false)))
+}
 function Set-EnvValue([string] $file, [string] $key, [string] $value) {
-  if (-not (Test-Path $file)) { New-Item -ItemType File -Path $file -Force | Out-Null }
-  $lines = @(Get-Content $file)
+  $lines = @()
+  if (Test-Path $file) { $lines = @(Get-Content $file) }
   $out = @()
   $found = $false
   foreach ($line in $lines) {
@@ -88,7 +99,7 @@ function Set-EnvValue([string] $file, [string] $key, [string] $value) {
     else { $out += $line }
   }
   if (-not $found) { $out += "$key=$value" }
-  Set-Content -Path $file -Value $out -Encoding utf8
+  Write-TextFile $file $out
 }
 
 function Test-PortInUse([int] $port) {
@@ -100,22 +111,32 @@ function Test-PortInUse([int] $port) {
   } catch { return $false }
 }
 
+function Resolve-Port([int] $fromParam, [string] $envKey, [int] $default, [string] $prompt, [bool] $ask) {
+  if ($fromParam) { $value = $fromParam }
+  else {
+    $existing = Get-EnvValue '.env' $envKey
+    $value = if ($existing) { [int]$existing } else { $default }
+    if ($ask -and -not $Yes) { $value = [int](Read-Choice $prompt "$value") }
+  }
+  if ($value -lt 1024 -or $value -gt 65535) { throw "Port $value must be an integer 1024-65535." }
+  return $value
+}
+
 function Get-NodeMajor {
   if (-not (Have 'node')) { return 0 }
   try {
-    $v = (& node --version).Trim().TrimStart('v')   # e.g. "22.11.0"
+    $v = (& node --version).Trim().TrimStart('v')
     return [int]($v.Split('.')[0])
   } catch { return 0 }
 }
 
 function Install-WingetPackage([string] $id, [string] $label) {
   if (-not (Have 'winget')) {
-    throw "winget is not available. Install $label manually (https://learn.microsoft.com/windows/package-manager/winget/ for winget itself), then re-run."
+    throw "winget is not available. Install $label manually, then re-run."
   }
   Write-Host "  Installing $label ($id) via winget ..."
   & winget install --id $id --exact --accept-source-agreements --accept-package-agreements --silent
   if ($LASTEXITCODE -ne 0) { throw "winget failed to install $label. Install it manually and re-run." }
-  # Refresh PATH for this process so a just-installed tool is visible.
   $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
               [System.Environment]::GetEnvironmentVariable('Path', 'User')
 }
@@ -133,6 +154,10 @@ function Assert-Dependencies {
 
   $needNode   = ($Mode -eq 'local')
   $needDocker = ($Mode -eq 'docker' -or $Database -eq 'docker')
+  $want = @()
+  if ($needNode) { $want += 'node'; $want += 'npm' }
+  if ($needDocker) { $want += 'docker' }
+  Write-Host ("Platform: Windows - package manager: " + $(if (Have 'winget') { 'winget' } else { 'none' }) + " - install mode: $Mode/$Database - checking: " + ($want -join ', '))
 
   $missing = @()
   if ($needNode) {
@@ -164,14 +189,13 @@ function Assert-Dependencies {
   if ($missing -contains 'node' -or $missing -contains 'npm') { Install-WingetPackage 'OpenJS.NodeJS.LTS' 'Node.js LTS' }
   if ($missing -contains 'docker') {
     Install-WingetPackage 'Docker.DockerDesktop' 'Docker Desktop'
-    Write-Host '  Docker Desktop installed - start it (and complete first-run setup) before continuing, then re-run this script.'
+    Write-Host '  Docker Desktop installed - start it (and complete first-run setup), then re-run this script.'
     exit 1
   }
 
-  # re-verify
   if ($needNode -and ((-not (Have 'node')) -or (Get-NodeMajor) -lt $NodeMinMajor)) {
     Write-Host ''
-    Write-Host "Node still missing/old after install. Open a NEW PowerShell window (so PATH refreshes) and re-run scripts/setup.ps1."
+    Write-Host 'Node still missing/old after install. Open a NEW PowerShell window (so PATH refreshes) and re-run scripts/setup.ps1.'
     exit 1
   }
   Write-Host 'All dependencies present.'
@@ -181,6 +205,8 @@ function Assert-Dependencies {
 # --------------------------------------------------------------------------
 # resolve options
 # --------------------------------------------------------------------------
+Set-Location $RootDir
+Write-Host '-- Environment --------------------------------------------------'
 if (-not $Mode) { $Mode = Read-Choice 'Install mode: local or docker' 'local' }
 if ($Mode -notin @('local', 'docker')) { throw '-Mode must be local or docker' }
 
@@ -195,17 +221,24 @@ if ($Mode -eq 'docker' -and $Database -ne 'docker') { throw '-Mode docker requir
 if (-not $Data) { if ($Yes) { $Data = 'empty' } else { $Data = Read-Choice 'Data mode: empty or demo' 'empty' } }
 if ($Data -notin @('empty', 'demo')) { throw '-Data must be empty or demo' }
 
-if (-not $AdminEmail) { if ($Yes) { $AdminEmail = 'admin@example.com' } else { $AdminEmail = Read-Choice 'Admin email (login)' 'admin@example.com' } }
+Write-Host '-- Ports --------------------------------------------------------'
+$appPort      = Resolve-Port $Port 'PORT' 4000 'API + web app port' $true
+$dbPortValue  = Resolve-Port $DbPort 'DB_PORT' 55432 'PostgreSQL host port' ($Database -ne 'url')
+$frontendPort = Resolve-Port $FrontendPort 'FRONTEND_PORT' 5173 'Vite dev-server port' ($Mode -eq 'local')
+$portSet = @($appPort, $dbPortValue, $frontendPort)
+if (($portSet | Select-Object -Unique).Count -ne $portSet.Count) { throw 'The app, database, and frontend ports must all be different.' }
+
+Write-Host '-- Admin account ----------------------------------------------'
+if (-not $AdminEmail) { if ($Yes) { $AdminEmail = 'admin@example.com' } else { $AdminEmail = Read-Choice 'Admin email (this is the login)' 'admin@example.com' } }
 if ($AdminEmail -notmatch '^[^@]+@[^@]+\.[^@]+$') { throw '-AdminEmail must look like an email address' }
 
 if (-not $AdminName) { if ($Yes) { $AdminName = 'Admin User' } else { $AdminName = Read-Choice 'Admin display name' 'Admin User' } }
 
-if (-not $AdminPassword -and -not $Yes) { $AdminPassword = Read-AdminPassword }
-if ($AdminPassword -and $AdminPassword.Length -lt 8) { throw 'Admin password must be at least 8 characters' }
+if (-not $AdminPassword -and -not $Yes -and -not $AdminDefer) { $AdminPassword = Read-AdminPassword }
+if ($AdminPassword -and $AdminPassword.Length -lt $MinPasswordLen) { throw "Admin password must be at least $MinPasswordLen characters." }
 
+Write-Host '-- Dependencies ----------------------------------------------'
 Assert-Dependencies
-
-Set-Location $RootDir
 
 # --------------------------------------------------------------------------
 # preflight
@@ -214,11 +247,10 @@ $errors = 0
 if ($Mode -eq 'local' -and (Get-NodeMajor) -lt $NodeMinMajor) {
   Write-Host "Node $NodeMinMajor+ is required for local mode."; $errors = 1
 }
-$appPort = Get-EnvValue '.env' 'PORT'; if (-not $appPort) { $appPort = '4000' }
-if (Test-PortInUse ([int]$appPort)) { Write-Host "Port $appPort is in use - stop that process or set PORT in .env."; $errors = 1 }
-if ($Mode -eq 'local' -and (Test-PortInUse 5173)) { Write-Host 'Port 5173 (frontend dev server) is in use.'; $errors = 1 }
-if ($Database -ne 'url' -and -not (Test-Path 'data/pg') -and (Test-PortInUse 55432)) {
-  Write-Host 'Port 55432 is in use - the database cannot bind. Free it or use -Database url.'; $errors = 1
+if (Test-PortInUse $appPort) { Write-Host "Port $appPort is in use - pick another with -Port."; $errors = 1 }
+if ($Mode -eq 'local' -and (Test-PortInUse $frontendPort)) { Write-Host "Port $frontendPort (frontend dev server) is in use - pick another with -FrontendPort."; $errors = 1 }
+if ($Database -ne 'url' -and -not (Test-Path 'data/pg') -and (Test-PortInUse $dbPortValue)) {
+  Write-Host "Port $dbPortValue is in use - pick another with -DbPort or use -Database url."; $errors = 1
 }
 if ($errors) { Write-Host 'Preflight checks failed. Nothing was changed.'; exit 1 }
 
@@ -232,34 +264,40 @@ if (-not (Get-EnvValue '.env' 'JWT_SECRET'))       { Set-EnvValue '.env' 'JWT_SE
 if (-not (Get-EnvValue '.env' 'POSTGRES_PASSWORD')) { Set-EnvValue '.env' 'POSTGRES_PASSWORD' (New-RandomPassword) }
 if (-not (Get-EnvValue '.env' 'POSTGRES_USER'))     { Set-EnvValue '.env' 'POSTGRES_USER' 'aibom' }
 if (-not (Get-EnvValue '.env' 'POSTGRES_DB'))       { Set-EnvValue '.env' 'POSTGRES_DB' 'aibom' }
-if (-not (Get-EnvValue '.env' 'PORT'))              { Set-EnvValue '.env' 'PORT' '4000' }
 if (-not (Get-EnvValue '.env' 'BIND_HOST'))         { Set-EnvValue '.env' 'BIND_HOST' '127.0.0.1' }
+
+Set-EnvValue '.env' 'PORT' "$appPort"
+Set-EnvValue '.env' 'DB_PORT' "$dbPortValue"
+Set-EnvValue '.env' 'FRONTEND_PORT' "$frontendPort"
 
 $pgUser = Get-EnvValue '.env' 'POSTGRES_USER'
 $pgPass = Get-EnvValue '.env' 'POSTGRES_PASSWORD'
 $pgDb   = Get-EnvValue '.env' 'POSTGRES_DB'
-$port   = Get-EnvValue '.env' 'PORT'
 
 if ($Database -eq 'url') {
   if (-not (Get-EnvValue '.env' 'DATABASE_URL')) { throw '-Database url needs DATABASE_URL set in .env. Add it and re-run.' }
 } else {
-  Set-EnvValue '.env' 'DATABASE_URL' "postgresql://${pgUser}:${pgPass}@127.0.0.1:55432/${pgDb}?schema=public"
+  Set-EnvValue '.env' 'DATABASE_URL' "postgresql://${pgUser}:${pgPass}@127.0.0.1:${dbPortValue}/${pgDb}?schema=public"
 }
-if (-not (Get-EnvValue '.env' 'APP_URL'))     { Set-EnvValue '.env' 'APP_URL' "http://localhost:$port" }
-if (-not (Get-EnvValue '.env' 'CORS_ORIGIN')) { Set-EnvValue '.env' 'CORS_ORIGIN' "http://localhost:$port" }
+
+$appUrlNow = Get-EnvValue '.env' 'APP_URL'
+if (-not $appUrlNow -or $appUrlNow -match 'localhost|127\.0\.0\.1') { Set-EnvValue '.env' 'APP_URL' "http://localhost:$appPort" }
+$corsNow = Get-EnvValue '.env' 'CORS_ORIGIN'
+if (-not $corsNow -or $corsNow -match 'localhost|127\.0\.0\.1') { Set-EnvValue '.env' 'CORS_ORIGIN' "http://localhost:$appPort" }
 
 if ($Mode -eq 'local') {
   foreach ($k in 'DATABASE_URL', 'JWT_SECRET', 'PORT', 'CORS_ORIGIN', 'APP_URL') {
     Set-EnvValue 'backend/.env' $k (Get-EnvValue '.env' $k)
   }
+  if ($Database -eq 'managed') { Set-EnvValue 'backend/.env' 'MANAGED_PG_PORT' "$dbPortValue" }
 }
 
-# Demo data needs an admin to own it; generate one when none was supplied.
+# An interactive run has a password by now; -AdminDefer leaves it to the app.
 $adminViaWizard = $false
 $adminGenerated = $false
 if (-not $AdminPassword) {
-  if ($Data -eq 'demo') { $AdminPassword = New-RandomPassword; $adminGenerated = $true }
-  else { $adminViaWizard = $true }
+  if ($AdminDefer) { $adminViaWizard = $true }
+  else { $AdminPassword = New-RandomPassword; $adminGenerated = $true }
 }
 
 # Load .env into this process so `docker compose` / prisma see it.
@@ -297,7 +335,7 @@ if ($Mode -eq 'docker') {
   Invoke-Step 'install frontend'      { Push-Location 'frontend'; npm install; Pop-Location }
 
   switch ($Database) {
-    'managed' { Invoke-Step 'start bundled PostgreSQL' { Push-Location 'backend'; npm run db:start; Pop-Location } }
+    'managed' { Invoke-Step 'start bundled PostgreSQL' { Push-Location 'backend'; $env:MANAGED_PG_PORT = "$dbPortValue"; npm run db:start; Pop-Location } }
     'docker'  { Invoke-Step 'start postgres container' { docker compose up -d postgres } }
     'url'     { }
   }
@@ -309,21 +347,24 @@ if ($Mode -eq 'docker') {
   }
 }
 
-Set-Content -Path '.aibom-mode' -Value @("MODE=$Mode", "DATABASE=$Database", "DATA=$Data") -Encoding utf8
+Write-TextFile '.aibom-mode' @("MODE=$Mode", "DATABASE=$Database", "DATA=$Data")
 
 $appUrl = Get-EnvValue '.env' 'APP_URL'
 Write-Host ''
-Write-Host 'Setup complete. Run scripts/start.ps1 (or scripts/start.sh from Git Bash) to start AI-BOM.'
-Write-Host "Mode: $Mode   Database: $Database"
+Write-Host 'Setup complete. Run scripts/start.ps1 to start AI-BOM.'
+Write-Host "Mode: $Mode   Database: $Database   Data: $Data"
+Write-Host "App:  $appUrl"
+if ($Mode -eq 'local') { Write-Host "Dev:  http://localhost:$frontendPort  (Vite dev server via scripts/start.ps1)" }
+if ($Database -ne 'url') { Write-Host "DB:   127.0.0.1:$dbPortValue" }
 Write-Host 'Config is in .env (generated secrets are gitignored).'
 if ($adminViaWizard) {
   Write-Host "Admin account: none seeded - open $appUrl and create it on first visit."
 } elseif ($adminGenerated) {
   Write-Host "Admin login: $AdminEmail   (name: $AdminName)"
-  Write-Host "Admin password: $AdminPassword   (generated - change it on the Users page)"
+  Write-Host "Admin password: $AdminPassword   (generated - change it on the Account page)"
 } else {
   Write-Host "Admin login: $AdminEmail   (name: $AdminName)"
   Write-Host 'Admin password: the value you supplied.'
 }
 Write-Host 'To reset the admin password later, re-run:'
-Write-Host "  pwsh ./scripts/setup.ps1 -Mode $Mode -Database $Database -Data $Data -AdminEmail '$AdminEmail' -AdminPassword 'NEW' -Yes"
+Write-Host "  powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1 -Mode $Mode -Database $Database -Data $Data -AdminEmail '$AdminEmail' -AdminPassword 'NEW' -Yes"

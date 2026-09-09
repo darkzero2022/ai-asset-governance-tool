@@ -20,6 +20,8 @@ if [ -f .env ]; then
   set +a
 fi
 APP_PORT="${PORT:-4000}"
+DB_PORT="${DB_PORT:-55432}"
+FRONTEND_PORT="${FRONTEND_PORT:-5173}"
 
 if [ "$MODE" = "docker" ]; then
   docker compose up -d
@@ -30,7 +32,7 @@ fi
 
 mkdir -p logs
 case "$DATABASE" in
-  managed) (cd backend && npm run --silent db:start) ;;
+  managed) (cd backend && MANAGED_PG_PORT="$DB_PORT" npm run --silent db:start) ;;
   docker) docker compose up -d postgres ;;
   url) : ;;
 esac
@@ -47,13 +49,14 @@ start_process() {
   (cd "$dir" && "$@" > "$ROOT_DIR/logs/$name.log" 2>&1 & echo $! > "$ROOT_DIR/$pid_file")
 }
 
+export VITE_DEV_API_TARGET="http://localhost:${APP_PORT}"
 start_process backend backend npm run dev
-start_process frontend frontend npm run dev -- --host 127.0.0.1
+start_process frontend frontend npm run dev -- --host 127.0.0.1 --port "$FRONTEND_PORT"
 
 for _ in $(seq 1 30); do
-  if curl -fsS http://localhost:4000/health >/dev/null 2>&1; then
-    echo "Frontend: http://localhost:5173"
-    echo "Backend:  http://localhost:4000/health"
+  if curl -fsS "http://localhost:${APP_PORT}/health" >/dev/null 2>&1; then
+    echo "Frontend: http://localhost:${FRONTEND_PORT}"
+    echo "Backend:  http://localhost:${APP_PORT}/health"
     exit 0
   fi
   sleep 1

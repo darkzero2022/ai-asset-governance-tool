@@ -44,7 +44,7 @@ else
     fi
   done
   case "$DATABASE" in
-    managed) (cd backend && npm run --silent db:status) || true ;;
+    managed) (cd backend && MANAGED_PG_PORT="${DB_PORT:-55432}" npm run --silent db:status) || true ;;
     docker) docker compose ps postgres 2>/dev/null || true ;;
     url) echo "  database: external (DATABASE_URL)" ;;
   esac

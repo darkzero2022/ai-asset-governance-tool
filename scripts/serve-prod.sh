@@ -17,7 +17,7 @@ if [ -f .env ]; then
 fi
 
 case "$DATABASE" in
-  managed) (cd backend && npm run --silent db:start) ;;
+  managed) (cd backend && MANAGED_PG_PORT="${DB_PORT:-55432}" npm run --silent db:start) ;;
   docker) docker compose up -d postgres >/dev/null ;;
   url) : ;;
 esac

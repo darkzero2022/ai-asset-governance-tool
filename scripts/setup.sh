@@ -11,9 +11,14 @@ DATA=""
 YES="false"
 INSTALL_DEPS="false"
 SKIP_DEPS="false"
+ADMIN_DEFER="false"
 ADMIN_EMAIL="${ADMIN_EMAIL:-}"
 ADMIN_NAME="${ADMIN_NAME:-}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
+APP_PORT_OPT=""
+DB_PORT_OPT=""
+FRONTEND_PORT_OPT=""
+MIN_PASSWORD_LEN=12
 
 usage() {
   cat >&2 <<EOF
@@ -26,9 +31,13 @@ Usage: scripts/setup.sh [options]
                                 docker  - the postgres service in docker-compose.yml
                                 url     - an existing server (set DATABASE_URL in .env)
   --data=empty|demo           Seed data (default: empty)
+  --port=N                    API + web app port (default: 4000)
+  --db-port=N                 PostgreSQL host port (default: 55432)
+  --frontend-port=N           Vite dev-server port, local mode only (default: 5173)
   --admin-email=EMAIL         Login (email) for the initial admin account
   --admin-name=NAME           Display name for the initial admin (default: "Admin User")
-  --admin-password=PASSWORD   Password for the initial admin (min 8 chars; default: random, printed)
+  --admin-password=PASSWORD   Password for the initial admin (>= ${MIN_PASSWORD_LEN} chars, not common; default: random, printed)
+  --admin-defer               Don't create the admin now — do it on the app's first-run screen
   --install-deps              Install any missing system dependencies without asking
   --skip-deps                 Do not check or install system dependencies
   --yes                       Non-interactive: take defaults, and install missing deps
@@ -45,9 +54,13 @@ for arg in "$@"; do
     --mode=*) MODE="${arg#*=}" ;;
     --database=*) DATABASE="${arg#*=}" ;;
     --data=*) DATA="${arg#*=}" ;;
+    --port=*) APP_PORT_OPT="${arg#*=}" ;;
+    --db-port=*) DB_PORT_OPT="${arg#*=}" ;;
+    --frontend-port=*) FRONTEND_PORT_OPT="${arg#*=}" ;;
     --admin-email=*) ADMIN_EMAIL="${arg#*=}" ;;
     --admin-name=*) ADMIN_NAME="${arg#*=}" ;;
     --admin-password=*) ADMIN_PASSWORD="${arg#*=}" ;;
+    --admin-defer) ADMIN_DEFER="true" ;;
     --install-deps) INSTALL_DEPS="true" ;;
     --skip-deps) SKIP_DEPS="true" ;;
     --yes) YES="true" ;;
@@ -56,6 +69,11 @@ for arg in "$@"; do
   esac
 done
 
+valid_port() {
+  case "$1" in *[!0-9]*|"") return 1 ;; esac
+  [ "$1" -ge 1024 ] && [ "$1" -le 65535 ]
+}
+
 ask_choice() {
   local prompt="$1" default="$2" answer=""
   read -r -p "$prompt [$default]: " answer
@@ -63,11 +81,18 @@ ask_choice() {
 }
 
 ask_password() {
-  local p1 p2
+  local p1 p2 allow_blank="${1:-false}"
   while true; do
-    read -rs -p "Admin password (leave blank to generate a strong random one): " p1; printf '\n' >&2
-    if [ -z "$p1" ]; then echo ""; return; fi
-    if [ "${#p1}" -lt 8 ]; then echo "  Password must be at least 8 characters." >&2; continue; fi
+    if [ "$allow_blank" = "true" ]; then
+      read -rs -p "Admin password (blank = generate a strong random one): " p1; printf '\n' >&2
+    else
+      read -rs -p "Admin password (>= ${MIN_PASSWORD_LEN} chars, not a common password): " p1; printf '\n' >&2
+    fi
+    if [ -z "$p1" ]; then
+      [ "$allow_blank" = "true" ] && { echo ""; return; }
+      echo "  A password is required. (Re-run with --admin-defer to set it in the app instead.)" >&2; continue
+    fi
+    if [ "${#p1}" -lt "$MIN_PASSWORD_LEN" ]; then echo "  Password must be at least ${MIN_PASSWORD_LEN} characters." >&2; continue; fi
     read -rs -p "Confirm admin password: " p2; printf '\n' >&2
     if [ "$p1" = "$p2" ]; then echo "$p1"; return; fi
     echo "  Passwords did not match, try again." >&2
@@ -103,6 +128,7 @@ env_set() {
 rand_secret() { rand_hex32; }
 
 # --- resolve options -----------------------------------------------------
+echo "── Environment ──────────────────────────────────────────────" >&2
 if [ -z "$MODE" ]; then
   if [ "$YES" = "true" ]; then MODE="local"; else MODE="$(ask_choice "Install mode: local or docker" "local")"; fi
 fi
@@ -127,8 +153,28 @@ if [ -z "$DATA" ]; then
 fi
 case "$DATA" in empty|demo) ;; *) echo "--data must be empty or demo" >&2; exit 1 ;; esac
 
+# --- ports --------------------------------------------------------------
+echo "── Ports ────────────────────────────────────────────────────" >&2
+existing_port() { env_get .env "$1"; }
+APP_PORT="${APP_PORT_OPT:-$(existing_port PORT)}"; APP_PORT="${APP_PORT:-4000}"
+DB_PORT="${DB_PORT_OPT:-$(existing_port DB_PORT)}"; DB_PORT="${DB_PORT:-55432}"
+FRONTEND_PORT="${FRONTEND_PORT_OPT:-$(existing_port FRONTEND_PORT)}"; FRONTEND_PORT="${FRONTEND_PORT:-5173}"
+if [ "$YES" != "true" ]; then
+  [ -z "$APP_PORT_OPT" ] && APP_PORT="$(ask_choice "API + web app port" "$APP_PORT")"
+  if [ "$DATABASE" != "url" ]; then [ -z "$DB_PORT_OPT" ] && DB_PORT="$(ask_choice "PostgreSQL host port" "$DB_PORT")"; fi
+  if [ "$MODE" = "local" ]; then [ -z "$FRONTEND_PORT_OPT" ] && FRONTEND_PORT="$(ask_choice "Vite dev-server port" "$FRONTEND_PORT")"; fi
+fi
+for p in "$APP_PORT" "$DB_PORT" "$FRONTEND_PORT"; do
+  valid_port "$p" || { echo "Port '$p' must be an integer 1024-65535." >&2; exit 1; }
+done
+if [ "$APP_PORT" = "$DB_PORT" ] || [ "$APP_PORT" = "$FRONTEND_PORT" ] || { [ "$DATABASE" != "url" ] && [ "$DB_PORT" = "$FRONTEND_PORT" ]; }; then
+  echo "The app, database, and frontend ports must all be different." >&2; exit 1
+fi
+
+# --- admin account ----------------------------------------------------
+echo "── Admin account ────────────────────────────────────────────" >&2
 if [ -z "$ADMIN_EMAIL" ]; then
-  if [ "$YES" = "true" ]; then ADMIN_EMAIL="admin@example.com"; else ADMIN_EMAIL="$(ask_choice "Admin email (login)" "admin@example.com")"; fi
+  if [ "$YES" = "true" ]; then ADMIN_EMAIL="admin@example.com"; else ADMIN_EMAIL="$(ask_choice "Admin email (this is the login)" "admin@example.com")"; fi
 fi
 case "$ADMIN_EMAIL" in *@*.*) ;; *) echo "--admin-email must look like an email address" >&2; exit 1 ;; esac
 
@@ -136,21 +182,22 @@ if [ -z "$ADMIN_NAME" ]; then
   if [ "$YES" = "true" ]; then ADMIN_NAME="Admin User"; else ADMIN_NAME="$(ask_choice "Admin display name" "Admin User")"; fi
 fi
 
-if [ -z "$ADMIN_PASSWORD" ] && [ "$YES" != "true" ]; then
-  ADMIN_PASSWORD="$(ask_password)"
+if [ -z "$ADMIN_PASSWORD" ] && [ "$YES" != "true" ] && [ "$ADMIN_DEFER" != "true" ]; then
+  ADMIN_PASSWORD="$(ask_password false)"
 fi
-if [ -n "$ADMIN_PASSWORD" ] && [ "${#ADMIN_PASSWORD}" -lt 8 ]; then
-  echo "Admin password must be at least 8 characters" >&2; exit 1
+if [ -n "$ADMIN_PASSWORD" ] && [ "${#ADMIN_PASSWORD}" -lt "$MIN_PASSWORD_LEN" ]; then
+  echo "Admin password must be at least ${MIN_PASSWORD_LEN} characters." >&2; exit 1
 fi
 
 # --- prerequisites: detect, offer to install --------------------------
+echo "── Dependencies ─────────────────────────────────────────────" >&2
 if [ "$SKIP_DEPS" != "true" ]; then
   NEED="openssl"
   [ "$MODE" = "local" ] && NEED="$NEED node npm"
   { [ "$MODE" = "docker" ] || [ "$DATABASE" = "docker" ]; } && NEED="$NEED docker"
   # openssl is optional (fallback exists) — only auto-install it alongside others.
   have openssl || NEED="$(echo "$NEED" | sed 's/\bopenssl\b//')"
-  ensure_dependencies "$NEED" "$INSTALL_DEPS" "$YES"
+  ensure_dependencies "$NEED" "$INSTALL_DEPS" "$YES" "${MODE}/${DATABASE}"
 fi
 if [ "$MODE" = "local" ]; then require_command node; require_command npm; fi
 if { [ "$MODE" = "docker" ] || [ "$DATABASE" = "docker" ]; }; then
@@ -179,15 +226,14 @@ preflight() {
   fi
 
   # App port.
-  local app_port; app_port="$(env_get .env PORT)"; app_port="${app_port:-4000}"
-  if port_listening "$app_port"; then
-    echo "Port $app_port is in use — stop the other process or set PORT in .env." >&2
+  if port_listening "$APP_PORT"; then
+    echo "Port $APP_PORT is in use — pick another with --port, or stop the other process." >&2
     errors=1
   fi
 
   # Vite dev port (local mode only).
-  if [ "$MODE" = "local" ] && port_listening 5173; then
-    echo "Port 5173 (frontend dev server) is in use — stop the other process before running scripts/start.sh." >&2
+  if [ "$MODE" = "local" ] && port_listening "$FRONTEND_PORT"; then
+    echo "Port $FRONTEND_PORT (frontend dev server) is in use — pick another with --frontend-port." >&2
     errors=1
   fi
 
@@ -195,14 +241,14 @@ preflight() {
   case "$DATABASE" in
     managed)
       # Skip if data/pg already exists — a running instance there is our own.
-      if [ ! -d data/pg ] && port_listening 55432; then
-        echo "Port 55432 is in use — the bundled database can't start. Stop whatever is on 55432 or use --database=url." >&2
+      if [ ! -d data/pg ] && port_listening "$DB_PORT"; then
+        echo "Port $DB_PORT is in use — the bundled database can't start. Pick another with --db-port or use --database=url." >&2
         errors=1
       fi
       ;;
     docker)
-      if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -qx aibom-postgres && port_listening 55432; then
-        echo "Port 55432 is in use — free it or point --database=url at the existing server." >&2
+      if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -qx aibom-postgres && port_listening "$DB_PORT"; then
+        echo "Port $DB_PORT is in use — pick another with --db-port or point --database=url at the existing server." >&2
         errors=1
       fi
       ;;
@@ -236,13 +282,16 @@ env_set .env DB_MODE "$DATABASE"
 [ -n "$(env_get .env POSTGRES_PASSWORD)" ] || env_set .env POSTGRES_PASSWORD "$(rand_password)"
 [ -n "$(env_get .env POSTGRES_USER)" ] || env_set .env POSTGRES_USER "aibom"
 [ -n "$(env_get .env POSTGRES_DB)" ] || env_set .env POSTGRES_DB "aibom"
-[ -n "$(env_get .env PORT)" ] || env_set .env PORT "4000"
 [ -n "$(env_get .env BIND_HOST)" ] || env_set .env BIND_HOST "127.0.0.1"
+
+# Ports: persist the resolved values (the user may have changed them on a re-run).
+env_set .env PORT "$APP_PORT"
+env_set .env DB_PORT "$DB_PORT"
+env_set .env FRONTEND_PORT "$FRONTEND_PORT"
 
 PG_USER="$(env_get .env POSTGRES_USER)"
 PG_PASS="$(env_get .env POSTGRES_PASSWORD)"
 PG_DB="$(env_get .env POSTGRES_DB)"
-APP_PORT="$(env_get .env PORT)"
 
 if [ "$DATABASE" = "url" ]; then
   if [ -z "$(env_get .env DATABASE_URL)" ]; then
@@ -250,31 +299,38 @@ if [ "$DATABASE" = "url" ]; then
     exit 1
   fi
 else
-  # managed + docker: bundled/containered PostgreSQL on 127.0.0.1:55432.
-  env_set .env DATABASE_URL "postgresql://${PG_USER}:${PG_PASS}@127.0.0.1:55432/${PG_DB}?schema=public"
+  # managed + docker: bundled/containered PostgreSQL on 127.0.0.1:$DB_PORT.
+  env_set .env DATABASE_URL "postgresql://${PG_USER}:${PG_PASS}@127.0.0.1:${DB_PORT}/${PG_DB}?schema=public"
 fi
-[ -n "$(env_get .env APP_URL)" ] || env_set .env APP_URL "http://localhost:${APP_PORT}"
-[ -n "$(env_get .env CORS_ORIGIN)" ] || env_set .env CORS_ORIGIN "http://localhost:${APP_PORT}"
+
+# Localhost-based APP_URL / CORS_ORIGIN track the chosen port; a non-localhost
+# value (a real deployment URL) is left alone.
+_app_url="$(env_get .env APP_URL)"
+case "${_app_url:-http://localhost}" in *localhost*|*127.0.0.1*|"") env_set .env APP_URL "http://localhost:${APP_PORT}" ;; esac
+_cors="$(env_get .env CORS_ORIGIN)"
+case "${_cors:-http://localhost}" in *localhost*|*127.0.0.1*|"") env_set .env CORS_ORIGIN "http://localhost:${APP_PORT}" ;; esac
 
 # backend/.env: derived, for local backend runs + the Prisma CLI.
 if [ "$MODE" = "local" ]; then
   [ -f backend/.env ] || : > backend/.env
   env_set backend/.env DATABASE_URL "$(env_get .env DATABASE_URL)"
   env_set backend/.env JWT_SECRET "$(env_get .env JWT_SECRET)"
-  env_set backend/.env PORT "$(env_get .env PORT)"
+  env_set backend/.env PORT "$APP_PORT"
   env_set backend/.env CORS_ORIGIN "$(env_get .env CORS_ORIGIN)"
   env_set backend/.env APP_URL "$(env_get .env APP_URL)"
+  [ "$DATABASE" = "managed" ] && env_set backend/.env MANAGED_PG_PORT "$DB_PORT"
 fi
 
-# Demo data needs an admin to own it, so generate a password when none was given.
-# Empty data leaves the admin account to the app's first-run screen.
+# An interactive run always has a password by now. --admin-defer leaves the
+# account to the app's first-run screen; otherwise (a --yes run with no
+# password given) a strong one is generated and printed.
 ADMIN_VIA_WIZARD="false"
 if [ -z "$ADMIN_PASSWORD" ]; then
-  if [ "$DATA" = "demo" ]; then
-    ADMIN_PASSWORD="$(rand_password)"
-    ADMIN_GENERATED="true"
-  else
+  if [ "$ADMIN_DEFER" = "true" ]; then
     ADMIN_VIA_WIZARD="true"
+  else
+    ADMIN_PASSWORD="$(rand_password)"  # rand_password yields 24 chars
+    ADMIN_GENERATED="true"
   fi
 fi
 
@@ -320,13 +376,16 @@ EOF
 APP_URL_OUT="$(env_get .env APP_URL)"
 echo
 echo "Setup complete. Run scripts/start.sh to start AI-BOM."
-echo "Mode: $MODE   Database: $DATABASE"
+echo "Mode: $MODE   Database: $DATABASE   Data: $DATA"
+echo "App:  ${APP_URL_OUT}"
+[ "$MODE" = "local" ] && echo "Dev:  http://localhost:${FRONTEND_PORT}  (Vite dev server via scripts/start.sh)"
+[ "$DATABASE" != "url" ] && echo "DB:   127.0.0.1:${DB_PORT}"
 echo "Config is in .env (generated secrets are gitignored)."
 if [ "$ADMIN_VIA_WIZARD" = "true" ]; then
   echo "Admin account: none seeded — open ${APP_URL_OUT} and create it on first visit."
 elif [ "${ADMIN_GENERATED:-false}" = "true" ]; then
   echo "Admin login: $ADMIN_EMAIL   (name: $ADMIN_NAME)"
-  echo "Admin password: $ADMIN_PASSWORD   (generated — change it on the Users page)"
+  echo "Admin password: $ADMIN_PASSWORD   (generated — change it on the Account page)"
 else
   echo "Admin login: $ADMIN_EMAIL   (name: $ADMIN_NAME)"
   echo "Admin password: the value you supplied."

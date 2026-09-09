@@ -38,7 +38,7 @@ for name in backend frontend; do
 done
 
 case "$DATABASE" in
-  managed) (cd backend && npm run --silent db:stop) ;;
+  managed) (cd backend && MANAGED_PG_PORT="${DB_PORT:-55432}" npm run --silent db:stop) ;;
   docker) docker compose stop postgres ;;
   url) : ;;
 esac

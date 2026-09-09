@@ -16,6 +16,13 @@ foreach ($line in Get-Content '.aibom-mode') {
   if ($line -match '^DATABASE=(.*)$') { $database = $Matches[1] }
 }
 
+$dbPort = '55432'
+if (Test-Path '.env') {
+  foreach ($line in Get-Content '.env') {
+    if ($line -match '^DB_PORT=(.*)$') { $dbPort = $Matches[1].Trim().Trim('"') }
+  }
+}
+
 if ($mode -eq 'docker') { docker compose down; exit 0 }
 
 foreach ($name in 'backend', 'frontend') {
@@ -29,6 +36,6 @@ foreach ($name in 'backend', 'frontend') {
 }
 
 switch ($database) {
-  'managed' { Push-Location 'backend'; npm run --silent db:stop; Pop-Location }
+  'managed' { Push-Location 'backend'; $env:MANAGED_PG_PORT = $dbPort; npm run --silent db:stop; Pop-Location }
   'docker'  { docker compose stop postgres }
 }

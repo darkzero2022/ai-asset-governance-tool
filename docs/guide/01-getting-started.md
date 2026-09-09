@@ -32,6 +32,26 @@ Key settings: `DB_MODE` (`managed` / `docker` / `url`), `PORT` (default 4000),
 `BIND_HOST` (default `127.0.0.1` — set `0.0.0.0` only behind a reverse proxy),
 `APP_URL`, `LOG_LEVEL`.
 
+### Custom ports
+
+Three ports are configurable end to end — setup prompts for each (interactive),
+or take a flag, and writes them to `.env`:
+
+| `.env` key | flag (`.sh` / `.ps1`) | what | default |
+|---|---|---|---|
+| `PORT` | `--port` / `-Port` | API + web app | 4000 |
+| `DB_PORT` | `--db-port` / `-DbPort` | PostgreSQL host port (managed + docker) | 55432 |
+| `FRONTEND_PORT` | `--frontend-port` / `-FrontendPort` | Vite dev server (local mode only) | 5173 |
+
+Each must be an integer 1024–65535 and the three must differ. `DATABASE_URL`,
+`APP_URL`, `CORS_ORIGIN`, the Docker port mappings, and the start/stop/status
+scripts all follow the values in `.env` — change them there and re-run
+`scripts/start.*`, no other edits needed.
+
+```bash
+scripts/setup.sh --mode=local --data=demo --port=4200 --db-port=55440 --frontend-port=5200 --yes
+```
+
 ## Data modes
 
 - **empty** — reference data only (framework categories, EU AI Act tiers, the
@@ -105,11 +125,14 @@ bundled database (data under `data/pg/`, port 55432, localhost-only), migrates,
 and seeds. `start.sh` / `start.ps1` runs the backend (`:4000`) and the Vite dev
 server (`:5173`); open **http://localhost:5173**.
 
-**Admin account:** pass `--admin-email` / `--admin-name` / `--admin-password`
-(`-AdminEmail` / `-AdminName` / `-AdminPassword`) to set the first admin
-non-interactively; without `--yes` the script prompts for each. Leave the
-password off with `--data=demo` and a random one is generated and printed;
-with `--data=empty` the app's first-run screen creates it instead.
+**Admin account:** an interactive run (no `--yes`) always finishes with a working
+login — it prompts for email, display name, and a password (**≥ 12 characters,
+not a common/breached one** — the same policy the app enforces). Pass
+`--admin-email` / `--admin-name` / `--admin-password` (`-AdminEmail` /
+`-AdminName` / `-AdminPassword`) to set them non-interactively. With `--yes` and
+no `--admin-password`, a strong random one is generated and printed. To skip
+seeding an admin and use the app's first-run screen instead, pass
+`--admin-defer` / `-AdminDefer`.
 
 Other database choices for local mode:
 
@@ -231,10 +254,11 @@ cd ../frontend && npm test && npm run build
 
 ## First login
 
-- **If setup created an admin** (you passed `--admin-password`, or chose `--data=demo`):
-  sign in with the email on the final `Admin login:` line and that password.
-- **Otherwise** (empty data, no password given): the first time you open the app it
-  shows a **"Create your administrator account"** screen. Fill it in — that account
+- **If setup created an admin** (any interactive run, or `--admin-password`, or
+  `--yes`): sign in with the email on the final `Admin login:` line and that
+  password.
+- **If you passed `--admin-defer`**: the first time you open the app it shows a
+  **"Create your administrator account"** screen. Fill it in — that account
   becomes the first ADMIN and you're signed straight in.
 
 Either way, add the rest of your users on the **Users** page. Lost the admin
@@ -244,8 +268,8 @@ password? Re-run setup with the same `--admin-email` and a new `--admin-password
 
 | Symptom | Fix |
 |---|---|
-| `Port 4000 is in use` from setup | Stop the other process, or set `PORT` in `.env`. Setup checks this before changing anything. |
-| Port 5173 / 55432 in use | Local dev uses 5173; the database uses 55432. Free them or (55432) switch to `--database=url`. |
+| `Port 4000 is in use` from setup | Re-run with `--port=<n>` / `-Port <n>` (or set `PORT` in `.env`). Setup checks this before changing anything. |
+| Port 5173 / 55432 in use | Re-run with `--frontend-port=<n>` / `--db-port=<n>` (`-FrontendPort` / `-DbPort`), or for the DB switch to `--database=url`. |
 | `POSTGRES_PASSWORD is required` from `docker compose` | Run `scripts/setup.sh` — it generates `.env`. For manual runs, create `.env` with `POSTGRES_PASSWORD` and `JWT_SECRET`. |
 | Requests fail with "Failed to fetch" after a manual/custom setup | The SPA and API must share an origin. Only set `VITE_API_BASE_URL` / `CORS_ORIGIN` if you deliberately split them. |
 | Managed database won't start | Needs the optional `embedded-postgres` binaries — re-run `npm install` in `backend/`, or use `--database=docker` / `--database=url`. |

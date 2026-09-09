@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
+import { passwordSchema } from "@aibom/shared";
 
 const prisma = new PrismaClient();
 
@@ -10,6 +11,17 @@ const ADMIN_NAME = process.env.ADMIN_NAME?.trim() || "Admin User";
 
 async function seedAdminUser() {
   const envPassword = process.env.ADMIN_PASSWORD?.trim() || undefined;
+
+  // Any path that sets an admin password (setup, manual seed, recovery re-run)
+  // must satisfy the same policy the app enforces on password changes.
+  if (envPassword) {
+    const check = passwordSchema.safeParse(envPassword);
+    if (!check.success) {
+      console.error(`\n  ADMIN_PASSWORD rejected: ${check.error.issues[0]?.message ?? "weak password"}.`);
+      console.error("  Use at least 12 characters and avoid common/breached passwords.\n");
+      process.exit(1);
+    }
+  }
   const existing = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
 
   if (existing) {
@@ -53,7 +65,7 @@ async function seedAdminUser() {
   console.log("  Created initial admin account");
   console.log(`    Email:    ${ADMIN_EMAIL}`);
   console.log(`    Password: (the value you supplied)`);
-  console.log("  Sign in, then change this password on the Users page.");
+  console.log("  Sign in, then change this password on the Account page.");
   console.log("  ────────────────────────────────────────────────\n");
 }
 

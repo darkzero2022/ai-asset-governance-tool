@@ -84,6 +84,10 @@ Pick one of three tracks (full guide: **[docs/guide/01-getting-started.md](docs/
 Data modes: **empty** (reference data + admin only) or **demo** (adds a fictional
 portfolio).
 
+Ports: `--port` / `--db-port` / `--frontend-port` (`.ps1`: `-Port` / `-DbPort` /
+`-FrontendPort`) override the app (4000), PostgreSQL (55432), and Vite dev-server
+(5173) ports; setup prompts for them interactively and writes them to `.env`.
+
 ```bash
 # admin account non-interactively (Windows: -AdminEmail / -AdminName / -AdminPassword)
 scripts/setup.sh --mode=docker --data=demo \
@@ -96,7 +100,7 @@ Once running:
 - **Docker track:** the app is at http://localhost:4000 (one service serves the API and the web app).
 - **Local track:** web app at http://localhost:5173, API at http://localhost:4000.
 - Health check: http://localhost:4000/health
-- Sign in with the admin account from setup (default `admin@example.com`). A blank password means setup **printed a random one** — copy it from that output, then change it on the Users page.
+- Sign in with the admin account from setup. An interactive run always creates one (password ≥ 12 chars); with `--yes` and no `--admin-password`, setup **printed a random one** — copy it from that output, then change it on the Account page.
 
 Config is one file: **`.env`** at the repo root (created by setup, gitignored).
 `scripts/status.sh` shows what's running; `scripts/upgrade.sh` pulls and

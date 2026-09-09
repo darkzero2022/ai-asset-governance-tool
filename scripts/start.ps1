@@ -22,6 +22,8 @@ if (Test-Path '.env') {
   }
 }
 $appPort = $env:PORT; if (-not $appPort) { $appPort = '4000' }
+$dbPort = $env:DB_PORT; if (-not $dbPort) { $dbPort = '55432' }
+$frontendPort = $env:FRONTEND_PORT; if (-not $frontendPort) { $frontendPort = '5173' }
 
 if ($mode -eq 'docker') {
   docker compose up -d
@@ -32,9 +34,10 @@ if ($mode -eq 'docker') {
 
 New-Item -ItemType Directory -Force -Path 'logs' | Out-Null
 switch ($database) {
-  'managed' { Push-Location 'backend'; npm run --silent db:start; Pop-Location }
+  'managed' { Push-Location 'backend'; $env:MANAGED_PG_PORT = $dbPort; npm run --silent db:start; Pop-Location }
   'docker'  { docker compose up -d postgres }
 }
+$env:VITE_DEV_API_TARGET = "http://localhost:$appPort"
 
 function Start-DevProcess([string] $name, [string] $dir, [string[]] $cmdArgs) {
   $pidFile = "logs/$name.pid"
@@ -49,12 +52,12 @@ function Start-DevProcess([string] $name, [string] $dir, [string[]] $cmdArgs) {
 }
 
 Start-DevProcess 'backend' 'backend' @('run', 'dev')
-Start-DevProcess 'frontend' 'frontend' @('run', 'dev', '--', '--host', '127.0.0.1')
+Start-DevProcess 'frontend' 'frontend' @('run', 'dev', '--', '--host', '127.0.0.1', '--port', $frontendPort)
 
 for ($i = 0; $i -lt 30; $i++) {
   try {
     if ((Invoke-WebRequest -UseBasicParsing "http://localhost:$appPort/health" -TimeoutSec 2).StatusCode -eq 200) {
-      Write-Host 'Frontend: http://localhost:5173'
+      Write-Host "Frontend: http://localhost:$frontendPort"
       Write-Host "Backend:  http://localhost:$appPort/health"
       exit 0
     }

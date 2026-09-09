@@ -131,11 +131,17 @@ rand_password() {
   fi
 }
 
-# ensure_dependencies "<space-separated deps>" <auto:true|false> <yes:true|false>
+# ensure_dependencies "<space-separated deps>" <auto:true|false> <yes:true|false> [install-mode label]
 # deps: any of node npm openssl docker git
 ensure_dependencies() {
-  local deps="$1" auto="${2:-false}" yes="${3:-false}"
+  local deps="$1" auto="${2:-false}" yes="${3:-false}" mode_label="${4:-}"
   local missing="" too_old=""
+  local pm; pm="$(detect_pkg_manager)"
+
+  echo "Platform: $(detect_os) · package manager: ${pm}${mode_label:+ · install mode: ${mode_label}} · checking:${deps}" >&2
+  if [ "$(detect_os)" = "macos" ] && [ "$pm" != "brew" ]; then
+    echo "  (Homebrew not found — install it first: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\")" >&2
+  fi
 
   for dep in $deps; do
     case "$dep" in

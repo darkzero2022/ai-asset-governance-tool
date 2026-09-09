@@ -51,5 +51,7 @@ COPY --from=frontend /repo/frontend/dist /repo/frontend/dist
 ENV NODE_ENV=production
 ENV SERVE_STATIC=true
 ENV FRONTEND_DIST=/repo/frontend/dist
-EXPOSE 4000
+# Documentation only — the app listens on $PORT (default 4000); compose publishes it.
+ARG PORT=4000
+EXPOSE ${PORT}
 CMD ["sh", "-c", "npx --no-install prisma migrate deploy && node dist/server.js"]
