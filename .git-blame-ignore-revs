@@ -2,5 +2,5 @@
 #   git config blame.ignoreRevsFile .git-blame-ignore-revs
 # GitHub applies it automatically.
 
-# style: adopt Prettier — repo-wide reformat, no behaviour change
-# (hash filled in by the commit that does the reformat)
+# chore: adopt Prettier + ESLint — repo-wide reformat, no behaviour change
+c36200c60f833e20554886dd0c0d761336360c5f
