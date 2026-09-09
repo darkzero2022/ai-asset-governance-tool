@@ -110,9 +110,9 @@ jobs:
           echo "rows after: $after"
           test "$before" = "$after"
 
-      - name: Test backend
+      - name: Test backend (with coverage threshold)
         working-directory: backend
-        run: npm run test
+        run: npm run test:coverage
 
       - name: Build backend
         working-directory: backend
@@ -122,9 +122,9 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Test frontend
+      - name: Test frontend (with coverage threshold)
         working-directory: frontend
-        run: npm run test
+        run: npm run test:coverage
 
       - name: Build frontend
         working-directory: frontend

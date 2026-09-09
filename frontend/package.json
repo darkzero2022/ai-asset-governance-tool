@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@aibom/shared": "file:../packages/shared",
@@ -41,6 +42,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.2",
+    "@vitest/coverage-v8": "^4.1.11",
     "autoprefixer": "^10.4.20",
     "jsdom": "^29.1.1",
     "postcss": "^8.4.49",
