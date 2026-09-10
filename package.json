@@ -1,6 +1,7 @@
 {
   "name": "ai-asset-governance-tool",
   "private": true,
+  "type": "module",
   "description": "Repo-level dev tooling (lint + format). The app lives in backend/, frontend/, and packages/shared/, each with its own package.json.",
   "scripts": {
     "lint": "eslint .",

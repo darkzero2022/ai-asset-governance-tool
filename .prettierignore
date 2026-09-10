@@ -16,3 +16,7 @@ data
 backups
 logs
 docs/screenshots
+
+test-results
+playwright-report
+blob-report

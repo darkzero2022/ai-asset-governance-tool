@@ -17,3 +17,9 @@ ecosystem.config.cjs
 
 # Local working notes — not published
 .project-notes/
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/.playwright/

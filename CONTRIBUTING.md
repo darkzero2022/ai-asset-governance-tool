@@ -29,6 +29,11 @@ npx tsc --noEmit   # in backend/ and frontend/
 ```
 
 `npm run format` (root) reformats; `npm run lint:fix` auto-fixes what ESLint can.
+
+The Playwright golden-path E2E lives in `frontend/e2e/`. Run it locally with a
+bundled Postgres up and a throwaway `aibom_e2e` database
+(`createdb -p 55433 aibom_e2e` once), then `cd frontend && npm run test:e2e`.
+
 The PR template has the full checklist.
 
 ## Sign your commits (DCO)
