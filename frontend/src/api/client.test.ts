@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiFetch, ApiClientError } from "./client";
-import { clearSession, getAccessToken } from "../auth/session";
+import { apiFetch, ApiClientError, downloadFile } from "./client";
+import { clearSession, getAccessToken, setAccessToken } from "../auth/session";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -55,5 +55,53 @@ describe("apiFetch — silent token refresh", () => {
       ApiClientError,
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not set a JSON content-type for a FormData body", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse({ ok: true }, 200));
+    const form = new FormData();
+    form.append("file", new Blob(["x"]), "x.txt");
+
+    await apiFetch("/attachments", { method: "POST", body: form });
+
+    const headers = fetchMock.mock.calls[0][1]?.headers as Headers;
+    expect(headers.get("Content-Type")).toBeNull();
+  });
+});
+
+describe("downloadFile", () => {
+  it("fetches with the bearer, names the file from Content-Disposition, and triggers a click", async () => {
+    setAccessToken("tok-1");
+    const blob = new Blob(["evidence"], { type: "application/pdf" });
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(blob, {
+        status: 200,
+        headers: { "Content-Disposition": 'attachment; filename="dpa.pdf"' },
+      }),
+    );
+    const createUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
+    const revokeUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const clicks: string[] = [];
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      clicks.push(this.download);
+    });
+
+    await downloadFile("/attachments/1/download", "fallback.bin");
+
+    expect(clicks).toEqual(["dpa.pdf"]);
+    expect(createUrl).toHaveBeenCalledWith(blob);
+    expect(revokeUrl).toHaveBeenCalledWith("blob:mock");
+    clickSpy.mockRestore();
+  });
+
+  it("throws an ApiClientError on a non-2xx response", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("", { status: 404 }));
+    await expect(downloadFile("/attachments/x/download", "f.bin")).rejects.toBeInstanceOf(
+      ApiClientError,
+    );
   });
 });
