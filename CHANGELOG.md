@@ -6,10 +6,24 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from `0.1.0`.
 
 ## [Unreleased]
 
-First tagged release is being prepared. Everything below is the state of `master`
-since the project became a standalone tool.
+## [0.1.0] — 2026-09-10
+
+First tagged release. Pilot-grade — see [SECURITY.md](SECURITY.md) for known
+limitations and [ROADMAP.md](ROADMAP.md) for what's next.
 
 ### Added
+
+- **Threat modelling** — a per-AI-system data-flow model (typed elements,
+  directed flows, trust boundaries); a rules engine that suggests threats
+  (STRIDE-AI + OWASP LLM/MCP), each promotable to a draft risk; an auto-laid-out
+  DFD report.
+- **Two-factor authentication** — optional TOTP with QR enrolment and single-use
+  recovery codes; a code is required at login once enabled.
+- **Evidence attachments** — upload files against a risk, control, model card,
+  AI system, or project; size / MIME limits; served back with authentication.
+- **Readiness probe** — `GET /ready` checks database connectivity and that every
+  migration has been applied (`GET /health` stays a no-DB liveness check).
+- **In-process scheduler** — prunes expired sessions and orphaned attachments.
 
 - **One-origin serving** — the backend serves the built SPA and the API on a
   single port (`SERVE_STATIC`), with an `Accept`-negotiated SPA fallback.
@@ -59,5 +73,9 @@ since the project became a standalone tool.
 - Every growable list / export endpoint is bounded (`MAX_LIST_ROWS` /
   `MAX_EXPORT_ROWS`).
 - Cleared all production `npm audit` advisories (pinned `qs` ≥ 6.16.0).
+- CI gates: production `npm audit`, CodeQL, ESLint + Prettier, coverage
+  thresholds, Prisma schema-drift, a Playwright golden-path E2E, and a DCO check.
+- Second review of the STRIDE-AI threat mappings.
 
-[Unreleased]: https://github.com/darkzero2022/ai-asset-governance-tool/commits/master
+[Unreleased]: https://github.com/darkzero2022/ai-asset-governance-tool/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/darkzero2022/ai-asset-governance-tool/releases/tag/v0.1.0
