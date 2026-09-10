@@ -183,6 +183,20 @@ export interface TotpSetup {
   qrDataUri: string;
 }
 
+export type AttachmentEntity = "RISK" | "CONTROL" | "MODEL_CARD" | "AI_SYSTEM" | "PROJECT";
+
+export interface Attachment {
+  id: string;
+  entityType: AttachmentEntity;
+  entityId: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  description?: string | null;
+  createdAt: string;
+  uploadedBy?: { id: string; name: string; email: string } | null;
+}
+
 export interface AuthSession {
   id: string;
   userAgent?: string | null;

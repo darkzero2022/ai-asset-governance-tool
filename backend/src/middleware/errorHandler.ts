@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler, RequestHandler } from "express";
 import { ZodError } from "zod";
+import { MulterError } from "multer";
 import { Prisma } from "@prisma/client";
 import { AppError } from "../httpError.js";
 import { logger } from "../log.js";
@@ -47,6 +48,13 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     code = "VALIDATION_FAILED";
     message = "Request validation failed";
     details = err.flatten();
+  } else if (err instanceof MulterError) {
+    status = err.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+    code = err.code === "LIMIT_FILE_SIZE" ? "FILE_TOO_LARGE" : "UPLOAD_REJECTED";
+    message =
+      err.code === "LIMIT_FILE_SIZE"
+        ? "The file exceeds the size limit"
+        : `Upload rejected: ${err.message}`;
   } else if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === "P2025") {
       status = 404;

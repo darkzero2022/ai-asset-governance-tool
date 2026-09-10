@@ -80,6 +80,7 @@ type Props = {
   onUpdateControl: (controlId: string, implementationStatus: string) => void;
   onUnlinkControl: (controlId: string) => void;
   canManage: boolean;
+  evidence?: ReactNode;
 };
 
 const controlStatuses = ["NOT_STARTED", "IN_PROGRESS", "IMPLEMENTED", "VERIFIED"];
@@ -386,6 +387,8 @@ export default function RiskDetail(props: Props) {
               {!(props.risk.controls ?? []).length && <EmptyState title="No linked controls." />}
             </div>
           </Panel>
+
+          {props.evidence}
 
           <Panel title="Audit History">
             <div className="space-y-3">

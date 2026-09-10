@@ -47,7 +47,10 @@ const REFRESHABLE_CODES = new Set(["TOKEN_STALE", "INVALID_TOKEN"]);
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { token, _retried, headers, ...init } = options;
   const mergedHeaders = new Headers(headers);
-  mergedHeaders.set("Content-Type", "application/json");
+  // Let the browser set the multipart boundary for FormData bodies.
+  if (!(init.body instanceof FormData)) {
+    mergedHeaders.set("Content-Type", "application/json");
+  }
   mergedHeaders.set("Accept", "application/json");
   const bearer = getAccessToken() ?? token;
   if (bearer) mergedHeaders.set("Authorization", `Bearer ${bearer}`);
@@ -85,4 +88,28 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
 
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+/** Fetch a binary endpoint with the access token and hand the browser a save
+ *  dialog. Used for evidence-file downloads (a plain <a> can't send the Bearer). */
+export async function downloadFile(path: string, fallbackName: string): Promise<void> {
+  const bearer = getAccessToken();
+  const response = await fetch(`${apiBaseUrl}${API_PREFIX}${path}`, {
+    credentials: "include",
+    headers: bearer ? { Authorization: `Bearer ${bearer}` } : undefined,
+  });
+  if (!response.ok) {
+    throw new ApiClientError(response.status, "Download failed");
+  }
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const named = /filename="?([^"]+)"?/.exec(disposition)?.[1];
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = named || fallbackName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }

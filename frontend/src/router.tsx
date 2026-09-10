@@ -26,6 +26,7 @@ import {
   type ModelCardFormState,
 } from "./components/ModelCardForm";
 import { Forbidden } from "./components/Forbidden";
+import { Attachments } from "./components/Attachments";
 import { toast } from "./components/ui/toastStore";
 import { useAuditLogsQuery } from "./queries/auditLogs";
 import {
@@ -751,6 +752,16 @@ function RiskDetailRoute() {
       onUpdateControl={onUpdateControl}
       onUnlinkControl={onUnlinkControl}
       canManage={canManage(ctx.currentUser)}
+      evidence={
+        id ? (
+          <Attachments
+            token={ctx.token}
+            entityType="RISK"
+            entityId={id}
+            canManage={canManage(ctx.currentUser)}
+          />
+        ) : null
+      }
     />
   );
 }

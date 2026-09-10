@@ -41,6 +41,10 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       ENABLE_API_DOCS: ${ENABLE_API_DOCS:-}
+      ATTACHMENTS_DIR: /data/attachments
+      ATTACHMENTS_MAX_MB: ${ATTACHMENTS_MAX_MB:-10}
+    volumes:
+      - attachments-data:/data/attachments
     ports:
       - "${BIND_HOST:-127.0.0.1}:${PORT:-4000}:${PORT:-4000}"
     healthcheck:
@@ -75,3 +79,4 @@ services:
 
 volumes:
   postgres-data:
+  attachments-data:

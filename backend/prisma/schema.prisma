@@ -96,6 +96,32 @@ enum Role {
   VIEWER
 }
 
+enum AttachmentEntity {
+  RISK
+  CONTROL
+  MODEL_CARD
+  AI_SYSTEM
+  PROJECT
+}
+
+// Evidence files attached to a governance record. The bytes live on disk under
+// ATTACHMENTS_DIR keyed by `storageKey`; this row is the metadata + ownership.
+model Attachment {
+  id           String           @id @default(cuid())
+  entityType   AttachmentEntity
+  entityId     String
+  filename     String
+  contentType  String
+  size         Int
+  storageKey   String           @unique
+  description  String?
+  uploadedById String
+  uploadedBy   User             @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime         @default(now())
+
+  @@index([entityType, entityId])
+}
+
 model User {
   id                  String               @id @default(cuid())
   email               String               @unique
@@ -117,6 +143,7 @@ model User {
   createdAt           DateTime             @default(now())
   sessions            Session[]
   totpRecoveryCodes   TotpRecoveryCode[]
+  attachments         Attachment[]
   assets              AIAsset[]            @relation("AssetCreator")
   approvals           GovernanceWorkflow[] @relation("WorkflowApprover")
   auditLogs           AuditLog[]           @relation("AuditActor")
