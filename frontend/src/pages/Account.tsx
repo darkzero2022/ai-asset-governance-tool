@@ -8,6 +8,7 @@ import { SkeletonRows } from "../components/ui/Skeleton";
 import { toast } from "../components/ui/toastStore";
 import { clearSession } from "../auth/session";
 import { useLogoutAllMutation, useRevokeSessionMutation, useSessionsQuery } from "../queries/auth";
+import { TwoFactor } from "../components/TwoFactor";
 
 export default function Account({ token }: { token: string }) {
   const { data: sessions = [], isPending } = useSessionsQuery(token);
@@ -38,6 +39,8 @@ export default function Account({ token }: { token: string }) {
             </Link>
           </CardBody>
         </Card>
+
+        <TwoFactor token={token} />
 
         <Card>
           <CardHeader

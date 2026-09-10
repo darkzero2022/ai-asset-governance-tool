@@ -130,6 +130,17 @@ export const changePasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+  // A 6-digit TOTP or a "xxxx-xxxx" recovery code, supplied on the second step
+  // when the account has 2FA enabled.
+  totpCode: z.string().min(6).max(32).optional(),
+});
+
+export const totpEnableSchema = z.object({ code: z.string().min(6).max(10) });
+export const totpDisableSchema = z.object({ password: z.string().min(1) });
+
 // Update variants carry an optimistic-concurrency token: the updatedAt the client
 // last saw. The server rejects the write (409 STALE_WRITE) if the row moved on.
 const withLock = { expectedUpdatedAt: z.string().datetime().optional() };

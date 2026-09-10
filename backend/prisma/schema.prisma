@@ -109,13 +109,32 @@ model User {
   mustChangePassword  Boolean              @default(false)
   failedLoginAttempts Int                  @default(0)
   lockedUntil         DateTime?
+  // TOTP (RFC 6238) second factor. `totpSecret` is set the moment enrolment
+  // starts; `totpEnabledAt` stays null until a first code is confirmed and only
+  // then is a code demanded at login.
+  totpSecret          String?
+  totpEnabledAt       DateTime?
   createdAt           DateTime             @default(now())
   sessions            Session[]
+  totpRecoveryCodes   TotpRecoveryCode[]
   assets              AIAsset[]            @relation("AssetCreator")
   approvals           GovernanceWorkflow[] @relation("WorkflowApprover")
   auditLogs           AuditLog[]           @relation("AuditActor")
   projects            Project[]            @relation("ProjectCreator")
   risks               Risk[]               @relation("RiskCreator")
+}
+
+// Single-use TOTP recovery codes. Only the SHA-256 hash is stored; the plaintext
+// set is shown to the user exactly once, at enrolment.
+model TotpRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String    @unique
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 // One row per active refresh token. The raw token lives only in the client's

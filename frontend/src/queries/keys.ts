@@ -7,6 +7,7 @@
 export const queryKeys = {
   currentUser: () => ["auth", "me"] as const,
   sessions: () => ["auth", "sessions"] as const,
+  totp: () => ["auth", "totp"] as const,
   assets: (filters?: Record<string, string>) => ["assets", filters ?? {}] as const,
   asset: (id: string) => ["asset", id] as const,
   assetProjects: (id: string) => ["asset", id, "projects"] as const,

@@ -168,6 +168,19 @@ export interface CurrentUser {
   role: Role | string;
   active: boolean;
   mustChangePassword?: boolean;
+  totpEnabled?: boolean;
+}
+
+export interface TotpStatus {
+  enabled: boolean;
+  pendingSetup: boolean;
+  recoveryCodesRemaining: number;
+}
+
+export interface TotpSetup {
+  secret: string;
+  otpauthUrl: string;
+  qrDataUri: string;
 }
 
 export interface AuthSession {

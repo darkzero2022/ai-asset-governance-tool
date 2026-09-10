@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AuthSession, CurrentUser } from "@aibom/shared";
+import type { AuthSession, CurrentUser, TotpSetup, TotpStatus } from "@aibom/shared";
 import { apiFetch } from "../api/client";
 import { setAccessToken } from "../auth/session";
 import { queryKeys } from "./keys";
@@ -56,5 +56,66 @@ export function useRevokeSessionMutation(token: string) {
 export function useLogoutAllMutation(token: string) {
   return useMutation({
     mutationFn: () => apiFetch("/auth/logout-all", { method: "POST", token }),
+  });
+}
+
+// --- TOTP / two-factor -----------------------------------------------------
+
+export function useTotpStatusQuery(token: string) {
+  return useQuery({
+    queryKey: queryKeys.totp(),
+    queryFn: () => apiFetch<TotpStatus>("/auth/totp", { token }),
+    enabled: Boolean(token),
+  });
+}
+
+export function useTotpSetupMutation(token: string) {
+  return useMutation({
+    mutationFn: () => apiFetch<TotpSetup>("/auth/totp/setup", { method: "POST", token }),
+  });
+}
+
+export function useTotpEnableMutation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) =>
+      apiFetch<{ enabled: boolean; recoveryCodes: string[] }>("/auth/totp/enable", {
+        method: "POST",
+        body: JSON.stringify({ code: code.trim() }),
+        token,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.totp() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentUser() });
+    },
+  });
+}
+
+export function useTotpDisableMutation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (password: string) =>
+      apiFetch("/auth/totp/disable", {
+        method: "POST",
+        body: JSON.stringify({ password }),
+        token,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.totp() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentUser() });
+    },
+  });
+}
+
+export function useTotpRecoveryCodesMutation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (password: string) =>
+      apiFetch<{ recoveryCodes: string[] }>("/auth/totp/recovery-codes", {
+        method: "POST",
+        body: JSON.stringify({ password }),
+        token,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.totp() }),
   });
 }

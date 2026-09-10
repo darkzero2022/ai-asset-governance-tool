@@ -29,6 +29,8 @@ function App() {
   const [needsBootstrap, setNeedsBootstrap] = useState<boolean | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [mfaRequired, setMfaRequired] = useState(false);
   const [error, setError] = useState("");
   const [theme, toggleTheme] = useTheme();
   const queryClient = useQueryClient();
@@ -68,18 +70,29 @@ function App() {
     setError("");
     try {
       const result = await apiFetch<{
-        accessToken: string;
-        user: CurrentUser;
+        accessToken?: string;
+        user?: CurrentUser;
         mustChangePassword?: boolean;
+        mfaRequired?: boolean;
       }>("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email,
+          password,
+          ...(totpCode ? { totpCode: totpCode.trim() } : {}),
+        }),
       });
+      if (result.mfaRequired) {
+        setMfaRequired(true);
+        return;
+      }
       queryClient.setQueryData(queryKeys.currentUser(), {
         ...result.user,
         mustChangePassword: result.mustChangePassword,
       });
-      setAccessToken(result.accessToken);
+      setAccessToken(result.accessToken!);
+      setMfaRequired(false);
+      setTotpCode("");
       if (result.mustChangePassword) navigate("/account/change-password");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -133,6 +146,7 @@ function App() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 autoComplete="username"
+                disabled={mfaRequired}
               />
               <Input
                 id="password"
@@ -141,8 +155,21 @@ function App() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="current-password"
-                hint={PASSWORD_POLICY_HINT}
+                hint={mfaRequired ? undefined : PASSWORD_POLICY_HINT}
+                disabled={mfaRequired}
               />
+              {mfaRequired && (
+                <Input
+                  id="totp"
+                  label="Authentication code"
+                  value={totpCode}
+                  onChange={(event) => setTotpCode(event.target.value)}
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  autoFocus
+                  hint="6-digit code from your authenticator app, or a recovery code"
+                />
+              )}
             </div>
             {error && (
               <p className="mt-4 text-sm text-danger" role="alert">
@@ -150,7 +177,7 @@ function App() {
               </p>
             )}
             <Button type="submit" variant="primary" className="mt-6 w-full">
-              Sign in
+              {mfaRequired ? "Verify" : "Sign in"}
             </Button>
           </form>
         </section>

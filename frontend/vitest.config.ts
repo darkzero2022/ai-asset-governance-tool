@@ -9,6 +9,8 @@ export default mergeConfig(
   viteConfig,
   defineConfig({
     test: {
+      // Unit tests only — the Playwright specs in e2e/ run via `npm run test:e2e`.
+      include: ["src/**/*.{test,spec}.{ts,tsx}"],
       coverage: {
         provider: "v8",
         include: ["src/api/**/*.ts", "src/auth/**/*.ts", "src/lib/**/*.ts"],
