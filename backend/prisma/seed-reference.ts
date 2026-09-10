@@ -391,7 +391,9 @@ export async function seedReferenceData() {
     {
       framework: "OWASP_LLM_TOP10",
       categoryId: "LLM03",
-      strideAiCategory: "MODEL_IMPERSONATION",
+      // Supply-chain compromise is Tampering (a compromised model/dataset/plugin
+      // alters behaviour) — DATA_MODEL_POISONING, not Spoofing.
+      strideAiCategory: "DATA_MODEL_POISONING",
       atlasTechniques: ["ML Supply Chain Compromise"],
       atlasMitigations: [M("0013"), M("0014"), M("0016")],
     },
@@ -419,7 +421,9 @@ export async function seedReferenceData() {
     {
       framework: "OWASP_LLM_TOP10",
       categoryId: "LLM07",
-      strideAiCategory: "PROVENANCE_LOSS",
+      // Leaking the system prompt is Information Disclosure — the closest
+      // STRIDE-AI bucket is MODEL_INVERSION (extracting what the model holds).
+      strideAiCategory: "MODEL_INVERSION",
       atlasTechniques: ["Discovery: LLM System Prompt"],
       atlasMitigations: [M("0000"), M("0019")],
     },
@@ -433,7 +437,9 @@ export async function seedReferenceData() {
     {
       framework: "OWASP_LLM_TOP10",
       categoryId: "LLM09",
-      strideAiCategory: "MODEL_INVERSION",
+      // Misinformation is the model's output diverging from truth/intent —
+      // ALIGNMENT_BYPASS, not disclosure. No single ATLAS technique fits.
+      strideAiCategory: "ALIGNMENT_BYPASS",
       atlasTechniques: [],
       atlasMitigations: [M("0021"), M("0022")],
     },
@@ -444,7 +450,12 @@ export async function seedReferenceData() {
       atlasTechniques: ["Sponge Example / Context Flooding"],
       atlasMitigations: [M("0004")],
     },
-    // OWASP MCP Top 10 (draft v0.1) — STRIDE-AI is closest-fit for MCP01/02/05/07/08/09.
+    // OWASP MCP Top 10 (draft). STRIDE-AI has six buckets aligned to classic
+    // STRIDE (IMPERSONATION≈Spoofing, DATA_MODEL_POISONING≈Tampering,
+    // PROVENANCE_LOSS≈Repudiation, MODEL_INVERSION≈Info-disclosure,
+    // RESOURCE_EXHAUSTION≈DoS, ALIGNMENT_BYPASS≈EoP). Several MCP entries are
+    // infrastructure/identity risks with no clean AI-specific bucket — the
+    // choice below is the nearest classic-STRIDE analogue (reviewed 2026-09-10).
     {
       framework: "OWASP_MCP_TOP10",
       categoryId: "MCP01",
@@ -469,7 +480,8 @@ export async function seedReferenceData() {
     {
       framework: "OWASP_MCP_TOP10",
       categoryId: "MCP04",
-      strideAiCategory: "MODEL_IMPERSONATION",
+      // "…& Dependency Tampering" — Tampering, i.e. DATA_MODEL_POISONING.
+      strideAiCategory: "DATA_MODEL_POISONING",
       atlasTechniques: ["ML Supply Chain Compromise"],
       atlasMitigations: [M("0013"), M("0014"), M("0016")],
     },
@@ -511,8 +523,9 @@ export async function seedReferenceData() {
     {
       framework: "OWASP_MCP_TOP10",
       categoryId: "MCP10",
+      // Over-sharing = context leaking across trust boundaries (disclosure).
       strideAiCategory: "MODEL_INVERSION",
-      atlasTechniques: ["RAG Poisoning / False RAG Entry Injection"],
+      atlasTechniques: ["Exfiltration via AI Agent Tool Invocation"],
       atlasMitigations: [M("0020"), M("0012")],
     },
   ] as const;
