@@ -25,7 +25,9 @@ jobs:
           mkdir -p sbom
           for dir in packages/shared backend frontend; do
             name="$(echo "$dir" | tr '/' '-')"
-            (cd "$dir" && npm ci --omit=dev --ignore-scripts)
+            # Full install so `npm sbom` can resolve every manifest entry; the
+            # SBOM output is still scoped to the production tree.
+            (cd "$dir" && npm ci --ignore-scripts)
             (cd "$dir" && npm sbom --sbom-format cyclonedx --omit=dev) > "sbom/aibom-${name}.cdx.json"
           done
           ls -la sbom

@@ -14,7 +14,9 @@ env:
   DATABASE_URL: postgresql://aibom:ci-postgres-pw@127.0.0.1:55432/aibom?schema=public
   JWT_SECRET: ci-secret
   ADMIN_EMAIL: admin@example.com
-  ADMIN_PASSWORD: ci-admin-pw
+  # >= 12 chars and not on the common-password deny-list — the reference seed
+  # enforces the app's password policy on ADMIN_PASSWORD.
+  ADMIN_PASSWORD: ci-throwaway-admin-pw
 
 jobs:
   lint:
