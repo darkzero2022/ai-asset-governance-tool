@@ -72,15 +72,24 @@ describe("apiFetch — silent token refresh", () => {
 });
 
 describe("downloadFile", () => {
+  // A minimal Response-shaped stub — jsdom's Response can't wrap a Blob.
+  function fileResponse(disposition: string | null, status = 200) {
+    const blob = { type: "application/pdf" } as Blob;
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      headers: {
+        get: (h: string) => (h.toLowerCase() === "content-disposition" ? disposition : null),
+      },
+      blob: async () => blob,
+      _blob: blob,
+    } as unknown as Response & { _blob: Blob };
+  }
+
   it("fetches with the bearer, names the file from Content-Disposition, and triggers a click", async () => {
     setAccessToken("tok-1");
-    const blob = new Blob(["evidence"], { type: "application/pdf" });
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(blob, {
-        status: 200,
-        headers: { "Content-Disposition": 'attachment; filename="dpa.pdf"' },
-      }),
-    );
+    const res = fileResponse('attachment; filename="dpa.pdf"');
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(res);
     const createUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
     const revokeUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     const clicks: string[] = [];
@@ -92,14 +101,32 @@ describe("downloadFile", () => {
 
     await downloadFile("/attachments/1/download", "fallback.bin");
 
+    expect((fetchMock.mock.calls[0][1]?.headers as Record<string, string>).Authorization).toBe(
+      "Bearer tok-1",
+    );
     expect(clicks).toEqual(["dpa.pdf"]);
-    expect(createUrl).toHaveBeenCalledWith(blob);
+    expect(createUrl).toHaveBeenCalledWith((res as unknown as { _blob: Blob })._blob);
     expect(revokeUrl).toHaveBeenCalledWith("blob:mock");
     clickSpy.mockRestore();
   });
 
+  it("falls back to the given name when there is no Content-Disposition", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(fileResponse(null));
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const clicks: string[] = [];
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      clicks.push(this.download);
+    });
+    await downloadFile("/attachments/1/download", "fallback.bin");
+    expect(clicks).toEqual(["fallback.bin"]);
+    clickSpy.mockRestore();
+  });
+
   it("throws an ApiClientError on a non-2xx response", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("", { status: 404 }));
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(fileResponse(null, 404));
     await expect(downloadFile("/attachments/x/download", "f.bin")).rejects.toBeInstanceOf(
       ApiClientError,
     );
