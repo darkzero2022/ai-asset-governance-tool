@@ -13,6 +13,10 @@ jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    # Code scanning needs a public repo or GitHub Advanced Security. While the
+    # repo is private without GHAS the analyze step can't upload its SARIF and
+    # fails — skip it until then (it auto-activates when the repo goes public).
+    if: ${{ github.event.repository.private == false }}
     permissions:
       actions: read
       contents: read

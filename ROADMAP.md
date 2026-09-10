@@ -54,14 +54,20 @@ Done recently: monorepo shared types, `/api/v1` + generated OpenAPI, react-route
 - Playwright end-to-end suite run against the Docker stack in CI: bootstrap →
   login → create AI system → add risk (framework auto-fill) → link to project →
   submit for approval → approve as a second user → export + validate CycloneDX.
-- Lint + format gates (ESLint + Prettier) in CI.
+- ~~Lint + format gates (ESLint + Prettier) in CI.~~ — **done** (`c36200c`).
 - ~~Supply-chain scanning (`npm audit` gate…)~~ — **done**: production `npm audit`
-  gate + CodeQL + Dependabot in CI (`e29efc3`). Still to add: a
-  dependency-review action on PRs; enable secret scanning + push protection in
-  repo settings.
-- ~~Self-SBOM + tagged releases + GHCR image~~ — **workflow in place**
-  (`.github/workflows/release.yml`, fires on a `v*` tag); cut `v0.1.0` to
-  exercise it. `CHANGELOG.md` added.
+  gate + Dependabot in CI (`e29efc3`).
+  - **CodeQL** — workflow committed, but code scanning needs a **public repo or
+    GitHub Advanced Security**. The `analyze` job self-skips while the repo is
+    private without GHAS and auto-activates when it goes public.
+  - **Secret scanning + push protection** — same gate (GHAS / public repo). Not
+    available on this private repo today.
+  - Still to add: a `dependency-review` action on PRs (also GHAS-gated for
+    private repos).
+- ~~Self-SBOM + tagged releases + GHCR image~~ — **done** (`v0.1.0`, `e29efc3` +
+  the release): GitHub Release with CycloneDX SBOMs +
+  `ghcr.io/darkzero2022/ai-asset-governance-tool` with provenance/SBOM
+  attestations. `CHANGELOG.md` maintained.
 
 ## Framework coverage
 
