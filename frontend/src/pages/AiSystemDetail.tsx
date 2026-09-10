@@ -1,5 +1,5 @@
 import { FormEvent, type ReactNode } from "react";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, ShieldAlert } from "lucide-react";
 import {
   ModelCardForm,
   type ModelCard,
@@ -122,6 +122,7 @@ type Props = {
   canManage: boolean;
   onBack: () => void;
   onEditAsset: (asset: Asset) => void;
+  onOpenThreatModel: () => void;
   onFormChange: (form: AssetForm) => void;
   onSaveAsset: (event: FormEvent) => void;
   onModelCardFormChange: (form: ModelCardFormState) => void;
@@ -187,11 +188,16 @@ export default function AiSystemDetail(props: Props) {
                     v{props.asset.version} · {props.label(props.asset.type)}
                   </p>
                 </div>
-                {props.canManage && (
-                  <Button variant="secondary" size="sm" onClick={() => props.onEditAsset(asset)}>
-                    <Pencil className="h-3.5 w-3.5" /> Edit AI system
+                <div className="flex shrink-0 gap-2">
+                  <Button variant="secondary" size="sm" onClick={props.onOpenThreatModel}>
+                    <ShieldAlert className="h-3.5 w-3.5" /> Threat model
                   </Button>
-                )}
+                  {props.canManage && (
+                    <Button variant="secondary" size="sm" onClick={() => props.onEditAsset(asset)}>
+                      <Pencil className="h-3.5 w-3.5" /> Edit AI system
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <dl className="mt-5 grid gap-3 text-sm md:grid-cols-2">

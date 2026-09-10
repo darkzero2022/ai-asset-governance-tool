@@ -73,6 +73,7 @@ import {
 // when its route is visited, instead of all eight shipping in the one
 // initial bundle. App (the root layout, always needed) stays a static import.
 const AiSystemDetail = lazy(() => import("./pages/AiSystemDetail"));
+const ThreatModelPage = lazy(() => import("./pages/ThreatModelPage"));
 const AiSystemList = lazy(() => import("./pages/AiSystemList"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
@@ -464,6 +465,7 @@ function AiSystemDetailRoute() {
       canManage={canManage(ctx.currentUser)}
       onBack={() => navigate("/ai-systems")}
       onEditAsset={onEditAsset}
+      onOpenThreatModel={() => navigate(`/ai-systems/${id}/threat-model`)}
       onFormChange={setAssetForm}
       onSaveAsset={onSaveAsset}
       onModelCardFormChange={setModelCardForm}
@@ -480,6 +482,24 @@ function AiSystemDetailRoute() {
       onUnlinkProject={onUnlinkProject}
       onWorkflowCommentsChange={setWorkflowComments}
       onTransitionAsset={onTransitionAsset}
+    />
+  );
+}
+
+function ThreatModelRoute() {
+  const ctx = useCtx();
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const { data: asset = null } = useAiSystemQuery(ctx.token, id);
+  if (!id) return null;
+  return (
+    <ThreatModelPage
+      token={ctx.token}
+      assetId={id}
+      assetName={asset?.name ?? "AI system"}
+      canManage={canManage(ctx.currentUser)}
+      onBack={() => navigate(`/ai-systems/${id}`)}
+      onOpenRisk={(riskId) => navigate(`/risks/${riskId}`)}
     />
   );
 }
@@ -970,6 +990,7 @@ export const router = createBrowserRouter([
       { path: "dashboard", element: <DashboardRoute /> },
       { path: "ai-systems", element: <AiSystemListRoute /> },
       { path: "ai-systems/:id", element: <AiSystemDetailRoute /> },
+      { path: "ai-systems/:id/threat-model", element: <ThreatModelRoute /> },
       { path: "risks", element: <RiskRegisterRoute /> },
       { path: "risks/:id", element: <RiskDetailRoute /> },
       { path: "projects", element: <ProjectListRoute /> },
