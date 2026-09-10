@@ -149,6 +149,7 @@ model User {
   auditLogs           AuditLog[]           @relation("AuditActor")
   projects            Project[]            @relation("ProjectCreator")
   risks               Risk[]               @relation("RiskCreator")
+  threatModels        ThreatModel[]        @relation("ThreatModelCreator")
 }
 
 // Single-use TOTP recovery codes. Only the SHA-256 hash is stored; the plaintext
@@ -223,11 +224,118 @@ model AIAsset {
   workflow                   GovernanceWorkflow[]
   recertificationSchedule    RecertificationSchedule?
   modelCard                  ModelCard?
+  threatModel                ThreatModel?
 
   @@index([status])
   @@index([type])
   @@index([hostingModel])
   @@index([networkDependency])
+}
+
+// --- Threat modelling (Phase A: structured model + rules-driven suggestions) ---
+
+enum ThreatModelElementType {
+  MODEL
+  TRAINING_DATASET
+  INFERENCE_API
+  VECTOR_STORE
+  TOOL_MCP_SERVER
+  EXTERNAL_DATA_SOURCE
+  END_USER
+  DOWNSTREAM_CONSUMER
+  HUMAN_REVIEWER
+  DATA_STORE
+  PROCESS
+}
+
+enum ThreatModelThreatStatus {
+  SUGGESTED
+  ACCEPTED
+  DISMISSED
+  PROMOTED
+}
+
+model ThreatModel {
+  id          String   @id @default(cuid())
+  assetId     String   @unique
+  asset       AIAsset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  createdById String
+  createdBy   User     @relation("ThreatModelCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  elements        ThreatModelElement[]
+  flows           ThreatModelFlow[]
+  trustBoundaries TrustBoundary[]
+  threats         ThreatModelThreat[]
+}
+
+model TrustBoundary {
+  id            String               @id @default(cuid())
+  threatModelId String
+  threatModel   ThreatModel          @relation(fields: [threatModelId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  elements      ThreatModelElement[]
+
+  @@index([threatModelId])
+}
+
+model ThreatModelElement {
+  id              String                 @id @default(cuid())
+  threatModelId   String
+  threatModel     ThreatModel            @relation(fields: [threatModelId], references: [id], onDelete: Cascade)
+  type            ThreatModelElementType
+  name            String
+  description     String?
+  // Optional layout hint for the Phase B canvas; Phase A auto-lays-out.
+  x               Int?
+  y               Int?
+  trustBoundaryId String?
+  trustBoundary   TrustBoundary?         @relation(fields: [trustBoundaryId], references: [id], onDelete: SetNull)
+
+  outgoingFlows ThreatModelFlow[] @relation("FlowSource")
+  incomingFlows ThreatModelFlow[] @relation("FlowTarget")
+
+  @@index([threatModelId])
+}
+
+model ThreatModelFlow {
+  id            String             @id @default(cuid())
+  threatModelId String
+  threatModel   ThreatModel        @relation(fields: [threatModelId], references: [id], onDelete: Cascade)
+  sourceId      String
+  source        ThreatModelElement @relation("FlowSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  targetId      String
+  target        ThreatModelElement @relation("FlowTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  label         String
+  protocol      String?
+  authenticated Boolean            @default(false)
+  encrypted     Boolean            @default(false)
+
+  @@index([threatModelId])
+}
+
+model ThreatModelThreat {
+  id              String                  @id @default(cuid())
+  threatModelId   String
+  threatModel     ThreatModel             @relation(fields: [threatModelId], references: [id], onDelete: Cascade)
+  // Which rule produced it (null for a hand-added threat), and what it targets.
+  ruleId          String?
+  elementId       String?
+  flowId          String?
+  title           String
+  description     String
+  strideAiCategory StrideAiCategory?
+  sourceFramework SourceFramework?
+  sourceCategoryId String?
+  status          ThreatModelThreatStatus @default(SUGGESTED)
+  promotedRiskId  String?                 @unique
+  createdAt       DateTime                @default(now())
+
+  @@index([threatModelId])
 }
 
 model Risk {

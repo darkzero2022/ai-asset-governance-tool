@@ -11,6 +11,8 @@ import {
   ROLES,
   SOURCE_FRAMEWORKS,
   STRIDE_AI_CATEGORIES,
+  THREAT_MODEL_ELEMENT_TYPES,
+  THREAT_MODEL_THREAT_STATUSES,
 } from "./enums.js";
 
 export const assetSchema = z.object({
@@ -140,6 +142,43 @@ export const loginSchema = z.object({
 
 export const totpEnableSchema = z.object({ code: z.string().min(6).max(10) });
 export const totpDisableSchema = z.object({ password: z.string().min(1) });
+
+// --- Threat modelling ---
+
+export const threatModelCreateSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
+});
+export const threatModelUpdateSchema = threatModelCreateSchema.partial().extend({
+  expectedUpdatedAt: z.string().datetime().optional(),
+});
+
+export const trustBoundarySchema = z.object({
+  name: z.string().min(1).max(120),
+  description: z.string().max(1000).optional(),
+});
+
+export const threatModelElementSchema = z.object({
+  type: z.enum(THREAT_MODEL_ELEMENT_TYPES),
+  name: z.string().min(1).max(120),
+  description: z.string().max(1000).optional(),
+  trustBoundaryId: z.string().nullable().optional(),
+  x: z.number().int().optional(),
+  y: z.number().int().optional(),
+});
+
+export const threatModelFlowSchema = z.object({
+  sourceId: z.string().min(1),
+  targetId: z.string().min(1),
+  label: z.string().min(1).max(120),
+  protocol: z.string().max(60).optional(),
+  authenticated: z.boolean().optional(),
+  encrypted: z.boolean().optional(),
+});
+
+export const threatStatusSchema = z.object({
+  status: z.enum(THREAT_MODEL_THREAT_STATUSES),
+});
 
 // Update variants carry an optimistic-concurrency token: the updatedAt the client
 // last saw. The server rejects the write (409 STALE_WRITE) if the row moved on.

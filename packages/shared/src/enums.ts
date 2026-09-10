@@ -24,6 +24,27 @@ export const STRIDE_AI_CATEGORIES = [
   "ALIGNMENT_BYPASS",
 ] as const;
 
+export const THREAT_MODEL_ELEMENT_TYPES = [
+  "MODEL",
+  "TRAINING_DATASET",
+  "INFERENCE_API",
+  "VECTOR_STORE",
+  "TOOL_MCP_SERVER",
+  "EXTERNAL_DATA_SOURCE",
+  "END_USER",
+  "DOWNSTREAM_CONSUMER",
+  "HUMAN_REVIEWER",
+  "DATA_STORE",
+  "PROCESS",
+] as const;
+
+export const THREAT_MODEL_THREAT_STATUSES = [
+  "SUGGESTED",
+  "ACCEPTED",
+  "DISMISSED",
+  "PROMOTED",
+] as const;
+
 export type AssetType = (typeof ASSET_TYPES)[number];
 export type HostingModel = (typeof HOSTING_MODELS)[number];
 export type NetworkDependency = (typeof NETWORK_DEPENDENCIES)[number];
@@ -36,3 +57,5 @@ export type EuAiActTier = (typeof EU_AI_ACT_TIERS)[number];
 export type ControlStatus = (typeof CONTROL_STATUSES)[number];
 export type Role = (typeof ROLES)[number];
 export type StrideAiCategory = (typeof STRIDE_AI_CATEGORIES)[number];
+export type ThreatModelElementType = (typeof THREAT_MODEL_ELEMENT_TYPES)[number];
+export type ThreatModelThreatStatus = (typeof THREAT_MODEL_THREAT_STATUSES)[number];
