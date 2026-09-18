@@ -18,6 +18,14 @@ import { toast } from "./components/ui/toastStore";
 import { useTheme } from "./theme/useTheme";
 
 /**
+ * Route handlers call `setError("")` at the start of an action to clear any
+ * previous error — that must not surface as a toast, so only non-empty messages do.
+ */
+export function reportOutletError(message: string) {
+  if (message) toast.error(message);
+}
+
+/**
  * The root layout route. Owns only what's genuinely cross-cutting — the auth
  * session, the current user, and the theme. The access token is held in the
  * session store (frontend/src/auth/session.ts), never in localStorage; a hard
@@ -200,9 +208,7 @@ function App() {
           </div>
         }
       >
-        <Outlet
-          context={{ token, currentUser, setError: (message: string) => toast.error(message) }}
-        />
+        <Outlet context={{ token, currentUser, setError: reportOutletError }} />
       </Suspense>
     </AppShell>
   );

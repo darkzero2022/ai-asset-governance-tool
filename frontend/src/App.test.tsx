@@ -2,7 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import App from "./App";
+import App, { reportOutletError } from "./App";
+import { toast } from "./components/ui/toastStore";
 
 describe("login form", () => {
   it("renders empty credential fields once the session check finishes with no session", async () => {
@@ -24,5 +25,16 @@ describe("login form", () => {
     expect(screen.getByLabelText(/email/i)).toHaveValue("");
     expect(screen.getByLabelText(/password/i)).toHaveValue("");
     vi.restoreAllMocks();
+  });
+});
+
+describe("reportOutletError", () => {
+  it("does not raise a toast for the empty 'clear the error' call every handler makes", () => {
+    const spy = vi.spyOn(toast, "error").mockImplementation(() => undefined as never);
+    reportOutletError("");
+    expect(spy).not.toHaveBeenCalled();
+    reportOutletError("Something failed");
+    expect(spy).toHaveBeenCalledWith("Something failed");
+    spy.mockRestore();
   });
 });
