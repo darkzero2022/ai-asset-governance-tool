@@ -1,14 +1,14 @@
 # Standalone SPA container (docker compose --profile standalone-frontend).
 # Build context is the repo root so the @aibom/shared file: dependency resolves.
 
-FROM node:22-alpine AS shared
+FROM node:25-alpine AS shared
 WORKDIR /repo/packages/shared
 COPY packages/shared/package*.json ./
 RUN npm ci
 COPY packages/shared/ ./
 RUN npm run build
 
-FROM node:22-alpine AS build
+FROM node:25-alpine AS build
 COPY --from=shared /repo/packages /repo/packages
 WORKDIR /repo/frontend
 ARG VITE_API_BASE_URL=http://localhost:4000
@@ -18,7 +18,7 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-FROM node:22-alpine AS runtime
+FROM node:25-alpine AS runtime
 COPY --from=shared /repo/packages /repo/packages
 WORKDIR /repo/frontend
 ENV NODE_ENV=production
