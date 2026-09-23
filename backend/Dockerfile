@@ -4,7 +4,7 @@
 # so the `file:` symlink to @aibom/shared keeps resolving.
 
 # --- Shared package ---
-FROM node:22-alpine AS shared
+FROM node:25-alpine AS shared
 WORKDIR /repo/packages/shared
 COPY packages/shared/package*.json ./
 RUN npm ci
@@ -12,7 +12,7 @@ COPY packages/shared/ ./
 RUN npm run build
 
 # --- Frontend build ---
-FROM node:22-alpine AS frontend
+FROM node:25-alpine AS frontend
 COPY --from=shared /repo/packages /repo/packages
 WORKDIR /repo/frontend
 COPY frontend/package*.json ./
@@ -24,7 +24,7 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 
 # --- Backend build ---
-FROM node:22-alpine AS build
+FROM node:25-alpine AS build
 RUN apk add --no-cache openssl
 COPY --from=shared /repo/packages /repo/packages
 WORKDIR /repo/backend
@@ -36,7 +36,7 @@ COPY backend/src ./src
 RUN npm run prisma:generate && npm run build
 
 # --- Runtime ---
-FROM node:22-alpine AS runtime
+FROM node:25-alpine AS runtime
 RUN apk add --no-cache openssl
 # Carry the fully installed dependency tree (incl. the generated Prisma client, the
 # prisma CLI used by `migrate deploy`, tsx used by the seed scripts) from the build
